@@ -6,35 +6,36 @@ cabal-version: 2.2
 
 name:           contra
 version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/githubuser/contra#readme>
-homepage:       https://github.com/githubuser/contra#readme
-bug-reports:    https://github.com/githubuser/contra/issues
-author:         Author name here
-maintainer:     example@example.com
-copyright:      2023 Author name here
+description:    Please see the README on GitHub at <https://github.com/SophieBosio/contra#readme>
+homepage:       https://github.com/SophieBosio/contra#readme
+bug-reports:    https://github.com/SophieBosio/contra/issues
+author:         Sophie Adeline Solheim Bosio
+maintainer:     sophie.bosio@outlook.com
+copyright:      2023 Sophie Adeline Solheim Bosio
 license:        BSD-3-Clause
 license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
     README.md
-    CHANGELOG.md
 
 source-repository head
   type: git
-  location: https://github.com/githubuser/contra
+  location: https://github.com/SophieBosio/contra
 
 library
-  exposed-modules:
-      Lib
   other-modules:
       Paths_contra
   autogen-modules:
       Paths_contra
   hs-source-dirs:
       src
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields
   build-depends:
       base >=4.7 && <5
+    , containers >=0.6.7 && <=0.7.0
+    , mtl ==2.2.*
+    , parsec ==3.1.*
+    , tasty-quickcheck ==0.10.*
   default-language: Haskell2010
 
 executable contra-exe
@@ -45,10 +46,15 @@ executable contra-exe
       Paths_contra
   hs-source-dirs:
       app
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , containers >=0.6.7 && <=0.7.0
     , contra
+    , mtl ==2.2.*
+    , parsec ==3.1.*
+    , tasty ==1.4.*
+    , tasty-quickcheck ==0.10.*
   default-language: Haskell2010
 
 test-suite contra-test
@@ -60,8 +66,14 @@ test-suite contra-test
       Paths_contra
   hs-source-dirs:
       test
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , containers >=0.6.7 && <=0.7.0
     , contra
+    , mtl ==2.2.*
+    , parsec ==3.1.*
+    , tasty ==1.4.*
+    , tasty-hunit ==0.10.*
+    , tasty-quickcheck ==0.10.*
   default-language: Haskell2010

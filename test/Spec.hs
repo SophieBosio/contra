@@ -1,2 +1,14 @@
+import Test.Tasty
+
+
+timeoutSeconds :: Integer -> Timeout
+timeoutSeconds = mkTimeout . (* 1000000)
+
 main :: IO ()
-main = putStrLn "Test suite not yet implemented"
+main = defaultMain $ localOption (timeoutSeconds 10) tests
+
+tests :: TestTree
+tests =
+  testGroup "Contra - Main Test Suite"
+    [ 
+    ]

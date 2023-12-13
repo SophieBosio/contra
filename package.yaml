@@ -1,26 +1,29 @@
 name:                contra
 version:             0.1.0.0
-github:              "githubuser/contra"
+github:              "SophieBosio/contra"
 license:             BSD-3-Clause
-author:              "Author name here"
-maintainer:          "example@example.com"
-copyright:           "2023 Author name here"
+author:              "Sophie Adeline Solheim Bosio"
+maintainer:          "sophie.bosio@outlook.com"
+copyright:           "2023 Sophie Adeline Solheim Bosio"
 
 extra-source-files:
 - README.md
-- CHANGELOG.md
 
 # Metadata used when publishing your package
-# synopsis:            Short description of your package
-# category:            Web
+# synopsis:            A friendly functional laguage for finding counterexamples
+# category:            Programming Language
 
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/githubuser/contra#readme>
+description:         Please see the README on GitHub at <https://github.com/SophieBosio/contra#readme>
 
 dependencies:
-- base >= 4.7 && < 5
+- base              >= 4.7   && < 5
+- containers        >= 0.6.7 && <= 0.7.0
+- parsec            >= 3.1   && < 3.2
+- mtl               >= 2.2   && < 2.3
+- tasty-quickcheck  >= 0.10  && < 0.11
 
 ghc-options:
 - -Wall
@@ -28,10 +31,10 @@ ghc-options:
 - -Widentities
 - -Wincomplete-record-updates
 - -Wincomplete-uni-patterns
-- -Wmissing-export-lists
+#- -Wmissing-export-lists
 - -Wmissing-home-modules
 - -Wpartial-fields
-- -Wredundant-constraints
+#- -Wredundant-constraints
 
 library:
   source-dirs: src
@@ -46,6 +49,7 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - contra
+    - tasty             >= 1.4  && < 1.5
 
 tests:
   contra-test:
@@ -57,3 +61,5 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - contra
+    - tasty             >= 1.4  && < 1.5
+    - tasty-hunit       >= 0.10 && < 0.11
