@@ -1,3 +1,4 @@
+
 name: hlint
 on:
   push:
@@ -21,4 +22,4 @@ jobs:
       uses: haskell/actions/hlint-run@v2
       with:
         path:    src/
-        fail-on: suggestion # <- warning ?
+        fail-on: suggestion
