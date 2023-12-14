@@ -69,6 +69,20 @@ data Pattern a =
 
 -- Canonical terms
 -- A canonical term is a pattern with no variables
+class Canonical a where
+  canonical :: a -> Bool
+
+instance Canonical (Term a) where
+  canonical (Pattern p) = canonical p
+  canonical _           = False
+
+instance Canonical (Pattern a) where
+  canonical (Variable       _ _) = False
+  canonical (Unit             _) = True
+  canonical (Number         _ _) = True
+  canonical (Boolean        _ _) = True
+  canonical (Pair       t0 t1 _) = canonical t0 && canonical t1
+  canonical (Constructor _ ps _) = all canonical ps
 
 
 -- Pretty printing
