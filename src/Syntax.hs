@@ -44,7 +44,6 @@ data Term a =
     Pattern (Pattern a)
   | Lambda      X      (T0 a)            a
   | Application (T1 a) (T2 a)            a
-  | If          (T0 a) (T1 a) (T2 a)     a
   | Case        (T0 a) [(Alt a, Body a)] a
   -- Utilities:
   | Fst         (T0 a)                   a
