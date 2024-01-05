@@ -43,6 +43,8 @@ data Term a =
   -- Base terms:
     Pattern (Pattern a)
   | Lambda      X      (T0 a)            a
+  | Rec         X      (T0 a)            a
+  | Let         X      (T1 a) (T2 a)     a
   | Application (T1 a) (T2 a)            a
   | Case        (T0 a) [(Alt a, Body a)] a
   -- Utilities:
@@ -105,6 +107,9 @@ instance Show (Pattern a) where
 instance Show (Term a) where
   show (Pattern              p) = show p
   show (Lambda      x  t0    _) = parens $ "\\" ++ x ++ " -> " ++ show t0
+  show (Rec         x  t0    _) = "rec " ++ x ++ " . " ++ show t0
+  show (Let         x  t1 t2 _) = "let " ++ x ++ " = " ++ show t1 ++
+    " in " ++ show t2
   show (Application    t1 t2 _) = show t1 ++ parens (show t2)
   show (Case        t0 ts    _) = "case " ++ show t0 ++ " of" ++
     concatMap caseArrow ts
@@ -128,3 +133,44 @@ instance Show a => Show (Program a) where
     -- /!\ Might have to destructure pair first
     t ++ " = "   ++ show cs ++ concatMap show cs ++ "\n\n" ++ show rest
   show End                   = ""
+
+
+-- Utility functions
+instance Semigroup (Program a) where
+  (Signature x t  p1) <> p2 = Signature x t  (p1 <> p2)
+  (Function  f x  p1) <> p2 = Function  f x  (p1 <> p2)
+  (Property  p xs p1) <> p2 = Property  p xs (p1 <> p2)
+  (Data      t cs p1) <> p2 = Data      t cs (p1 <> p2)
+  End                 <> p2 = p2
+
+instance Monoid (Program a) where
+  mempty  = End
+  mappend = (<>)
+
+signatures :: Program a -> [(F, Type)]
+signatures (Signature x t rest) = (x, t) : signatures rest
+signatures (Function  _ _ rest) = signatures rest
+signatures (Property  _ _ rest) = signatures rest
+signatures (Data      _ _ rest) = signatures rest
+signatures _ = mempty
+
+functions :: Program a -> [(F, Term a)]
+functions (Signature _ _ rest) = functions rest
+functions (Function  f x rest) = (f, x) : functions rest
+functions (Property  _ _ rest) = functions rest
+functions (Data _ _ rest) = functions rest
+functions _                    = mempty
+
+datatypes :: Program a -> [(T, [(C, [Type])])]
+datatypes (Signature _ _ rest) = datatypes rest
+datatypes (Function  _ _ rest) = datatypes rest
+datatypes (Property  _ _ rest) = datatypes rest
+datatypes (Data      x t rest) = (x, t) : datatypes rest
+datatypes _                    = mempty
+
+properties :: Program a -> [(P, Term a)]
+properties (Signature _ _ rest) = properties rest
+properties (Function  _ _ rest) = properties rest
+properties (Property  p x rest) = (p, x) : properties rest
+properties (Data      _ _ rest) = properties rest
+properties _                    = mempty
