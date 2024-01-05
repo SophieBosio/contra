@@ -106,8 +106,6 @@ instance Show (Term a) where
   show (Pattern              p) = show p
   show (Lambda      x  t0    _) = parens $ "\\" ++ x ++ " -> " ++ show t0
   show (Application    t1 t2 _) = show t1 ++ parens (show t2)
-  show (If          t0 t1 t2 _) = "if " ++ show t0 ++ " then " ++
-    show t1 ++ " else " ++ show t2
   show (Case        t0 ts    _) = "case " ++ show t0 ++ " of" ++
     concatMap caseArrow ts
   show (Fst         t0       _) = "fst " ++ show t0
