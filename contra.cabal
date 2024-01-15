@@ -24,7 +24,9 @@ source-repository head
 
 library
   exposed-modules:
+      Generators
       Interpreter
+      Supercompiler
       Syntax
       TypeInferrer
   other-modules:
