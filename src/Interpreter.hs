@@ -1,6 +1,7 @@
 module Interpreter where
 
 import Syntax
+import Unification
 
 import Control.Monad.Reader
 
@@ -25,7 +26,7 @@ evaluate (Pattern (Variable x _)) =
 evaluate (Pattern (Pair t0 t1 a)) =
   do v0 <- evaluate t0
      v1 <- evaluate t1
-     return $ (Pattern (Pair v0 v1 a))
+     return $ Pattern (Pair v0 v1 a)
 evaluate (Pattern (Constructor c ps a)) =
   do ts  <- mapM evaluate (Pattern <$> ps) 
      ps' <- mapM (return . strengthenToPattern) ts
@@ -106,6 +107,10 @@ substitute x t v = -- computes t[v/x]
   where
     subs = flip (substitute x) v
     manipulateWith f = strengthenToPattern . f . weakenToTerm
+
+-- substituteWithUnifier :: Unifier a -> Term a -> Term a
+-- substituteWithUnifier xs t =
+--   foldr (\(x, v) t' -> substitute x t' v) t xs
 
 
 -- Utility functions
