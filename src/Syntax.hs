@@ -135,6 +135,41 @@ instance Show a => Show (Program a) where
   show End                   = ""
 
 
+-- Annotations
+class Annotated term where
+  annotation  :: term a -> a
+  annotations :: term a -> [a]
+
+instance Annotated Term where
+  annotations (Pattern           p) = annotations p
+  annotations (Lambda _ t0       a) = a : annotations t0
+  annotations (Rec    _ t0       a) = a : annotations t0
+  annotations (Let    _    t1 t2 a) = a : ([t1, t2]     >>= annotations)
+  annotations (Application t1 t2 a) = a : ([t1, t2]     >>= annotations)
+  annotations (Case     t0 ts    a) = a : annotations t0
+                                      ++ concatMap (annotations . fst) ts
+                                      ++ concatMap (annotations . snd) ts
+  annotations (Fst      t0       a) = a : annotations t0
+  annotations (Snd      t0       a) = a : annotations t0
+  annotations (Plus     t0 t1    a) = a : ([t0, t1]     >>= annotations)
+  annotations (Minus    t0 t1    a) = a : ([t0, t1]     >>= annotations)
+  annotations (Lt       t0 t1    a) = a : ([t0, t1]     >>= annotations)
+  annotations (Gt       t0 t1    a) = a : ([t0, t1]     >>= annotations)
+  annotations (Equal    t0 t1    a) = a : ([t0, t1]     >>= annotations)
+  annotations (Not      t0       a) = a : annotations t0
+  annotation  term                  = head $ annotations term
+
+instance Annotated Pattern where
+  annotations (Variable        _ a) = return a
+  annotations (Constructor _ ts  a) = a : concatMap annotations ts
+  annotations (Unit              a) = return a
+  annotations (Number          _ a) = return a
+  annotations (Boolean         _ a) = return a
+  annotations (Pair     t0 t1    a) = a : ([t0, t1] >>= annotations)
+  annotation  p                     = head $ annotations p
+
+
+
 -- Utility functions
 instance Semigroup (Program a) where
   (Signature x t  p1) <> p2 = Signature x t  (p1 <> p2)
