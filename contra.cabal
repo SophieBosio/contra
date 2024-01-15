@@ -29,6 +29,7 @@ library
       Supercompiler
       Syntax
       TypeInferrer
+      Unification
   other-modules:
       Paths_contra
   autogen-modules:
