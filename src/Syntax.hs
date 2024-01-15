@@ -87,6 +87,8 @@ instance Canonical (Pattern a) where
 
 strengthenToPattern :: Term a -> Pattern a
 strengthenToPattern (Pattern p) = p
+strengthenToPattern t           = error $
+  "expected pattern, but was given the non-canonical term " ++ show t
 
 weakenToTerm :: Pattern a -> Term a
 weakenToTerm p = (Pattern p)
