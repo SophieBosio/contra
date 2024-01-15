@@ -91,7 +91,7 @@ strengthenToPattern t           = error $
   "expected pattern, but was given the non-canonical term " ++ show t
 
 weakenToTerm :: Pattern a -> Term a
-weakenToTerm p = (Pattern p)
+weakenToTerm = Pattern
 
 
 -- Pretty printing

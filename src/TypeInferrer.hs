@@ -128,7 +128,7 @@ annotate (Not t0 _) =
      t0' `hasType` Boolean'
      return $ Not t0' Boolean'
 
-annotate' :: (Pattern a) -> Annotation (Term Type)
+annotate' :: Pattern a -> Annotation (Term Type)
 annotate' (Variable  x _) =
   do env <- ask
      return $ Pattern $ Variable x $ env x
