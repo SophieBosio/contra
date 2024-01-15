@@ -28,7 +28,7 @@ evaluate (Pattern (Pair t0 t1 a)) =
      return $ (Pattern (Pair v0 v1 a))
 evaluate (Pattern (Constructor c ps a)) =
   do ts  <- mapM evaluate (Pattern <$> ps) 
-     ps' <- mapM strengthenToPattern ts
+     ps' <- mapM (return . strengthenToPattern) ts
      return $ Pattern (Constructor c ps' a)
 -- evaluate (Rec x t0 a) =
 --   do notAtTopLevel (x, a)
@@ -86,7 +86,7 @@ evaluate (Pattern (Constructor c ps a)) =
 substitute :: X -> Term a -> (Term a -> Term a)
 substitute = undefined
 
-strengthenToPattern :: Term a -> Runtime a (Pattern a)
-strengthenToPattern (Pattern p) = return $ p
-strengthenToPattern _           = error $ "expected pattern, but got general term"
+-- strengthenToPattern :: Term a -> Runtime a (Pattern a)
+-- strengthenToPattern (Pattern p) = return p
+-- strengthenToPattern _           = error "expected pattern, but got general term"
 

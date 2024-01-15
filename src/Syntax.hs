@@ -85,6 +85,12 @@ instance Canonical (Pattern a) where
   canonical (Pair       t0 t1 _) = canonical t0 && canonical t1
   canonical (Constructor _ ps _) = all canonical ps
 
+strengthenToPattern :: Term a -> Pattern a
+strengthenToPattern (Pattern p) = p
+
+weakenToTerm :: Pattern a -> Term a
+weakenToTerm p = (Pattern p)
+
 
 -- Pretty printing
 parens :: String -> String
