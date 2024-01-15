@@ -82,11 +82,27 @@ evaluate (Pattern (Constructor c ps a)) =
 
 
 
--- Utility functions
+-- Substitution
 substitute :: X -> Term a -> (Term a -> Term a)
-substitute = undefined
-
--- strengthenToPattern :: Term a -> Runtime a (Pattern a)
--- strengthenToPattern (Pattern p) = return p
--- strengthenToPattern _           = error "expected pattern, but got general term"
-
+substitute x t v = -- computes t[v/x].
+  case t of
+    Pattern (Variable  y  _) | x == y -> v
+    Pattern (Constructor c ps a)      ->
+      Pattern (Constructor c (map (manipulateWith f) ps) a)
+    Pattern (Pair  t1 t2 a) -> Pattern (Pair  (f t1) (f t2)                 a)
+    Lambda  y t1 a | x /= y -> Lambda y (f t1)                              a
+    Application  t1 t2 a    -> Application (f t1) (f t2)                    a
+    Let  y t1 t2 a          -> Let y (f t1) ((if x == y then id else f) t2) a
+    Rec  y t1    a | x /= y -> Rec y (f t1)                                 a
+    Fst   t0     a          -> Fst   (f t0)                                 a
+    Snd   t0     a          -> Snd   (f t0)                                 a
+    Plus  t0 t1  a          -> Plus  (f t0) (f t1)                          a
+    Minus t0 t1  a          -> Minus (f t0) (f t1)                          a
+    Lt    t0 t1  a          -> Lt    (f t0) (f t1)                          a
+    Gt    t0 t1  a          -> Gt    (f t0) (f t1)                          a
+    Equal t0 t1  a          -> Equal (f t0) (f t1)                          a
+    Not   t0     a          -> Not   (f t0)                                 a
+    _                         -> t
+  where
+    f = flip (substitute x) v
+    manipulateWith f = strengthenToPattern . f . weakenToTerm
