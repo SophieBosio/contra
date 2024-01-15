@@ -30,16 +30,16 @@ evaluate (Pattern (Constructor c ps a)) =
   do ts  <- mapM evaluate (Pattern <$> ps) 
      ps' <- mapM (return . strengthenToPattern) ts
      return $ Pattern (Constructor c ps' a)
--- evaluate (Rec x t0 a) =
---   do notAtTopLevel (x, a)
---      evaluate (substitute x t0 (Rec x t0 a))
--- evaluate (Let x t0 t1 a) =
---   do notAtTopLevel (x, a)
---      evaluate t0 >>= evaluate . substitute x t1
--- evaluate (Application t1 t2 _) =
---   do f <- evaluate t1 >>= function
---      x <- evaluate t2
---      evaluate (f x)
+evaluate (Rec x t0 a) =
+  do notAtTopLevel (x, a)
+     evaluate (substitute x t0 (Rec x t0 a))
+evaluate (Let x t0 t1 a) =
+  do notAtTopLevel (x, a)
+     evaluate t0 >>= evaluate . substitute x t1
+evaluate (Application t1 t2 _) =
+  do f <- evaluate t1 >>= function
+     x <- evaluate t2
+     evaluate (f x)
 -- evaluate (Case t0 ts _) =
 --   do v  <- evaluate t0
 --      let us = map (first $ unify v) ts
@@ -121,8 +121,14 @@ pair :: Show a => Term a -> Runtime a (Term a, Term a)
 pair (Pattern (Pair t1 t2 _)) = return (t1, t2)
 pair t = error $ "expected a pair, but got a " ++ show t
 
--- function :: Show a => Term a -> Runtime a (Term a -> Term a)
--- function (Lambda x t a) =
---   do notAtTopLevel (x, a)
---      return $ substitute x t
--- function t = error $ "expected a function, but got a " ++ show t
+function :: Show a => Term a -> Runtime a (Term a -> Term a)
+function (Lambda x t a) =
+  do notAtTopLevel (x, a)
+     return $ substitute x t
+function t = error $ "expected a function, but got a " ++ show t
+
+notAtTopLevel :: (X, a) -> Runtime a ()
+notAtTopLevel (x, _) =
+  do program <- ask
+     when (x `elem` (fst <$> functions program)) $
+       error $ "the name " ++ x ++ "shadows the top level declaration of " ++ x
