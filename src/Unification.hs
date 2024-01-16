@@ -51,16 +51,21 @@ instance Monoid (Substitution meta a) where
   mappend = (<>)
 
 substitutes :: Pattern a -> X -> Substitution Pattern a
-substitutes = undefined
+substitutes p x = Substitution $ return $ x `mapsTo` p
 
 
 -- Utility functions
-isMatch :: PatternMatch meta -> Bool
-isMatch NoMatch = False
-isMatch _       = True
-
 contains :: Pattern a -> X -> Bool
-contains = undefined
+contains (Variable                     x _) y | x == y = True
+contains (Constructor               _ ps _) y = any (`contains` y) ps
+contains (Pair (Pattern p0) (Pattern p1) _) y = p0 `contains` y || p1 `contains`y
+contains _                                  _ = False
 
--- mapsTo :: X -> Pattern a -> Transformation Pattern a
--- mapsTo (Variable x _) y | x == y = 
+mapsTo :: X -> Pattern a -> Transformation Pattern a
+mapsTo x p = mapper
+  where
+    mapper (Variable                     y _) | x == y = p
+    mapper (Constructor               c ps a) = Constructor c (mapper <$> ps) a
+    mapper (Pair (Pattern p0) (Pattern p1) a) =
+      Pair (Pattern (mapper p0)) (Pattern (mapper p1)) a
+    mapper q = q
