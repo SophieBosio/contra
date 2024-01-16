@@ -5,9 +5,6 @@ module TypeInferrer where
 import Syntax
 
 import Control.Monad.RWS
-import Data.Maybe        (fromMaybe)
-import Data.Functor      ((<&>))
-
 
 -- Abbreviations
 data Constraint = Type :=: Type
@@ -77,11 +74,12 @@ annotate (Case t0 ts _) =
      t0'  <- annotate t0
      t0' `hasType` tau1
      fvs  <- mapM (\x -> (,) x <$> fresh) $ concatMap (freeVariables . fst) ts
-     ps'  <- local (liftFreeVariables fvs) $ mapM (annotate . fst) ts
+     ps'  <- local (liftFreeVariables fvs) $ mapM (annotate . weakenToTerm . fst) ts
+     ps'' <- mapM (return . strengthenToPattern) ps'
      bs'  <- local (liftFreeVariables fvs) $ mapM (annotate . snd) ts
      mapM_ (`hasType` tau1) ps'
      mapM_ (`hasType` tau2) bs'
-     return $ Case t0' (zip ps' bs') tau2
+     return $ Case t0' (zip ps'' bs') tau2
 annotate (Fst t0 _) =
   do t0'  <- annotate t0
      tau1 <- fresh
@@ -179,46 +177,17 @@ indices (t0  :*:  t1) = indices t0 ++ indices t1
 indices (t0  :->: t1) = indices t0 ++ indices t1
 indices _             = mempty
 
-freeVariables :: Term a -> [Name]
-freeVariables (Pattern (Unit         _)) = mempty
-freeVariables (Pattern (Number     _ _)) = mempty
-freeVariables (Pattern (Boolean    _ _)) = mempty
-freeVariables (Pattern (Variable   x _)) = return x
-freeVariables (Pattern (Pair   t0 t1 _)) =
-     freeVariables t0
-  <> freeVariables t1
-freeVariables (Pattern (Constructor x ts _)) =
-  [ y | y <- foldr (\t acc -> acc <> freeVariables (weakenToTerm t)) mempty ts, x /= y ]
-freeVariables (Lambda      x t0 _) = [ y | y <- freeVariables t0 , x /= y ]
-freeVariables (Rec         x t0 _) = [ y | y <- freeVariables t0 , x /= y ]
-freeVariables (Let      x t0 t1 _) =
-     freeVariables t0
-  <> [ y | y <- freeVariables t1, y /= x ]
-freeVariables (Application t0 t1 _) =
-     freeVariables t0
-  <> freeVariables t1
-freeVariables (Case t1 ts _) =
-     freeVariables t1
-  <> concatMap (freeVariables . fst) ts
-  <> concatMap (freeVariables . snd) ts
-freeVariables (Fst t0 _) = freeVariables t0
-freeVariables (Snd t0 _) = freeVariables t0
-freeVariables (Plus t0 t1 _) =
-     freeVariables t0
-  <> freeVariables t1
-freeVariables (Minus t0 t1 _) =
-     freeVariables t0
-  <> freeVariables t1
-freeVariables (Lt t0 t1 _) =
-     freeVariables t0
-  <> freeVariables t1
-freeVariables (Gt t0 t1 _) =
-     freeVariables t0
-  <> freeVariables t1
-freeVariables (Equal t0 t1 _) =
-     freeVariables t0
-  <> freeVariables t1
-freeVariables (Not t0 _) = freeVariables t0
+freeVariables :: Pattern a -> [Name]
+freeVariables (Unit         _) = mempty
+freeVariables (Number     _ _) = mempty
+freeVariables (Boolean    _ _) = mempty
+freeVariables (Variable   x _) = return x
+freeVariables (Pair   (Pattern p0) (Pattern p1) _) =
+     freeVariables p0
+  <> freeVariables p1
+freeVariables (Constructor x ps _) =
+  [ y | y <- foldr (\p acc -> acc <> freeVariables p) mempty ps, x /= y ]
+freeVariables _ = mempty
 
 liftFreeVariables :: [(Name, Type)] -> (Environment -> Environment)
 liftFreeVariables [              ] e = e

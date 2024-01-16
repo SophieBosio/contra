@@ -16,8 +16,9 @@ type T    = Name    -- Type name
 type T0   a = Term a
 type T1   a = Term a
 type T2   a = Term a
-type Alt  a = Term a  -- Case alternative
-type Body a = Term a  -- Case alternative body
+
+type Alt  a = Pattern a  -- Case alternative
+type Body a = Term    a  -- Case alternative body
 
 
 -- Abstract Syntax
@@ -101,8 +102,8 @@ parens = ("(" ++) . (++ ")")
 brackets :: String -> String
 brackets = ("[" ++) . (++ "]")
 
-caseArrow :: (Term a, Term a) -> String
-caseArrow (t1, t2) = " ; " ++ show t1 ++ " -> " ++ show t2
+caseArrow :: (Pattern a, Term a) -> String
+caseArrow (p, t) = " ; " ++ show p ++ " -> " ++ show t
 
 instance Show (Pattern a) where
   show (Variable    x        _) = show x
