@@ -68,6 +68,8 @@ test-suite contra-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      InterpreterTests
+      UnificationTests
       Paths_contra
   autogen-modules:
       Paths_contra
