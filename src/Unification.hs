@@ -5,13 +5,13 @@ import Syntax
 
 -- Abbreviations
 -- Meta is a placeholder for the Pattern/Term constructors
-type Transformation meta a = (meta a -> meta a)
+type Transformation meta a = [(X, meta a)]
 
 data PatternMatch a =
     NoMatch
   | MatchBy (Transformation Pattern a)
 
-type Unifier a = Maybe (a -> a)
+type Unifier a = Maybe [(X, a)]
 
 newtype Substitution meta a = Substitution { unifier :: Unifier (meta a) }
   
@@ -41,10 +41,10 @@ unify' _             _                 = Substitution Nothing
 
 -- Substitution
 instance Semigroup (Substitution meta a) where
-  s <> s' = Substitution $ (.) <$> unifier s <*> unifier s'
+  s <> s' = Substitution $ unifier s <> unifier s'
 
 instance Monoid (Substitution meta a) where
-  mempty = Substitution $ return id
+  mempty = Substitution $ return []
   mappend = (<>)
 
 substitutes :: Pattern a -> X -> Substitution Pattern a
@@ -59,10 +59,4 @@ contains (Pair (Pattern p0) (Pattern p1) _) y = p0 `contains` y || p1 `contains`
 contains _                                  _ = False
 
 mapsTo :: X -> Pattern a -> Transformation Pattern a
-mapsTo x p = mapper
-  where
-    mapper (Variable                     y _) | x == y = p
-    mapper (Constructor               c ps a) = Constructor c (mapper <$> ps) a
-    mapper (Pair (Pattern p0) (Pattern p1) a) =
-      Pair (Pattern (mapper p0)) (Pattern (mapper p1)) a
-    mapper q = q
+mapsTo x p = return (x, p)

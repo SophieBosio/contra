@@ -4,6 +4,7 @@ import Syntax
 import Unification
 
 import Control.Monad.Reader
+import Control.Arrow (second)
 
 
 -- Abbreviation
@@ -41,18 +42,10 @@ evaluate (Application t1 t2 _) =
   do f <- evaluate t1 >>= function
      x <- evaluate t2
      evaluate (f x)
--- evaluate (Case t0 ts _) =
---   do v      <- evaluate t0
---      (u, t) <- firstMatch v ts
---      evaluate $ applyTransformation u t
-
-  -- do v  <- evaluate t0
-  --    let us = map (unify v . fst) ts
-  --    if null us
-  --       then error $ "no case matched " ++ show t0
-  --       else do let u = fst $ head us -- take the first possible unifier
-  --               let t = snd $ head us -- take the corresponding branch
-  --               evaluate $ substituteWithUnifier u t
+evaluate (Case t0 ts _) =
+  do v      <- evaluate t0
+     (u, t) <- firstMatch v ts
+     evaluate $ applyTransformation u t
 evaluate (Fst p _) =
   do ts <- evaluate p >>= pair
      return $ fst ts
@@ -85,7 +78,7 @@ evaluate (Not t0 a) =
 evaluate _ = error "expected a non-canonical term!"
 
 
--- Substitution
+-- Substitution & Pattern matching
 substitute :: X -> Term a -> (Term a -> Term a)
 substitute x t v = -- computes t[v/x]
   case t of
@@ -112,12 +105,6 @@ substitute x t v = -- computes t[v/x]
     subs = flip (substitute x) v
     manipulateWith f = strengthenToPattern . f . weakenToTerm
 
--- substituteWithUnifier :: Unifier a -> Term a -> Term a
--- substituteWithUnifier xs t =
---   foldr (\(x, v) t' -> substitute x t' v) t xs
-
-
--- Pattern matching
 firstMatch :: Term a -> [(Pattern a, Term a)]
            -> Runtime a (Transformation Pattern a, Term a)
 firstMatch v [] = error $ "No match for " ++ show v ++ " in case statement"
@@ -125,17 +112,9 @@ firstMatch v ((p, t) : rest) = case patternMatch v (weakenToTerm p) of
   NoMatch   -> firstMatch v rest
   MatchBy u -> return (u, t)
 
-liftTransformation :: Pattern a -> Pattern a -> Transformation Term a
-liftTransformation p q = lifter
-  where
-    lifter (Pattern p) = (Pattern q)
-
-transformToTerm :: Transformation Pattern a -> Pattern a -> Term a
-transformToTerm tr p = Pattern $ tr p
-
 applyTransformation :: Transformation Pattern a -> Term a -> Term a
-applyTransformation u (Pattern p) = Pattern $ u p
-applyTransformation _ t           = t
+applyTransformation xs t =
+  foldr ((\(x, v) t' -> substitute x t' v) . second weakenToTerm) t xs
 
 
 -- Utility functions
