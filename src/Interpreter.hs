@@ -42,13 +42,17 @@ evaluate (Application t1 t2 _) =
      x <- evaluate t2
      evaluate (f x)
 -- evaluate (Case t0 ts _) =
---   do v  <- evaluate t0
---      let us = map (first $ unify v) ts
---      if null us
---         then error $ "no case matched " ++ show t0
---         else do let u = fst $ head us -- take the first possible unifier
---                 let t = snd $ head us -- take the corresponding branch
---                 evaluate $ substituteWithUnifier u t
+--   do v      <- evaluate t0
+--      (u, t) <- firstMatch v ts
+--      evaluate $ applyTransformation u t
+
+  -- do v  <- evaluate t0
+  --    let us = map (unify v . fst) ts
+  --    if null us
+  --       then error $ "no case matched " ++ show t0
+  --       else do let u = fst $ head us -- take the first possible unifier
+  --               let t = snd $ head us -- take the corresponding branch
+  --               evaluate $ substituteWithUnifier u t
 evaluate (Fst p _) =
   do ts <- evaluate p >>= pair
      return $ fst ts
@@ -111,6 +115,27 @@ substitute x t v = -- computes t[v/x]
 -- substituteWithUnifier :: Unifier a -> Term a -> Term a
 -- substituteWithUnifier xs t =
 --   foldr (\(x, v) t' -> substitute x t' v) t xs
+
+
+-- Pattern matching
+firstMatch :: Term a -> [(Pattern a, Term a)]
+           -> Runtime a (Transformation Pattern a, Term a)
+firstMatch v [] = error $ "No match for " ++ show v ++ " in case statement"
+firstMatch v ((p, t) : rest) = case patternMatch v (weakenToTerm p) of
+  NoMatch   -> firstMatch v rest
+  MatchBy u -> return (u, t)
+
+liftTransformation :: Pattern a -> Pattern a -> Transformation Term a
+liftTransformation p q = lifter
+  where
+    lifter (Pattern p) = (Pattern q)
+
+transformToTerm :: Transformation Pattern a -> Pattern a -> Term a
+transformToTerm tr p = Pattern $ tr p
+
+applyTransformation :: Transformation Pattern a -> Term a -> Term a
+applyTransformation u (Pattern p) = Pattern $ u p
+applyTransformation _ t           = t
 
 
 -- Utility functions

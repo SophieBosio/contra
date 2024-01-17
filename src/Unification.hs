@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-
 module Unification where
 
 import Syntax
@@ -16,8 +14,7 @@ data PatternMatch a =
 type Unifier a = Maybe (a -> a)
 
 newtype Substitution meta a = Substitution { unifier :: Unifier (meta a) }
-
-
+  
 -- Export
 patternMatch :: Term a -> Term a -> PatternMatch a
 patternMatch p q = maybe NoMatch MatchBy (unifier $ unify p q)
@@ -26,7 +23,7 @@ patternMatch p q = maybe NoMatch MatchBy (unifier $ unify p q)
 -- Unification
 unify :: Term a -> Term a -> Substitution Pattern a
 unify (Pattern p) (Pattern q) = unify' p q
-unify _            _          = Substitution Nothing
+unify _            _          = Substitution Nothing -- Only patterns can match patterns
 
 unify' :: Pattern a -> Pattern a -> Substitution Pattern a
 unify' (Variable x _) (Variable y _) | x == y = mempty

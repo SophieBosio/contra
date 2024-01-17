@@ -42,7 +42,7 @@ data Type =
 
 data Term a =
   -- Base terms:
-    Pattern (Pattern a)
+    Pattern                     (Pattern a)
   | Lambda      X      (T0 a)            a
   | Rec         X      (T0 a)            a
   | Let         X      (T1 a) (T2 a)     a
