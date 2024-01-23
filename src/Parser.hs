@@ -71,13 +71,22 @@ regularType = choice
   ]
 
 simpleType :: Parser Type
-simpleType = undefined
+simpleType = choice
+  [ Unit'     <$  unit
+  , Integer'  <$  symbol "Integer"
+  , Boolean'  <$  symbol "Boolean"
+  , Variable' <$> number
+  -- TODO! ADT
+  , parens type'
+  ]
 
 partialArrowType :: Parser Type -> Parser Type
-partialArrowType = undefined
+partialArrowType retType =
+  try $ regularType >>= \argType -> symbol "->" >> (argType :->:) <$> retType
 
 partialProductType :: Parser Type -> Parser Type
-partialProductType = undefined
+partialProductType t2 =
+  try $ parens $ simpleType >>= \t1 -> symbol "," >> (t1 :*:) <$> t2
 
 
 -- Patterns
@@ -103,6 +112,7 @@ pattern' = choice $
     , boolean    <&> Boolean
     , Unit       <$ unit
     , identifier <&> Variable
+    -- TODO Constructor!
     , try $ parens $ Pair <$> term <*> (char ',' *> term)
     ]
 

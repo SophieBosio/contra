@@ -4,7 +4,7 @@ module Syntax where
 
 
 -- Abbreviations
-type Index = Int    -- Unification variable index
+type Index = Integer    -- Unification variable index
 
 type Name = String
 type X    = Name    -- Variable name
