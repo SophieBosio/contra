@@ -54,6 +54,11 @@ identifier =
      when (reserved name) $ fail $ "reserved keyword " ++ name
      lexeme $ return name
 
+constructor :: Parser String
+constructor =
+  do name <- (:) <$> upper <*> many identTail
+     lexeme $ return name
+
 keyword :: String -> Parser ()
 keyword s = lexeme $ try $ string s >> notFollowedBy identTail
 
@@ -111,26 +116,34 @@ pattern' :: Parser (Pattern Info)
 pattern' = choice $
   try (parens pattern') :
   map info
-    [ number     <&> Number
-    , boolean    <&> Boolean
-    , Unit       <$ unit
-    , identifier <&> Variable
-    -- TODO Constructor!
+    [ number      <&> Number
+    , boolean     <&> Boolean
+    , Unit        <$  unit
+    , identifier  <&> Variable
+    , Constructor <$> constructor <*> many1 pattern'
     , try $ parens $ Pair <$> term <*> (char ',' *> term)
     ]
 
 
--- Complex Terms
+-- Complex terms
 term :: Parser (Term Info)
 term = undefined
 
 
--- Functions & Properties
-func :: Parser ()
-func = undefined
+-- Functions, properties & data types
+-- func :: Parser ()
+-- func =
+--   do name <- identifier
+--      args <- many $ info $ (,) <$> name
+--      _    <- symbol "="
+--      t    <- term'
+--      return $ Function f $
 
 prop :: Parser ()
 prop = undefined
+
+adt :: Parser ()
+adt = undefined
 
 
 -- Program

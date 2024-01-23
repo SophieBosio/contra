@@ -60,12 +60,12 @@ data Term a =
   deriving (Functor, Eq)
 
 data Pattern a =
-    Variable X a
+    Variable    X             a
   | Constructor C [Pattern a] a
-  | Unit a
-  | Number Integer a
-  | Boolean Bool a
-  | Pair (T0 a) (T1 a) a
+  | Unit                      a
+  | Number      Integer       a
+  | Boolean     Bool          a
+  | Pair        (T0 a) (T1 a) a
   deriving (Functor, Eq)
 
 
