@@ -58,6 +58,26 @@ keyword s = lexeme $ try $ string s >> notFollowedBy identTail
 
 
 -- Types
+type' :: Parser Type
+type' = choice
+  [ partialArrowType type'
+  , simpleType
+  ]
+
+regularType :: Parser Type
+regularType = choice
+  [ partialProductType simpleType
+  , simpleType
+  ]
+
+simpleType :: Parser Type
+simpleType = undefined
+
+partialArrowType :: Parser Type -> Parser Type
+partialArrowType = undefined
+
+partialProductType :: Parser Type -> Parser Type
+partialProductType = undefined
 
 
 -- Patterns
@@ -76,21 +96,33 @@ unit :: Parser ()
 unit = void $ symbol "()"
 
 pattern' :: Parser (Pattern Info)
-pattern' =
-  (try $ parens $ pattern')
-  <|>
-  (choice $ map info
+pattern' = choice $
+  (try $ parens $ pattern') :
+  map info
     [ number     <&> Number
     , boolean    <&> Boolean
     , Unit       <$ unit
     , identifier <&> Variable
     , try $ parens $ Pair <$> term <*> (char ',' *> term)
-    ])
+    ]
 
 
 -- Complex Terms
 term :: Parser (Term Info)
 term = undefined
+
+
+-- Functions & Properties
+func :: Parser ()
+func = undefined
+
+prop :: Parser ()
+prop = undefined
+
+
+-- Program
+program :: Parser (Program Info)
+program = undefined
 
 
 -- Utility
