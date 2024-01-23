@@ -28,6 +28,7 @@ data ParseError =
 comment :: Parser ()
 comment = void $ lexeme $ symbol "--" >> many (noneOf "\n")
 
+reservedKeywords :: [String]
 reservedKeywords =
   [ "if"
   , "then"
@@ -82,11 +83,13 @@ simpleType = choice
 
 partialArrowType :: Parser Type -> Parser Type
 partialArrowType retType =
-  try $ regularType >>= \argType -> symbol "->" >> (argType :->:) <$> retType
+  do argType <- try regularType
+     symbol "->" >> (argType :->:) <$> retType
 
 partialProductType :: Parser Type -> Parser Type
 partialProductType t2 =
-  try $ parens $ simpleType >>= \t1 -> symbol "," >> (t1 :*:) <$> t2
+  do t1 <- try $ parens simpleType
+     symbol "," >> (t1 :*:) <$> t2
 
 
 -- Patterns
@@ -106,7 +109,7 @@ unit = void $ symbol "()"
 
 pattern' :: Parser (Pattern Info)
 pattern' = choice $
-  (try $ parens $ pattern') :
+  try (parens pattern') :
   map info
     [ number     <&> Number
     , boolean    <&> Boolean
