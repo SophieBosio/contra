@@ -70,6 +70,7 @@ test-suite contra-test
   main-is: Spec.hs
   other-modules:
       InterpreterTests
+      ParserTests
       UnificationTests
       Paths_contra
   autogen-modules:

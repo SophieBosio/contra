@@ -31,7 +31,7 @@ bind x a look y = if x == y              -- If x is already bound
 hasSameTypeAs :: Term Type -> Term Type -> Annotation ()
 t0 `hasSameTypeAs` t1 = tell [annotation t0 :=: annotation t1]
 
-hasType :: Term Type-> Type -> Annotation ()
+hasType :: Term Type -> Type -> Annotation ()
 t0 `hasType` tau = tell [annotation t0 :=: tau]
 
 class HasSubstitution a where

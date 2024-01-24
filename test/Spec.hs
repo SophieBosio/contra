@@ -1,7 +1,7 @@
 import Test.Tasty
 
 import InterpreterTests
--- import ParserTests
+import ParserTests
 -- import TypeInferrerTests
 -- import UnificationTests
 -- import GeneratorsTests
@@ -23,6 +23,7 @@ tests =
         ]
     , testGroup "Parser: "
         [
+          parserTests
         ]
     , testGroup "Type inferrer: "
         [

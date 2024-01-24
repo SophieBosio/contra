@@ -12,17 +12,21 @@ type Source = String
 type Parser = Parsec Source ()
 type Info   = (SourcePos, SourcePos)
 
-data ParseError =
+data Error =
     ReservedKeyword      X Info
   | MultipleDeclarations X Info
   | MultipleDefinitions  X Info
+  | UnrecognisedSyntax   X Info
 
 
 -- Export
--- parseProgram :: Source -> IO (Either [Error] (Program Info))
+-- parseProgram :: Source -> IO (Either [ParseError] (Program Info))
 -- parseProgram path =
 --   do src <- readFile path
-     
+
+parseString :: Parser a -> String -> Either ParseError a
+parseString p = runParser p () "<repl>"
+    
 
 -- Language basics
 comment :: Parser ()
