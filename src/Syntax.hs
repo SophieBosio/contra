@@ -94,6 +94,9 @@ strengthenToPattern t           = error $
 weakenToTerm :: Pattern a -> Term a
 weakenToTerm = Pattern
 
+manipulateWith :: (Term a -> Term a) -> Pattern a -> Pattern a
+manipulateWith f = strengthenToPattern . f . weakenToTerm
+
 
 -- Pretty printing
 parens :: String -> String

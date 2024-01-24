@@ -34,7 +34,7 @@ evaluate (Pattern (Constructor c ps a)) =
      return $ Pattern (Constructor c ps' a)
 evaluate (Rec x t0 a) =
   do notAtTopLevel (x, a)
-     evaluate (substitute x t0 (Rec x t0 a))
+     evaluate $ substitute x t0 (Rec x t0 a)
 evaluate (Let x t0 t1 a) =
   do notAtTopLevel (x, a)
      evaluate t0 >>= evaluate . substitute x t1
@@ -103,10 +103,9 @@ substitute x t v = -- computes t[v/x]
     _                         -> t
   where
     subs = flip (substitute x) v
-    manipulateWith f = strengthenToPattern . f . weakenToTerm
 
-firstMatch :: Term a -> [(Pattern a, Term a)]
-           -> Runtime a (Transformation Pattern a, Term a)
+firstMatch :: (Monad m) => Term a -> [(Pattern a, Term a)]
+           -> m (Transformation Pattern a, Term a)
 firstMatch v [] = error $ "No match for " ++ show v ++ " in case statement"
 firstMatch v ((p, t) : rest) = case patternMatch v (weakenToTerm p) of
   NoMatch   -> firstMatch v rest
@@ -118,15 +117,15 @@ applyTransformation xs t =
 
 
 -- Utility functions
-bool :: Show a => Term a -> Runtime a Bool
+bool :: (Show a, Monad m) => Term a -> m Bool
 bool (Pattern (Boolean b _)) = return b
 bool t = error $ "expected a boolean value, but got a " ++ show t
 
-number :: Show a => Term a -> Runtime a Integer
+number :: (Show a, Monad m) => Term a -> m Integer
 number (Pattern (Number n _)) = return n
 number t = error $ "expected an integer, but got a " ++ show t
 
-pair :: Show a => Term a -> Runtime a (Term a, Term a)
+pair :: (Show a, Monad m) => Term a -> m (Term a, Term a)
 pair (Pattern (Pair t1 t2 _)) = return (t1, t2)
 pair t = error $ "expected a pair, but got a " ++ show t
 
