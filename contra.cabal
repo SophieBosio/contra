@@ -27,6 +27,7 @@ library
       Generators
       Interpreter
       Parser
+      PartialEvaluator
       Supercompiler
       Syntax
       TypeInferrer
