@@ -23,7 +23,11 @@ tests =
         ]
     , testGroup "Parser: "
         [
-          parserTests
+          utilityParsers
+        , patternParser
+        , termParser
+        , typeParser
+        , programTests
         ]
     , testGroup "Type inferrer: "
         [

@@ -70,13 +70,13 @@ keyword s = lexeme $ try $ string s >> notFollowedBy identTail
 -- Types
 type' :: Parser Type
 type' = choice
-  [ partialArrowType type'
-  , simpleType
+  [ try $ partialArrowType type'
+  , regularType
   ]
 
 regularType :: Parser Type
 regularType = choice
-  [ partialProductType simpleType
+  [ try $ parens $ partialProductType type'
   , simpleType
   ]
 
@@ -92,20 +92,19 @@ simpleType = choice
 
 partialArrowType :: Parser Type -> Parser Type
 partialArrowType retType =
-  do argType <- try regularType
+  do argType <- regularType
      symbol "->" >> (argType :->:) <$> retType
 
 partialProductType :: Parser Type -> Parser Type
 partialProductType t2 =
-  do t1 <- try $ parens simpleType
+  do t1 <- type'
      symbol "," >> (t1 :*:) <$> t2
 
 
 -- Patterns
 number :: Parser Integer
-number = lexeme $ fmap read $ (++) <$> prefix <*> digits
-  where prefix = option "" $ string "-"
-        digits = many1 digit
+number = option id (symbol "-" >> return negate) <*> digits
+  where digits = lexeme $ read <$> many1 digit
 
 boolean :: Parser Bool
 boolean = choice
@@ -114,7 +113,7 @@ boolean = choice
   ]
 
 unit :: Parser ()
-unit = void $ symbol "()"
+unit = void $ symbol "Unit"
 
 pattern' :: Parser (Pattern Info)
 pattern' = choice $
