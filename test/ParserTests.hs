@@ -115,14 +115,17 @@ testParseSimpleTypesOK :: [TestTree]
 testParseSimpleTypesOK =
   map (\(s, e) -> testCase ("Parsing simple type '" ++ s ++ "'") $
                   testSimpleOK simpleType s e)
-  [ ("0", Variable' 0)
-  , ("3", Variable' 3)
-  , ("321", Variable' 321)
-  , ("Unit", Unit')
-  , ("Integer", Integer')
-  , ("Boolean", Boolean')
-  , ("(Integer)", Integer')
+  [ ("0",           Variable' 0)
+  , ("3",           Variable' 3)
+  , ("321",         Variable' 321)
+  , ("Unit",        Unit')
+  , ("Integer",     Integer')
+  , ("Boolean",     Boolean')
+  , ("(Integer)",   Integer')
   , ("((Integer))", Integer')
+  , ("C Integer",   ADT "C" [Integer'])
+  , ("Ctr Ctr_ Boolean Integer",
+      ADT "Ctr" [ADT "Ctr_" [Boolean', Integer']])
   ]
 
 testParseSimpleTypesError :: [TestTree]
@@ -130,21 +133,22 @@ testParseSimpleTypesError =
   map (\s -> testCase ("* Illegal type '" ++ s ++ "'") $
              testSimpleError type' s)
   ("" : reservedKeywords)
+  -- TODO
 
 testParseRegularTypesOK :: [TestTree]
 testParseRegularTypesOK =
   map (\(s, e) -> testCase ("Parsing regular type '" ++ s ++ "'") $
                   testSimpleOK regularType s e)
-  [ ("(Integer, Integer)", Integer' :*: Integer')
-  , ("(Boolean, Unit)", Boolean' :*: Unit')
-  , ("(Integer, Boolean)", Integer' :*: Boolean')
+  [ ("(Integer, Integer)",         Integer' :*: Integer')
+  , ("(Boolean, Unit)",            Boolean' :*: Unit')
+  , ("(Integer, Boolean)",         Integer' :*: Boolean')
   , ("((Integer, Unit), Boolean)", (Integer' :*: Unit') :*: Boolean')
   , ("(Integer, (Unit, Boolean))", Integer' :*: (Unit' :*: Boolean'))
-  , ("3", Variable' 3)
-  , ("Unit", Unit')
-  , ("Integer", Integer')
-  , ("Boolean", Boolean')
-  , ("(Integer)", Integer')
+  , ("3",                          Variable' 3)
+  , ("Unit",                       Unit')
+  , ("Integer",                    Integer')
+  , ("Boolean",                    Boolean')
+  , ("(Integer)",                  Integer')
   ]
 
 testParseRegularTypesError :: [TestTree]
@@ -161,17 +165,19 @@ testParseTypesOK :: [TestTree]
 testParseTypesOK =
   map (\(s, e) -> testCase ("Parsing type '" ++ s ++ "'") $
                   testSimpleOK type' s e)
-  [ ("0", Variable' 0)
-  , ("3", Variable' 3)
-  , ("321", Variable' 321)
-  , ("Unit", Unit')
-  , ("Integer", Integer')
-  , ("Boolean", Boolean')
-  , ("(Unit)", Unit')
-  , ("(Unit, Unit)", Unit' :*: Unit')
+  [ ("0",                  Variable' 0)
+  , ("3",                  Variable' 3)
+  , ("321",                Variable' 321)
+  , ("Unit",               Unit')
+  , ("Integer",            Integer')
+  , ("Boolean",            Boolean')
+  , ("(Unit)",             Unit')
+  , ("(Unit, Unit)",       Unit' :*: Unit')
   , ("(Integer, Boolean)", Integer' :*: Boolean')
   , ("Boolean -> Integer", Boolean' :->: Integer')
-  -- , TODO: ADTs!
+  , ("C Integer",          ADT "C" [Integer'])
+  , ("Ctr Ctr_ Boolean Integer",
+      ADT "Ctr" [ADT "Ctr_" [Boolean', Integer']])
   ]
   
 
@@ -180,6 +186,7 @@ testParseTypesError =
   map (\s -> testCase ("* Illegal type '" ++ s ++ "'") $
              testSimpleError type' s)
   ("" : reservedKeywords)
+  -- TODO
 
 
 -- Parse whole programs
