@@ -28,7 +28,7 @@ data Program a =
   | Function  F (Term a)      (Program a)  -- Function declaration
   | Property  P (Term a)      (Program a)  -- Property declaration
   | End
-  deriving (Functor, Eq)
+  deriving (Functor)
 
 data Type =
     Unit'
@@ -38,7 +38,7 @@ data Type =
   | Type :*:  Type
   | Type :->: Type
   | ADT  T    [Type]
-  deriving (Eq, Show)
+  deriving (Show)
 
 data Term a =
   -- Base terms:
@@ -57,7 +57,7 @@ data Term a =
   | Gt          (T0 a) (T1 a)            a
   | Equal       (T0 a) (T1 a)            a
   | Not         (T0 a)                   a
-  deriving (Functor, Eq)
+  deriving (Functor)
 
 data Pattern a =
     Variable    X             a
@@ -66,7 +66,7 @@ data Pattern a =
   | Number      Integer       a
   | Boolean     Bool          a
   | Pair        (T0 a) (T1 a) a
-  deriving (Functor, Eq)
+  deriving (Functor)
 
 
 -- Canonical terms
@@ -180,6 +180,56 @@ instance Annotated Pattern where
   annotations (Pair     t0 t1    a) = a : ([t0, t1] >>= annotations)
   annotation  p                     = head $ annotations p
 
+
+-- Term Equality
+instance Eq Type where
+  (==) = equivalent
+
+equivalent :: Type -> Type -> Bool
+equivalent (Variable' _) _   = True
+equivalent _   (Variable' _) = True
+equivalent Unit'    Unit'    = True
+equivalent Integer' Integer' = True
+equivalent Boolean' Boolean' = True
+equivalent (t0 :*:  t1) (t0' :*:  t1') = t0 == t0' && t1 == t1'
+equivalent (t0 :->: t1) (t0' :->: t1') = t0 == t0' && t1 == t1'
+equivalent (ADT   t ts) (ADT    s ts') = t  == s   && and (zipWith (==) ts ts')
+equivalent _ _ = False
+
+instance (Eq a) => Eq (Term a) where
+  (Pattern     p) == (Pattern       q) = p == q
+  (Fst   t0    a) == (Fst   t0'     b) = a == b && t0 == t0'
+  (Snd   t0    a) == (Snd   t0'     b) = a == b && t0 == t0'
+  (Plus  t0 t1 a) == (Plus  t0' t1' b) = a == b && t0 == t0' && t1 == t1'
+  (Minus t0 t1 a) == (Minus t0' t1' b) = a == b && t0 == t0' && t1 == t1'
+  (Lt    t0 t1 a) == (Lt    t0' t1' b) = a == b && t0 == t0' && t1 == t1'
+  (Gt    t0 t1 a) == (Gt    t0' t1' b) = a == b && t0 == t0' && t1 == t1'
+  (Equal t0 t1 a) == (Equal t0' t1' b) = a == b && t0 == t0' && t1 == t1'
+  (Not   t0    a) == (Not   t0'     b) = a == b && t0 == t0'
+  (Lambda x t0 a) == (Lambda  y t0' b) = x == y &&  a == b   && t0 == t0'
+  (Rec    x t0 a) == (Rec     y t0' b) = x == y &&  a == b   && t0 == t0'
+  (Let x t0 t1 a) == (Let y t0' t1' b) = x == y   &&  a == b   &&
+                                        t0 == t0' && t1 == t1'
+  (Application t1 t2 a) == (Application t1' t2' b) =
+    a == b && t1 == t1' && t2 == t2'
+  (Case t0 cases a) == (Case t0' cases' b) =
+    a  == b   &&
+    t0 == t0' &&
+    all (\((x, y), (x', y')) -> x == x' && y == y') (zip cases cases')
+  _ == _ = False
+
+instance (Eq a) => Eq (Pattern a) where
+  (Variable    x     a) == (Variable    y       b) = x == y && a == b
+  (Unit              _) == (Unit                _) = True
+  (Number      n     _) == (Number      m       _) = n == m
+  (Boolean     b     _) == (Boolean     c       _) = b == c
+  (Pair        t0 t1 a) == (Pair        t0' t1' b) = a  == b   &&
+                                                     t0 == t0' &&
+                                                     t1 == t1'
+  (Constructor c  ps a) == (Constructor d   ps' b) = a  == b   &&
+                                                     c  == d   &&
+                                                     and (zipWith (==) ps ps')
+  _ == _ = False
 
 
 -- Utility functions
