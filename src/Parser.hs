@@ -105,7 +105,7 @@ partialProductType t2 =
 number :: Parser Integer
 number = lexeme $ fmap read $ (++) <$> prefix <*> digits
   where prefix = option "" $ string "-"
-        digits = string "0" <|> many1 digit
+        digits = many1 digit
 
 boolean :: Parser Bool
 boolean = choice
