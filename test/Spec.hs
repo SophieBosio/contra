@@ -24,9 +24,8 @@ tests =
     , testGroup "Parser: "
         [
           utilityParsers
-        , patternParser
-        , termParser
         , typeParser
+        , termParser
         , programTests
         ]
     , testGroup "Type inferrer: "

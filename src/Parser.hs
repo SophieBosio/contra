@@ -18,6 +18,7 @@ data Error =
   | MultipleDefinitions  X Info
   | UnrecognisedSyntax   X Info
 
+-- TODO: Deal with errors
 
 -- Export
 -- parseProgram :: Source -> IO (Either [ParseError] (Program Info))
@@ -44,6 +45,7 @@ reservedKeywords =
   , "let"
   , "in"
   , "rec"
+  , "adt"
   ]
 
 identHead :: Parser Char
@@ -123,7 +125,7 @@ pattern' = choice $
     , boolean     <&> Boolean
     , Unit        <$  unit
     , identifier  <&> Variable
-    , Constructor <$> constructor <*> many1 pattern'
+    , Constructor <$> constructor <*> many pattern'
     , try $ parens $ Pair <$> term <*> (char ',' *> term)
     ]
 
@@ -133,24 +135,51 @@ term :: Parser (Term Info)
 term = undefined
 
 
--- Functions, properties & data types
--- func :: Parser ()
--- func =
---   do name <- identifier
---      args <- many $ info $ (,) <$> name
---      _    <- symbol "="
---      t    <- term'
---      return $ Function f $
+-- Functions, properties, signatures & data types
+func :: Parser (Program Info -> Program Info)
+func =
+  do f    <- identifier
+     args <- many $ info $ (,) <$> identifier
+     _    <- symbol "="
+     t    <- term
+     let def = foldr (\(x, a) partial -> Lambda x partial a) t args
+     return $ Function f def
+  
+prop :: Parser (Program Info -> Program Info)
+prop =
+  do p    <- identifier
+     args <- many $ info $ (,) <$> identifier
+     _    <- symbol "=*="
+     t    <- term
+     let def = foldr (\(x, a) partial -> Lambda x partial a) t args
+     return $ Property p def
+     
+signature' :: Parser (Program Info -> Program Info)
+signature' =
+  do s <- identifier
+     _ <- symbol "::"
+     Signature s <$> type'
 
-prop :: Parser ()
-prop = undefined
 
-adt :: Parser ()
-adt = undefined
+-- Algebraic Data Types
+constructors :: Parser (C, [Type])
+constructors =
+  do c  <- constructor
+     ts <- many type'
+     return (c, ts)
+
+adt :: Parser (Program Info -> Program Info)
+adt =
+  do _  <- symbol "adt"
+     t  <- constructor
+     _  <- symbol "="
+     cs <- many constructors
+     return $ Data t cs
 
 
 -- Program
 program :: Parser (Program Info)
+-- TODO
 program = undefined
 
 

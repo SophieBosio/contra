@@ -3,10 +3,11 @@ module ParserTests where
 import Syntax
 import Parser
 
-import Data.Either (isLeft)
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck as QC
+import Data.Either (isLeft)
+import Text.Parsec (eof)
 
 
 utilityParsers :: TestTree
@@ -16,16 +17,6 @@ utilityParsers =
   ++ testParseNumbersError
   ++ testParseBoolsOK
   ++ testParseBoolsError
-
-patternParser :: TestTree
-patternParser =
-  testGroup "Pattern parser tests: " $
-  []
-
-termParser :: TestTree
-termParser =
-  testGroup "Term parser tests: " $
-  []
 
 typeParser :: TestTree
 typeParser =
@@ -37,9 +28,34 @@ typeParser =
   ++ testParseTypesOK
   ++ testParseTypesError
 
+termParser :: TestTree
+termParser =
+  testGroup "Term parser tests: " $
+  []
+
+functionParser :: TestTree
+functionParser =
+  testGroup "Function parser tests: " $
+  []
+
+propertyParser :: TestTree
+propertyParser =
+  testGroup "Property parser tests: " $
+  []
+
+signatureParser :: TestTree
+signatureParser =
+  testGroup "Signature parser tests: " $
+  []
+
+adtParser :: TestTree
+adtParser =
+  testGroup "ADT parser tests: " $
+  []
+
 programTests :: TestTree
 programTests =
-  testGroup "Pattern parser tests: " $
+  testGroup "Program parser tests: " $
   []
   
 
@@ -100,16 +116,6 @@ testParseBoolsError =
   ++ reservedKeywords)
 
 
--- Parse patterns
-testParsePatterns :: [TestTree]
-testParsePatterns = undefined
-
-
--- Parse terms
-testParseTerms :: [TestTree]
-testParseTerms = undefined
-
-
 -- Parse types
 testParseSimpleTypesOK :: [TestTree]
 testParseSimpleTypesOK =
@@ -123,6 +129,7 @@ testParseSimpleTypesOK =
   , ("Boolean",     Boolean')
   , ("(Integer)",   Integer')
   , ("((Integer))", Integer')
+  , ("MyADT",       ADT "MyADT" [])
   , ("C Integer",   ADT "C" [Integer'])
   , ("Ctr Ctr_ Boolean Integer",
       ADT "Ctr" [ADT "Ctr_" [Boolean', Integer']])
@@ -133,7 +140,6 @@ testParseSimpleTypesError =
   map (\s -> testCase ("* Illegal type '" ++ s ++ "'") $
              testSimpleError type' s)
   ("" : reservedKeywords)
-  -- TODO
 
 testParseRegularTypesOK :: [TestTree]
 testParseRegularTypesOK =
@@ -174,7 +180,15 @@ testParseTypesOK =
   , ("(Unit)",             Unit')
   , ("(Unit, Unit)",       Unit' :*: Unit')
   , ("(Integer, Boolean)", Integer' :*: Boolean')
+  , ("(Integer ,Boolean)", Integer' :*: Boolean')
+  , ("( Integer,Boolean )", Integer' :*: Boolean')
   , ("Boolean -> Integer", Boolean' :->: Integer')
+  , ("(Integer -> Boolean) -> Unit",
+      (Integer' :->: Boolean') :->: Unit')
+  , ("Integer -> (Boolean -> Unit)",
+      Integer' :->: (Boolean' :->: Unit'))
+  , ("(Integer, Integer) -> Boolean",
+      (Integer' :*: Integer') :->: Boolean')
   , ("C Integer",          ADT "C" [Integer'])
   , ("Ctr Ctr_ Boolean Integer",
       ADT "Ctr" [ADT "Ctr_" [Boolean', Integer']])
@@ -184,9 +198,52 @@ testParseTypesOK =
 testParseTypesError :: [TestTree]
 testParseTypesError =
   map (\s -> testCase ("* Illegal type '" ++ s ++ "'") $
-             testSimpleError type' s)
-  ("" : reservedKeywords)
-  -- TODO
+             testSimpleError (type' >> eof) s) $
+  ("" : reservedKeywords) ++
+  [ "Integer ->"
+  , "(Boolean, )"
+  , "-> Boolean"
+  , "(, Unit)"
+  , "(,)"
+  , "->"
+  ]
+
+
+-- Parse terms
+testParseTerms :: [TestTree]
+testParseTerms = undefined
+
+
+-- Parse functions
+
+
+-- Parse properties
+
+
+-- Parse function signatures
+-- testParseSignaturesOK :: [TestTree]
+-- testParseSignaturesOK =
+--   map (\(s, e) -> testCase ("Parsing function signature '" ++ s ++ "'") $
+--                   testSimpleOK (signature' >> eof) s e)
+--   [ ("add :: Integer -> Integer -> Integer",
+--      Signature "add" ((Integer' :->: Integer') :->: Integer') End)
+--   , ("addTuple :: (Integer, Integer) -> Integer", )
+--   , ("addPedantic :: (Integer -> Integer) -> Integer", )
+--   , ("constant :: Integer", )
+--   , ("constant :: Boolean", )
+--   , ("un :: Unit", )
+--   , ("complex :: (Integer -> Integer) -> (Boolean -> Boolean)", )
+--   , ("complex2 :: (Boolean -> Boolean) -> (Integer, Integer)", )
+--   ]
+
+-- testParseSignaturesError :: [TestTree]
+-- testParseSignaturesError =
+--   map (\s -> testCase ("* Illegal function signature '" ++ s ++ "'") $
+--              testSimpleError signature' s)
+--   []
+
+
+-- Parse ADTs
 
 
 -- Parse whole programs
