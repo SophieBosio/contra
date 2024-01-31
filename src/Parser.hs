@@ -95,7 +95,7 @@ simpleType = choice
 partialArrowType :: Parser Type -> Parser Type
 partialArrowType retType =
   do argType <- regularType
-     symbol "->" >> (argType :->:) <$> retType
+     arrow >> (argType :->:) <$> retType
 
 partialProductType :: Parser Type -> Parser Type
 partialProductType t2 =
@@ -132,7 +132,68 @@ pattern' = choice $
 
 -- Complex terms
 term :: Parser (Term Info)
-term = undefined
+term = choice $
+  map try $
+  [ caseStatement
+  , desugaredIf
+  , binaryOperator term
+  , application term
+  ]
+  ++
+  map info
+    [ keyword "not" >> (Not <$> term)
+    , keyword "fst" >> (Fst <$> term)
+    , keyword "snd" >> (Snd <$> term)
+    , keyword "\\"  >> Lambda <$> identifier <*> (arrow >> term)
+    , keyword "rec" >> Rec <$> identifier <*> term
+    , symbol  "let" >> Let <$> identifier <*>
+                      (symbol "=" >> term) <*> (symbol "in" >> term)
+    ]
+  ++
+  [ Pattern <$> pattern'
+  , parens term
+  ]
+
+caseStatement :: Parser (Term Info)
+caseStatement =
+  do _ <- keyword "case"
+     t <- term
+     _ <- keyword "of"
+     info $ Case t <$> many1
+       (do _    <- symbol "|"
+           alt  <- pattern'
+           _    <- arrow
+           body <- term
+           return (alt, body))
+
+desugaredIf :: Parser (Term Info)
+desugaredIf =
+  do _     <- keyword "if"
+     t     <- term
+     _     <- keyword "then"
+     true  <- term
+     _     <- keyword "else"
+     false <- term
+     b1    <- info $ return $ Boolean True
+     b2    <- info $ return $ Boolean False
+     info $ return $ Case t [(b1, true), (b2, false)]
+
+binaryOperator :: Parser (Term Info) -> Parser (Term Info)
+binaryOperator t2 =
+  do t1 <- term
+     operator <- choice
+       [ symbol "+"   >> return Plus
+       , symbol "-"   >> return Minus
+       , symbol "<"   >> return Lt
+       , symbol ">"   >> return Gt
+       , symbol "=="  >> return Equal
+       ]
+     info $ operator t1 <$> t2
+
+application :: Parser (Term Info) -> Parser (Term Info)
+application t2 =
+  do t1 <- term
+     info $ Application t1 <$> t2
 
 
 -- Functions, properties, signatures & data types
@@ -211,6 +272,9 @@ dash = char '-'
 
 underscore :: Parser Char
 underscore = char '_'
+
+arrow :: Parser ()
+arrow = symbol "->"
 
 reserved :: Name -> Bool
 reserved = flip elem reservedKeywords
