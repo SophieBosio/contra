@@ -17,13 +17,26 @@ data Error =
   | MultipleDeclarations X Info
   | MultipleDefinitions  X Info
   | UnrecognisedSyntax   X Info
+  | ParsingFailed        ParseError
+  deriving Show
 
 -- TODO: Deal with errors
+reportErrors :: Program Info -> [Error]
+reportErrors program =
+  []
+
 
 -- Export
--- parseProgram :: Source -> IO (Either [ParseError] (Program Info))
--- parseProgram path =
---   do src <- readFile path
+parseProgram :: Source -> IO (Either [Error] (Program Info))
+parseProgram path =
+  do src <- readFile path
+     return $
+       case runParser (many whitespace >> program) () path src of
+         (Left   err) -> Left $ return $ ParsingFailed err
+         (Right code) ->
+           case reportErrors code of
+             [ ] -> return code
+             _   -> Left $ reportErrors code
 
 parseString :: Parser a -> String -> Either ParseError a
 parseString p = runParser p () "<repl>"
@@ -197,8 +210,8 @@ application t2 =
 
 
 -- Functions, properties, signatures & data types
-func :: Parser (Program Info -> Program Info)
-func =
+function :: Parser (Program Info -> Program Info)
+function =
   do f    <- identifier
      args <- many $ info $ (,) <$> identifier
      _    <- symbol "="
@@ -206,8 +219,8 @@ func =
      let def = foldr (\(x, a) partial -> Lambda x partial a) t args
      return $ Function f def
   
-prop :: Parser (Program Info -> Program Info)
-prop =
+property :: Parser (Program Info -> Program Info)
+property =
   do p    <- identifier
      args <- many $ info $ (,) <$> identifier
      _    <- symbol "=*="
@@ -240,8 +253,19 @@ adt =
 
 -- Program
 program :: Parser (Program Info)
--- TODO
-program = undefined
+program = fmap (foldr id End) statements
+  
+statements :: Parser [Program Info -> Program Info]
+statements =
+  do prog <- many $
+       choice
+         [ try signature'
+         , try adt
+         , function
+         , property
+         ]
+     _ <- eof
+     return prog
 
 
 -- Utility
