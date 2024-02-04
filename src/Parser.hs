@@ -3,8 +3,10 @@ module Parser where
 import Syntax hiding (parens)
 
 import Text.Parsec
+import Text.Parsec.Pos (newPos)
 import Control.Monad (void, when)
 import Data.Functor ((<&>))
+import Data.List (nub, (\\))
 
 
 -- Abbreviations
@@ -13,17 +15,31 @@ type Parser = Parsec Source ()
 type Info   = (SourcePos, SourcePos)
 
 data Error =
-    ReservedKeyword      X Info
-  | MultipleDeclarations X Info
-  | MultipleDefinitions  X Info
-  | UnrecognisedSyntax   X Info
+    ReservedKeyword      (X, Info)
+  | MultipleSignatures    X
+  | MultipleADTs          X
+  | MultipleFunctions    (X, Info)
+  | MultipleProperties   (X, Info)
   | ParsingFailed        ParseError
   deriving Show
 
 -- TODO: Deal with errors
 reportErrors :: Program Info -> [Error]
 reportErrors program =
-  []
+     [ MultipleSignatures  n         | n <- sigs  \\ nub sigs  ]
+  ++ [ MultipleADTs        n         | n <- adts  \\ nub adts  ]
+  ++ [ MultipleFunctions  (n, pos n) | n <- funcs \\ nub funcs ]
+  ++ [ MultipleProperties (n, pos n) | n <- props \\ nub props ]
+  where
+    sigs  = fst <$> signatures program
+    adts  = fst <$> datatypes  program
+    funcs = fst <$> functions  program
+    props = fst <$> properties program
+    pos n =
+      maybe
+      (newPos "unknown parse error" 0 0, 
+       newPos "unknown parse error" 0 0)
+      meta (lookup n (functions program ++ properties program))
 
 
 -- Export
@@ -73,8 +89,8 @@ identifier =
      when (reserved name) $ fail $ "reserved keyword " ++ name
      lexeme $ return name
 
-constructor :: Parser String
-constructor =
+constructorName :: Parser String
+constructorName =
   do name <- (:) <$> upper <*> many identTail
      lexeme $ return name
 
@@ -138,7 +154,7 @@ pattern' = choice $
     , boolean     <&> Boolean
     , Unit        <$  unit
     , identifier  <&> Variable
-    , Constructor <$> constructor <*> many pattern'
+    , Constructor <$> constructorName <*> many pattern'
     , try $ parens $ Pair <$> term <*> (char ',' *> term)
     ]
 
@@ -236,19 +252,21 @@ signature' =
 
 
 -- Algebraic Data Types
-constructors :: Parser (C, [Type])
-constructors =
-  do c  <- constructor
+constructor :: Parser (C, [Type])
+constructor =
+  do c  <- constructorName
      ts <- many type'
      return (c, ts)
+
+constructors :: Parser [(C, [Type])]
+constructors = constructor `sepBy1` symbol "|"
 
 adt :: Parser (Program Info -> Program Info)
 adt =
   do _  <- symbol "adt"
-     t  <- constructor
+     t  <- constructorName
      _  <- symbol "="
-     cs <- many constructors
-     return $ Data t cs
+     Data t <$> constructors
 
 
 -- Program

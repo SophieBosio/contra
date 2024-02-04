@@ -24,9 +24,9 @@ type Body a = Term    a  -- Case alternative body
 -- Abstract Syntax
 data Program a =
     Signature X  Type         (Program a)  -- Type signature declaration
+  | Data      T [(C, [Type])] (Program a)  -- Algebraic data type declaration
   | Function  F (Term a)      (Program a)  -- Function declaration
   | Property  P (Term a)      (Program a)  -- Property declaration
-  | Data      T [(C, [Type])] (Program a)  -- Algebraic data type declaration
   | End
   deriving (Functor, Eq)
 
@@ -180,6 +180,30 @@ instance Annotated Pattern where
 
 
 -- Utility functions
+meta :: Term a -> a
+meta (Pattern           p) = meta' p
+meta (Lambda      _ _   a) = a
+meta (Rec         _ _   a) = a
+meta (Let         _ _ _ a) = a
+meta (Application _ _   a) = a
+meta (Case        _ _   a) = a
+meta (Fst         _     a) = a
+meta (Snd         _     a) = a
+meta (Plus        _ _   a) = a
+meta (Minus       _ _   a) = a
+meta (Lt          _ _   a) = a
+meta (Gt          _ _   a) = a
+meta (Equal       _ _   a) = a
+meta (Not         _     a) = a
+
+meta' :: Pattern a -> a
+meta' (Variable      _ a) = a
+meta' (Unit            a) = a
+meta' (Number        _ a) = a
+meta' (Boolean       _ a) = a
+meta' (Pair        _ _ a) = a
+meta' (Constructor _ _ a) = a
+
 instance Semigroup (Program a) where
   (Signature x t  p1) <> p2 = Signature x t  (p1 <> p2)
   (Function  f x  p1) <> p2 = Function  f x  (p1 <> p2)
