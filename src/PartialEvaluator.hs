@@ -2,14 +2,13 @@ module PartialEvaluator where
 
 import Syntax
 import Interpreter
-  ( evaluate, substitute,
+  ( substitute,
     bool, number, pair,
     firstMatch, applyTransformation
   )
 
 import Control.Monad.Reader
 import Control.Monad.State
-import Control.Arrow ((***))
 
 
 -- Abbreviations
@@ -28,7 +27,7 @@ partial (Pattern (Variable x a)) =
   do program <- ask
      case map snd $ filter ((== x) . fst) (functions program) of
        [ ] -> return $ Pattern $ Variable x a
-       [t] -> return $ t
+       [t] -> return t
        _   -> error  $ "ambiguous bindings for " ++ show x
 partial (Pattern (Pair t0 t1 a)) =
   do t0' <- partial t0
