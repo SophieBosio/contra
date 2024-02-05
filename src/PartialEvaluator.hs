@@ -17,8 +17,8 @@ type PEvalState a = ReaderT (Program a) (State (Program a))
 
 
 -- Export
-partiallyEvaluate :: Show a => Program a -> Program a
-partiallyEvaluate = undefined
+partiallyEvaluate :: Show a => Program a -> (Term a -> (Term a, Program a))
+partiallyEvaluate p t = runState (runReaderT (partial t) p) p
 
 
 -- Main functions
@@ -28,7 +28,7 @@ partial (Pattern (Variable x a)) =
   do program <- ask
      case map snd $ filter ((== x) . fst) (functions program) of
        [ ] -> return $ Pattern $ Variable x a
-       -- [t] -> return $ ??? -- FIXME
+       [t] -> return $ t
        _   -> error  $ "ambiguous bindings for " ++ show x
 partial (Pattern (Pair t0 t1 a)) =
   do t0' <- partial t0
