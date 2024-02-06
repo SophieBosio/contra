@@ -5,7 +5,7 @@ import ParserTests
 -- import TypeInferrerTests
 -- import UnificationTests
 -- import GeneratorsTests
--- import PartialEvaluationTests
+import PartialEvaluatorTests
 
 
 timeoutSeconds :: Integer -> Timeout
@@ -37,7 +37,8 @@ tests =
     , testGroup "Generators: "
         [
         ]
-    , testGroup "Partial evaluation: "
+    , testGroup "Partial evaluator: "
         [
+          partialEvaluatorTests
         ]
     ]
