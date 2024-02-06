@@ -28,7 +28,6 @@ library
       Interpreter
       Parser
       PartialEvaluator
-      Supercompiler
       Syntax
       TypeInferrer
       Unification

@@ -23,23 +23,22 @@ data Error =
   | ParsingFailed        ParseError
   deriving Show
 
--- TODO: Deal with errors
 reportErrors :: Program Info -> [Error]
-reportErrors program =
+reportErrors p =
      [ MultipleSignatures  n         | n <- sigs  \\ nub sigs  ]
   ++ [ MultipleADTs        n         | n <- adts  \\ nub adts  ]
   ++ [ MultipleFunctions  (n, pos n) | n <- funcs \\ nub funcs ]
   ++ [ MultipleProperties (n, pos n) | n <- props \\ nub props ]
   where
-    sigs  = fst <$> signatures program
-    adts  = fst <$> datatypes  program
-    funcs = fst <$> functions  program
-    props = fst <$> properties program
+    sigs  = fst <$> signatures p
+    adts  = fst <$> datatypes  p
+    funcs = fst <$> functions  p
+    props = fst <$> properties p
     pos n =
       maybe
       (newPos "unknown parse error" 0 0, 
        newPos "unknown parse error" 0 0)
-      meta (lookup n (functions program ++ properties program))
+      meta (lookup n (functions p ++ properties p))
 
 
 -- Export
