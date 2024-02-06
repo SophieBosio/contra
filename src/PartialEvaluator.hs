@@ -50,7 +50,13 @@ partial (Let x t0 t1 a) =
 partial (Lambda x t0 a) =
   do t0' <- partial t0
      return $ Lambda x t0' a
-partial (Application t1 t2 a) = undefined -- TODO!
+partial (Application t1 t2 a) =
+  do t1' <- partial t1
+     t2' <- partial t2
+     if canonical t2'
+       then do f <- function t1'
+               partial (f t2')
+       else return $ Application t1' t2' a
 partial (Case t0 ts a) =
   do v <- partial t0
      if canonical v
