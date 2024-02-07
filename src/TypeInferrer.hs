@@ -168,7 +168,6 @@ freeVariables (Boolean    _ _) = mempty
 freeVariables (Variable   x _) = return x
 freeVariables (Constructor x ps _) =
   [ y | y <- foldr (\p acc -> acc <> freeVariables p) mempty ps, x /= y ]
-freeVariables _ = mempty
 
 liftFreeVariables :: [(Name, Type)] -> (Environment -> Environment)
 liftFreeVariables [              ] e = e
