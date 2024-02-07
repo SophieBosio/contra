@@ -118,7 +118,7 @@ partialArrowType retType =
      arrow >> (argType :->:) <$> retType
 
 
--- Patterns
+-- Values
 number :: Parser Integer
 number = option id (symbol "-" >> return negate) <*> digits
   where digits = lexeme $ read <$> many1 digit
@@ -132,17 +132,28 @@ boolean = choice
 unit :: Parser ()
 unit = void $ symbol "Unit"
 
-pattern' :: Parser (Pattern Info)
-pattern' = choice $
-  try (parens pattern') :
+value :: Parser (Value Info)
+value = choice $
+  try (parens value) :
   map info
-    [ number      <&> Number
-    , boolean     <&> Boolean
-    , Unit        <$  unit
-    , identifier  <&> Variable
-    , Constructor <$> constructorName <*> many pattern'
+    [ Unit         <$  unit
+    , number       <&> Number
+    , boolean      <&> Boolean
+    , VConstructor <$> constructorName <*> many value
     ]
 
+
+-- Patterns
+pattern' :: Parser (Pattern Info)
+pattern' = choice $
+  [ Value <$> value
+  , parens pattern'
+  ]
+  ++
+  map info
+    [ identifier   <&> Variable
+    , PConstructor <$> constructorName <*> many pattern'
+    ]
 
 -- Complex terms
 term :: Parser (Term Info)
@@ -154,17 +165,18 @@ term = choice $
   , application term
   ]
   ++
+  [ Pattern <$> pattern'
+  , parens term
+  ]
+  ++
   map info
     [ keyword "not" >> (Not <$> term)
     , keyword "\\"  >> Lambda <$> identifier <*> (arrow >> term)
     -- , keyword "rec" >> Rec <$> identifier <*> term
     , symbol  "let" >> Let <$> identifier <*>
                       (symbol "=" >> term) <*> (symbol "in" >> term)
+    , TConstructor <$> constructorName <*> many term
     ]
-  ++
-  [ Pattern <$> pattern'
-  , parens term
-  ]
 
 caseStatement :: Parser (Term Info)
 caseStatement =
@@ -188,7 +200,7 @@ desugaredIf =
      false <- term
      b1    <- info $ return $ Boolean True
      b2    <- info $ return $ Boolean False
-     info $ return $ Case t [(b1, true), (b2, false)]
+     info $ return $ Case t [(Value b1, true), (Value b2, false)]
 
 binaryOperator :: Parser (Term Info) -> Parser (Term Info)
 binaryOperator t2 =
