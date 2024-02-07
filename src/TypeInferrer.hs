@@ -5,6 +5,7 @@ module TypeInferrer where
 import Syntax
 
 import Control.Monad.RWS
+import Data.Maybe (fromMaybe)
 
 -- Abbreviations
 data Constraint = Type :=: Type
@@ -19,8 +20,7 @@ type Substitution = [(Index, Type)]
 
 -- Export
 inferProgram :: Program a -> Program Type
-inferProgram = undefined
--- TODO!
+inferProgram program = undefined
 
 
 -- Setup
@@ -53,7 +53,38 @@ emptyEnvironment :: Environment
 emptyEnvironment = error . (++ " is unbound!")
 
 
--- Main functions
+-- Annotate program
+-- TODO: In thesis text, note Joachim's comment:
+         -- This forces that all recursive functions must have type
+         -- declarations. It also forces the ML style monomorphism
+         -- constraint on recursive things at top-level. This may be be more
+         -- restrictive than what we want, but on the other hand, it was
+         -- easy to implement {^_^}.
+annotateProgram :: Program a -> Annotation (Program Type)
+annotateProgram (Signature x def rest) =
+  do i <- get
+     let (j, tau) = alpha i def
+     put j
+     rest' <- local (bind x tau) $ annotateProgram rest
+     return $ Signature x tau rest'
+-- TODO!
+-- annotateProgram (Data      t def rest) =
+--   do i <- get
+--      let (j, tau) = alpha i def
+--      put j
+--      rest' <- local (bind x tau) $ annotateProgram rest
+--      return $ ADT t tau rest'
+annotateProgram (Function f def rest) =
+  do def'  <- annotate def
+     rest' <- annotateProgram rest
+     return $ Function f def' rest'
+-- TODO!
+-- annotateProgram (Property p def rest) =
+--   do def'  <- annotate
+annotateProgram End = return End
+
+
+-- Annotate terms
 annotate :: Term a -> Annotation (Term Type)
 annotate (Pattern     p) = annotatePattern p
 annotate (TConstructor c ts _) =
@@ -151,6 +182,11 @@ annotateValue (VConstructor c vs _) =
      vs' <- mapM (return . strengthenToValue . strengthenToPattern) ts
      return $ Pattern $ Value $ VConstructor c vs' tau
 
+
+-- Resolve constraints
+resolveConstraints :: [Constraint] -> Substitution
+resolveConstraints = fromMaybe (error "Type error occurred") . solve
+
 solve :: [Constraint] -> Maybe Substitution
 solve [                 ] = return mempty
 solve (constraint : rest) =
@@ -175,6 +211,16 @@ solve (constraint : rest) =
               return $ (i, t0) : c
     _                               -> error $ show constraint
 
+refine :: Substitution -> (Type -> Type)
+refine [            ] t                      = t
+refine s@((i, u) : _) (Variable' j) | i == j = refine s u
+refine (_     : rest) (Variable' j)          = refine rest (Variable' j)
+refine _              Unit'                  = Unit'
+refine _              Integer'               = Integer'
+refine _              Boolean'               = Boolean'
+refine s              (tau1 :->: tau2)       = refine s tau1 :->: refine s tau2
+refine s              (ADT  name taus)       = ADT name $ map (refine s) taus
+
 
 -- Utility functions
 indices :: Type -> [Index]
@@ -193,17 +239,15 @@ liftFreeVariables :: [(Name, Type)] -> (Environment -> Environment)
 liftFreeVariables [              ] e = e
 liftFreeVariables ((x, t) : rest) e = bind x t $ liftFreeVariables rest e
 
-refine :: Substitution -> (Type -> Type)
-refine s o = refine' s o
+alpha :: Index -> (Type -> (Index, Type))
+alpha i t =
+  (if null (indices t)
+     then i
+     else i + maximum (indices t) + 1,
+  increment t)
   where
-    refine' [          ] t             = t
-    refine' _            Unit'         = Unit'
-    refine' _            Integer'      = Integer'
-    refine' _            Boolean'      = Boolean'
-    refine' ((i, t) : _) (Variable' j)
-      | i == j = refine' s t
-    refine' (_   : rest) (Variable' j) = refine' rest (Variable' j)
-    refine' s'           (t0  :->: t1) = refine' s' t0 :->: refine' s' t1
-    refine' s'           (ADT    x ts) =
-      ADT x $ map (refine' s') ts
-
+    increment :: Type -> Type
+    increment (Variable'    j) = Variable' (i + j)
+    increment (tau1 :->: tau2) = increment tau1 :->: increment tau2
+    increment (ADT       t ts) = ADT t $ map increment ts
+    increment t                = t
