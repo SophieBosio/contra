@@ -50,14 +50,17 @@ emptyEnvironment = error . (++ " is unbound!")
 -- Main functions
 annotate :: Term a -> Annotation (Term Type)
 annotate (Pattern     p) = annotate' p
+annotate (TConstructor c ts _) =
+  do tau <- fresh
+     ts' <- local (bind c tau) $ mapM annotate ts
+     if all isPattern ts'
+       then let ps = map strengthenToPattern ts'
+            in  return $ Pattern $ PConstructor c ps tau
+       else return $ TConstructor c ts' tau
 annotate (Lambda x t0 _) =
   do tau <- fresh
      t0' <- local (bind x tau) $ annotate t0
      return $ Lambda x t0' (tau :->: annotation t0')
--- annotate (Rec x t0 _) =
---   do tau <- fresh
---      t0' <- local (bind x tau) $ annotate t0
---      return $ Rec x t0' $ annotation t0'
 annotate (Let x t1 t2 _) =
   do t1' <- annotate t1
      t2' <- local (bind x (annotation t1')) $ annotate t2
@@ -113,6 +116,10 @@ annotate (Not t0 _) =
   do t0' <- annotate t0
      t0' `hasType` Boolean'
      return $ Not t0' Boolean'
+-- annotate (Rec x t0 _) =
+--   do tau <- fresh
+--      t0' <- local (bind x tau) $ annotate t0
+--      return $ Rec x t0' $ annotation t0'
 
 annotate' :: Pattern a -> Annotation (Term Type)
 annotate' (Value      v) = annotate'' v
@@ -121,9 +128,12 @@ annotate' (Variable x _) =
      return $ Pattern $ Variable x $ env x
 annotate' (PConstructor c ps _) =
   do tau <- fresh
-     ts  <- local (bind c tau) $ mapM annotate' ps -- /!\
+     ts  <- local (bind c tau) $ mapM annotate' ps
      ps' <- mapM (return . strengthenToPattern) ts
-     return $ Pattern $ PConstructor c ps' tau
+     if all canonical ps'
+       then let vs' = map strengthenToValue ps'
+            in  return $ Pattern $ Value $ VConstructor c vs' tau
+       else return $ Pattern $ PConstructor c ps' tau
 
 annotate'' :: Value a -> Annotation (Term Type)
 annotate'' (Unit        _) = return $ Pattern $ Value $ Unit Unit'

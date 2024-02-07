@@ -71,7 +71,7 @@ data Value a =
   deriving (Functor)
 
 
--- Canonical terms
+-- Canonical terms & Patterns
 -- A canonical term is a pattern with no variables
 class Canonical a where
   canonical :: a -> Bool
@@ -92,6 +92,9 @@ instance Canonical (Value a) where
   canonical (Boolean         _ _) = True
   canonical (VConstructor _ vs _) = all canonical vs
 
+isPattern :: Term a -> Bool
+isPattern (Pattern _) = True
+isPattern _           = False
 
 strengthenToPattern :: Term a -> Pattern a
 strengthenToPattern (Pattern p) = p

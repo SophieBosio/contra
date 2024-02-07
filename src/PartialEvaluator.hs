@@ -3,7 +3,7 @@ module PartialEvaluator where
 import Syntax
 import Interpreter
   ( substitute,
-    bool, number,
+    boolean, number,
     firstMatch, applyTransformation
   )
 
