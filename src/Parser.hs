@@ -38,7 +38,7 @@ reportErrors p =
       maybe
       (newPos "unknown parse error" 0 0, 
        newPos "unknown parse error" 0 0)
-      meta (lookup n (functions p ++ properties p))
+      annotation (lookup n (functions p ++ properties p))
 
 
 -- Export

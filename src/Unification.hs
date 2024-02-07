@@ -52,9 +52,9 @@ substitutes p x = Substitution $ return $ x `mapsTo` p
 
 -- Utility functions
 contains :: Pattern a -> X -> Bool
-contains (Variable                     x _) y | x == y = True
-contains (Constructor               _ ps _) y = any (`contains` y) ps
-contains _                                  _ = False
+contains (Variable        x _) y | x == y = True
+contains (Constructor  _ ps _) y = any (`contains` y) ps
+contains _                     _ = False
 
 mapsTo :: X -> Pattern a -> Transformation Pattern a
 mapsTo x p = return (x, p)
