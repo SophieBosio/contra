@@ -35,7 +35,6 @@ data Type =
   | Integer'
   | Boolean'
   | Variable' Index
-  | Type :*:  Type
   | Type :->: Type
   | ADT  T    [Type]
   deriving (Show)
@@ -204,7 +203,6 @@ equivalent _   (Variable' _) = True
 equivalent Unit'    Unit'    = True
 equivalent Integer' Integer' = True
 equivalent Boolean' Boolean' = True
-equivalent (t0 :*:  t1) (t0' :*:  t1') = t0 == t0' && t1 == t1'
 equivalent (t0 :->: t1) (t0' :->: t1') = t0 == t0' && t1 == t1'
 equivalent (ADT   t ts) (ADT    s ts') = t  == s   && and (zipWith (==) ts ts')
 equivalent _ _ = False

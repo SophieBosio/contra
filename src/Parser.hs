@@ -68,11 +68,9 @@ reservedKeywords =
   , "else"
   , "case"
   , "of"
-  , "fst"
-  , "snd"
   , "let"
   , "in"
-  , "rec"
+  -- , "rec"
   , "adt"
   ]
 
@@ -101,12 +99,6 @@ keyword s = lexeme $ try $ string s >> notFollowedBy identTail
 type' :: Parser Type
 type' = choice
   [ try $ partialArrowType type'
-  , regularType
-  ]
-
-regularType :: Parser Type
-regularType = choice
-  [ try $ parens $ partialProductType type'
   , simpleType
   ]
 
@@ -122,13 +114,8 @@ simpleType = choice
 
 partialArrowType :: Parser Type -> Parser Type
 partialArrowType retType =
-  do argType <- regularType
+  do argType <- simpleType
      arrow >> (argType :->:) <$> retType
-
-partialProductType :: Parser Type -> Parser Type
-partialProductType t2 =
-  do t1 <- type'
-     symbol "," >> (t1 :*:) <$> t2
 
 
 -- Patterns

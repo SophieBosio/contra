@@ -134,7 +134,6 @@ solve (constraint : rest) =
     Unit'         :=: Unit'         -> solve rest
     Integer'      :=: Integer'      -> solve rest
     Boolean'      :=: Boolean'      -> solve rest
-    (t0 :*:  t1)  :=: (t2 :*:  t3)  -> solve $ (t0 :=: t2) : (t1 :=: t3) : rest
     (t0 :->: t1)  :=: (t2 :->: t3)  -> solve $ (t0 :=: t2) : (t1 :=: t3) : rest
     (ADT  x1 t1)  :=: (ADT  x2 t2)  ->
       if   x1 /= x2
@@ -157,7 +156,6 @@ solve (constraint : rest) =
 indices :: Type -> [Index]
 indices (Variable' i) = return i
 indices (ADT    _ ts) = concatMap indices ts
-indices (t0  :*:  t1) = indices t0 ++ indices t1
 indices (t0  :->: t1) = indices t0 ++ indices t1
 indices _             = mempty
 
@@ -183,7 +181,6 @@ refine s o = refine' s o
     refine' ((i, t) : _) (Variable' j)
       | i == j = refine' s t
     refine' (_   : rest) (Variable' j) = refine' rest (Variable' j)
-    refine' s'           (t0  :*:  t1) = refine' s' t0 :*:  refine' s' t1
     refine' s'           (t0  :->: t1) = refine' s' t0 :->: refine' s' t1
     refine' s'           (ADT    x ts) =
       ADT x $ map (refine' s') ts
