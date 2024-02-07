@@ -43,26 +43,32 @@ data Type =
 data Term a =
   -- Base terms:
     Pattern                     (Pattern a)
-  | Lambda      X      (T0 a)            a
-  -- | Rec         X      (T0 a)            a
-  | Let         X      (T1 a) (T2 a)     a
-  | Application (T1 a) (T2 a)            a
-  | Case        (T0 a) [(Alt a, Body a)] a
+  | Lambda       X      (T0 a)            a
+  | Let          X      (T1 a) (T2 a)     a
+  | Application  (T1 a) (T2 a)            a
+  | Case         (T0 a) [(Alt a, Body a)] a
+  | TConstructor C      [Term a]          a
+  -- | Rec         X      (T0 a)            a -- Future work
   -- Utilities:
-  | Plus        (T0 a) (T1 a)            a
-  | Minus       (T0 a) (T1 a)            a 
-  | Lt          (T0 a) (T1 a)            a
-  | Gt          (T0 a) (T1 a)            a
-  | Equal       (T0 a) (T1 a)            a
-  | Not         (T0 a)                   a
+  | Plus         (T0 a) (T1 a)            a
+  | Minus        (T0 a) (T1 a)            a
+  | Lt           (T0 a) (T1 a)            a
+  | Gt           (T0 a) (T1 a)            a
+  | Equal        (T0 a) (T1 a)            a
+  | Not          (T0 a)                   a
   deriving (Functor)
 
 data Pattern a =
-    Variable    X             a
-  | Constructor C [Pattern a] a
-  | Unit                      a
-  | Number      Integer       a
-  | Boolean     Bool          a
+    Value               (Value a)
+  | Variable     X             a
+  | PConstructor C [Pattern a] a
+  deriving (Functor)
+
+data Value a =
+    Unit                      a
+  | Number       Integer      a
+  | Boolean      Bool         a
+  | VConstructor C [Value a]  a
   deriving (Functor)
 
 
@@ -72,15 +78,21 @@ class Canonical a where
   canonical :: a -> Bool
 
 instance Canonical (Term a) where
-  canonical (Pattern p) = canonical p
-  canonical _           = False
+  canonical (Pattern           p) = canonical p
+  canonical (TConstructor _ ts _) = all canonical ts
+  canonical _                     = False
 
 instance Canonical (Pattern a) where
-  canonical (Variable       _ _) = False
-  canonical (Unit             _) = True
-  canonical (Number         _ _) = True
-  canonical (Boolean        _ _) = True
-  canonical (Constructor _ ps _) = all canonical ps
+  canonical (Value             v) = canonical v
+  canonical (Variable        _ _) = False
+  canonical (PConstructor _ ps _) = all canonical ps
+
+instance Canonical (Value a) where
+  canonical (Unit              _) = True
+  canonical (Number          _ _) = True
+  canonical (Boolean         _ _) = True
+  canonical (VConstructor _ vs _) = all canonical vs
+
 
 strengthenToPattern :: Term a -> Pattern a
 strengthenToPattern (Pattern p) = p
@@ -104,29 +116,6 @@ brackets = ("[" ++) . (++ "]")
 caseArrow :: (Pattern a, Term a) -> String
 caseArrow (p, t) = " ; " ++ show p ++ " -> " ++ show t
 
-instance Show (Pattern a) where
-  show (Variable    x        _) = show x
-  show (Constructor c  ts    _) = c ++ concatMap show ts
-  show (Unit       _) = "()"
-  show (Number   n _) = show n
-  show (Boolean     b        _) = show b
-
-instance Show (Term a) where
-  show (Pattern              p) = show p
-  show (Lambda      x  t0    _) = parens $ "\\" ++ x ++ " -> " ++ show t0
-  -- show (Rec         x  t0    _) = "rec " ++ x ++ " . " ++ show t0
-  show (Let         x  t1 t2 _) = "let " ++ x ++ " = " ++ show t1 ++
-    " in " ++ show t2
-  show (Application    t1 t2 _) = show t1 ++ parens (show t2)
-  show (Case        t0 ts    _) = "case " ++ show t0 ++ " of" ++
-    concatMap caseArrow ts
-  show (Plus        t0 t1    _) = show t0 ++ " + "  ++ show t1
-  show (Minus       t0 t1    _) = show t0 ++ " - "  ++ show t1
-  show (Lt          t0 t1    _) = show t0 ++ " < "  ++ show t1
-  show (Gt          t0 t1    _) = show t0 ++ " > "  ++ show t1
-  show (Equal       t0 t1    _) = show t0 ++ " == " ++ show t1
-  show (Not         t0       _) = "not" ++ parens (show t0)
-
 instance Show a => Show (Program a) where
   show (Signature x t  rest) =
     x ++ " :: "  ++ show t  ++ "\n\n" ++ show rest
@@ -139,6 +128,34 @@ instance Show a => Show (Program a) where
     t ++ " = "   ++ show cs ++ concatMap show cs ++ "\n\n" ++ show rest
   show End                   = ""
 
+instance Show (Term a) where
+  show (Pattern               p) = show p
+  show (TConstructor c  ts    _) = c ++ concatMap show ts
+  show (Lambda       x  t0    _) = parens $ "\\" ++ x ++ " -> " ++ show t0
+  show (Let          x  t1 t2 _) = "let " ++ x ++ " = " ++ show t1 ++
+    " in " ++ show  t2
+  show (Application     t1 t2 _) = show t1 ++ parens (show t2)
+  show (Case         t0 ts    _) = "case " ++ show t0 ++ " of" ++
+    concatMap caseArrow ts
+  show (Plus         t0 t1    _) = show t0 ++ " + "  ++ show t1
+  show (Minus        t0 t1    _) = show t0 ++ " - "  ++ show t1
+  show (Lt           t0 t1    _) = show t0 ++ " < "  ++ show t1
+  show (Gt           t0 t1    _) = show t0 ++ " > "  ++ show t1
+  show (Equal        t0 t1    _) = show t0 ++ " == " ++ show t1
+  show (Not          t0       _) = "not" ++ parens (show t0)
+  -- show (Rec          x  t0    _) = "rec " ++ x ++ " . " ++ show t0
+
+instance Show (Pattern a) where
+  show (Value             v) = show v
+  show (Variable     x    _) = show x
+  show (PConstructor c ps _) = c ++ concatMap show ps
+
+instance Show (Value a) where
+  show (Unit              _) = "()"
+  show (Number       n    _) = show n
+  show (Boolean      b    _) = show b
+  show (VConstructor c vs _) = c ++ concatMap show vs
+
 
 -- Annotations
 class Annotated term where
@@ -147,8 +164,8 @@ class Annotated term where
 
 instance Annotated Term where
   annotations (Pattern           p) = annotations p
+  annotations (TConstructor _ ts a) = a : concatMap annotations ts
   annotations (Lambda _ t0       a) = a : annotations t0
-  -- annotations (Rec    _ t0       a) = a : annotations t0
   annotations (Let    _    t1 t2 a) = a : ([t1, t2]     >>= annotations)
   annotations (Application t1 t2 a) = a : ([t1, t2]     >>= annotations)
   annotations (Case     t0 ts    a) = a : annotations t0
@@ -160,15 +177,21 @@ instance Annotated Term where
   annotations (Gt       t0 t1    a) = a : ([t0, t1]     >>= annotations)
   annotations (Equal    t0 t1    a) = a : ([t0, t1]     >>= annotations)
   annotations (Not      t0       a) = a : annotations t0
-  annotation  term                  = head $ annotations term
+  annotation  t                     = head $ annotations t
+  -- annotations (Rec    _ t0       a) = a : annotations t0
 
 instance Annotated Pattern where
-  annotations (Variable        _ a) = return a
-  annotations (Constructor _ ts  a) = a : concatMap annotations ts
-  annotations (Unit              a) = return a
-  annotations (Number          _ a) = return a
-  annotations (Boolean         _ a) = return a
-  annotation  p                     = head $ annotations p
+  annotations (Value              v) = annotations v
+  annotations (Variable        _  a) = return a
+  annotations (PConstructor _  ps a) = a : concatMap annotations ps
+  annotation  p                      = head $ annotations p
+
+instance Annotated Value where
+  annotations (Unit               a) = return a
+  annotations (Number          _  a) = return a
+  annotations (Boolean         _  a) = return a
+  annotations (VConstructor _  vs a) = a : concatMap annotations vs
+  annotation  v                      = head $ annotations v
 
 
 -- Term Equality
@@ -195,7 +218,6 @@ instance (Eq a) => Eq (Term a) where
   (Equal t0 t1 a) == (Equal t0' t1' b) = a == b && t0 == t0' && t1 == t1'
   (Not   t0    a) == (Not   t0'     b) = a == b && t0 == t0'
   (Lambda x t0 a) == (Lambda  y t0' b) = x == y &&  a == b   && t0 == t0'
-  -- (Rec    x t0 a) == (Rec     y t0' b) = x == y &&  a == b   && t0 == t0'
   (Let x t0 t1 a) == (Let y t0' t1' b) = x == y   &&  a == b   &&
                                         t0 == t0' && t1 == t1'
   (Application t1 t2 a) == (Application t1' t2' b) =
@@ -204,41 +226,31 @@ instance (Eq a) => Eq (Term a) where
     a  == b   &&
     t0 == t0' &&
     all (\((x, y), (x', y')) -> x == x' && y == y') (zip cases cases')
+  (TConstructor c ts a) == (TConstructor d us b) = a  == b   &&
+                                                   c  == d   &&
+                                                   and (zipWith (==) ts us)
   _ == _ = False
+  -- (Rec    x t0 a) == (Rec     y t0' b) = x == y &&  a == b   && t0 == t0'
 
 instance (Eq a) => Eq (Pattern a) where
-  (Variable    x     a) == (Variable    y       b) = x == y && a == b
+  (Value      v) == (Value      w) = v == w
+  (Variable x a) == (Variable y b) = x == y && a == b
+  (PConstructor c ps a) == (PConstructor d rs b) = a  == b &&
+                                                   c  == d &&
+                                                   and (zipWith (==) ps rs)
+  _ == _ = False
+
+instance (Eq a) => Eq (Value a) where
   (Unit              _) == (Unit                _) = True
-  (Number      n     _) == (Number      m       _) = n == m
-  (Boolean     b     _) == (Boolean     c       _) = b == c
-  (Constructor c  ps a) == (Constructor d   ps' b) = a  == b   &&
-                                                     c  == d   &&
-                                                     and (zipWith (==) ps ps')
+  (Number       n    _) == (Number       m      _) = n == m
+  (Boolean      b    _) == (Boolean      c      _) = b == c
+  (VConstructor c vs a) == (VConstructor d ws b) = a  == b &&
+                                                   c  == d &&
+                                                   and (zipWith (==) vs ws)
   _ == _ = False
 
 
 -- Utility functions
-meta :: Term a -> a
-meta (Pattern           p) = meta' p
-meta (Lambda      _ _   a) = a
--- meta (Rec         _ _   a) = a
-meta (Let         _ _ _ a) = a
-meta (Application _ _   a) = a
-meta (Case        _ _   a) = a
-meta (Plus        _ _   a) = a
-meta (Minus       _ _   a) = a
-meta (Lt          _ _   a) = a
-meta (Gt          _ _   a) = a
-meta (Equal       _ _   a) = a
-meta (Not         _     a) = a
-
-meta' :: Pattern a -> a
-meta' (Variable      _ a) = a
-meta' (Unit            a) = a
-meta' (Number        _ a) = a
-meta' (Boolean       _ a) = a
-meta' (Constructor _ _ a) = a
-
 instance Semigroup (Program a) where
   (Signature x t  p1) <> p2 = Signature x t  (p1 <> p2)
   (Function  f x  p1) <> p2 = Function  f x  (p1 <> p2)
