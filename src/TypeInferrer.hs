@@ -115,17 +115,25 @@ annotate (Not t0 _) =
      return $ Not t0' Boolean'
 
 annotate' :: Pattern a -> Annotation (Term Type)
-annotate' (Variable  x _) =
+annotate' (Value      v) = annotate'' v
+annotate' (Variable x _) =
   do env <- ask
      return $ Pattern $ Variable x $ env x
-annotate' (Constructor c ts _) =
+annotate' (PConstructor c ps _) =
   do tau <- fresh
-     ts' <- local (bind c tau) $ mapM annotate' ts
-     ps' <- mapM (return . strengthenToPattern) ts'
-     return $ Pattern $ Constructor c ps' tau
-annotate' (Unit        _) = return $ Pattern $ Unit Unit'
-annotate' (Number    n _) = return $ Pattern $ Number n Integer'
-annotate' (Boolean   b _) = return $ Pattern $ Boolean b Boolean'
+     ts  <- local (bind c tau) $ mapM annotate' ps -- /!\
+     ps' <- mapM (return . strengthenToPattern) ts
+     return $ Pattern $ PConstructor c ps' tau
+
+annotate'' :: Value a -> Annotation (Term Type)
+annotate'' (Unit        _) = return $ Pattern $ Value $ Unit Unit'
+annotate'' (Number    n _) = return $ Pattern $ Value $ Number n Integer'
+annotate'' (Boolean   b _) = return $ Pattern $ Value $ Boolean b Boolean'
+annotate'' (VConstructor c vs _) =
+  do tau <- fresh
+     ts  <- local (bind c tau) $ mapM annotate'' vs
+     vs' <- mapM (return . strengthenToValue . strengthenToPattern) ts
+     return $ Pattern $ Value $ VConstructor c vs' tau
 
 solve :: [Constraint] -> Maybe Substitution
 solve [                 ] = return mempty
@@ -160,11 +168,9 @@ indices (t0  :->: t1) = indices t0 ++ indices t1
 indices _             = mempty
 
 freeVariables :: Pattern a -> [Name]
-freeVariables (Unit         _) = mempty
-freeVariables (Number     _ _) = mempty
-freeVariables (Boolean    _ _) = mempty
-freeVariables (Variable   x _) = return x
-freeVariables (Constructor x ps _) =
+freeVariables (Value             _) = mempty
+freeVariables (Variable     x    _) = return x
+freeVariables (PConstructor x ps _) =
   [ y | y <- foldr (\p acc -> acc <> freeVariables p) mempty ps, x /= y ]
 
 liftFreeVariables :: [(Name, Type)] -> (Environment -> Environment)

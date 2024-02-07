@@ -98,6 +98,11 @@ strengthenToPattern (Pattern p) = p
 strengthenToPattern t           = error $
   "expected pattern, but was given the non-canonical term " ++ show t
 
+strengthenToValue :: Pattern a -> Value a
+strengthenToValue (Value v) = v
+strengthenToValue p         = error $
+  "expected pattern, but was given the non-canonical term " ++ show p
+
 weakenToTerm :: Pattern a -> Term a
 weakenToTerm = Pattern
 
