@@ -28,9 +28,9 @@ evaluate (Pattern (Constructor c ps a)) =
   do ts  <- mapM evaluate (Pattern <$> ps) 
      ps' <- mapM (return . strengthenToPattern) ts
      return $ Pattern (Constructor c ps' a)
-evaluate (Rec x t0 a) =
-  do notAtTopLevel (x, a)
-     evaluate $ substitute x t0 (Rec x t0 a)
+-- evaluate (Rec x t0 a) =
+--   do notAtTopLevel (x, a)
+--      evaluate $ substitute x t0 (Rec x t0 a)
 evaluate (Let x t0 t1 a) =
   do notAtTopLevel (x, a)
      evaluate t0 >>= evaluate . substitute x t1
@@ -79,7 +79,7 @@ substitute x t v = -- computes t[v/x]
     Application  t1 t2 a    -> Application (subs t1) (subs t2) a
     Let  y t1 t2 a          ->
       Let y (subs t1) ((if x == y then id else subs) t2) a
-    Rec  y t1    a | x /= y -> Rec y (subs t1)                 a
+    -- Rec  y t1    a | x /= y -> Rec y (subs t1)                 a
     Plus  t0 t1  a          -> Plus  (subs t0) (subs t1)       a
     Minus t0 t1  a          -> Minus (subs t0) (subs t1)       a
     Lt    t0 t1  a          -> Lt    (subs t0) (subs t1)       a

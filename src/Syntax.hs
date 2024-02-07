@@ -44,7 +44,7 @@ data Term a =
   -- Base terms:
     Pattern                     (Pattern a)
   | Lambda      X      (T0 a)            a
-  | Rec         X      (T0 a)            a
+  -- | Rec         X      (T0 a)            a
   | Let         X      (T1 a) (T2 a)     a
   | Application (T1 a) (T2 a)            a
   | Case        (T0 a) [(Alt a, Body a)] a
@@ -114,7 +114,7 @@ instance Show (Pattern a) where
 instance Show (Term a) where
   show (Pattern              p) = show p
   show (Lambda      x  t0    _) = parens $ "\\" ++ x ++ " -> " ++ show t0
-  show (Rec         x  t0    _) = "rec " ++ x ++ " . " ++ show t0
+  -- show (Rec         x  t0    _) = "rec " ++ x ++ " . " ++ show t0
   show (Let         x  t1 t2 _) = "let " ++ x ++ " = " ++ show t1 ++
     " in " ++ show t2
   show (Application    t1 t2 _) = show t1 ++ parens (show t2)
@@ -148,7 +148,7 @@ class Annotated term where
 instance Annotated Term where
   annotations (Pattern           p) = annotations p
   annotations (Lambda _ t0       a) = a : annotations t0
-  annotations (Rec    _ t0       a) = a : annotations t0
+  -- annotations (Rec    _ t0       a) = a : annotations t0
   annotations (Let    _    t1 t2 a) = a : ([t1, t2]     >>= annotations)
   annotations (Application t1 t2 a) = a : ([t1, t2]     >>= annotations)
   annotations (Case     t0 ts    a) = a : annotations t0
@@ -195,7 +195,7 @@ instance (Eq a) => Eq (Term a) where
   (Equal t0 t1 a) == (Equal t0' t1' b) = a == b && t0 == t0' && t1 == t1'
   (Not   t0    a) == (Not   t0'     b) = a == b && t0 == t0'
   (Lambda x t0 a) == (Lambda  y t0' b) = x == y &&  a == b   && t0 == t0'
-  (Rec    x t0 a) == (Rec     y t0' b) = x == y &&  a == b   && t0 == t0'
+  -- (Rec    x t0 a) == (Rec     y t0' b) = x == y &&  a == b   && t0 == t0'
   (Let x t0 t1 a) == (Let y t0' t1' b) = x == y   &&  a == b   &&
                                         t0 == t0' && t1 == t1'
   (Application t1 t2 a) == (Application t1' t2' b) =
@@ -221,7 +221,7 @@ instance (Eq a) => Eq (Pattern a) where
 meta :: Term a -> a
 meta (Pattern           p) = meta' p
 meta (Lambda      _ _   a) = a
-meta (Rec         _ _   a) = a
+-- meta (Rec         _ _   a) = a
 meta (Let         _ _ _ a) = a
 meta (Application _ _   a) = a
 meta (Case        _ _   a) = a

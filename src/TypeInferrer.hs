@@ -54,10 +54,10 @@ annotate (Lambda x t0 _) =
   do tau <- fresh
      t0' <- local (bind x tau) $ annotate t0
      return $ Lambda x t0' (tau :->: annotation t0')
-annotate (Rec x t0 _) =
-  do tau <- fresh
-     t0' <- local (bind x tau) $ annotate t0
-     return $ Rec x t0' $ annotation t0'
+-- annotate (Rec x t0 _) =
+--   do tau <- fresh
+--      t0' <- local (bind x tau) $ annotate t0
+--      return $ Rec x t0' $ annotation t0'
 annotate (Let x t1 t2 _) =
   do t1' <- annotate t1
      t2' <- local (bind x (annotation t1')) $ annotate t2

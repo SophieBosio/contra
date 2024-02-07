@@ -33,9 +33,9 @@ partial (Pattern (Constructor c ps a)) =
   do ts  <- mapM partial (Pattern <$> ps)
      ps' <- mapM (return . strengthenToPattern) ts
      return $ Pattern $ Constructor c ps' a
-partial (Rec x t0 a) =
-  do notAtTopLevel (x, a)
-     partial $ substitute x t0 (Rec x t0 a)
+-- partial (Rec x t0 a) =
+--   do notAtTopLevel (x, a)
+--      partial $ substitute x t0 (Rec x t0 a)
 partial (Let x t0 t1 a) =
   do notAtTopLevel (x, a)
      t0' <- partial t0

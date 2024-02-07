@@ -170,7 +170,7 @@ term = choice $
   map info
     [ keyword "not" >> (Not <$> term)
     , keyword "\\"  >> Lambda <$> identifier <*> (arrow >> term)
-    , keyword "rec" >> Rec <$> identifier <*> term
+    -- , keyword "rec" >> Rec <$> identifier <*> term
     , symbol  "let" >> Let <$> identifier <*>
                       (symbol "=" >> term) <*> (symbol "in" >> term)
     ]
