@@ -20,7 +20,7 @@ normalise p t =
 
 -- Main functions
 evaluate :: Show a => Term a -> Runtime a (Term a)
-evaluate (Pattern p) = evaluate' p
+evaluate (Pattern p) = evaluatePattern p
 evaluate (Let x t0 t1 a) =
   do notAtTopLevel (x, a)
      evaluate t0 >>= evaluate . substitute x t1
@@ -60,21 +60,21 @@ evaluate _ = error "expected a non-canonical term!"
 --   do notAtTopLevel (x, a)
 --      evaluate $ substitute x t0 (Rec x t0 a)
 
-evaluate' :: Show a => Pattern a -> Runtime a (Term a)
-evaluate' (Value v) = evaluate'' v
-evaluate' (Variable x _) =
+evaluatePattern :: Show a => Pattern a -> Runtime a (Term a)
+evaluatePattern (Value v) = evaluateValue v
+evaluatePattern (Variable x _) =
   do program <- ask
      case map snd $ filter ((== x) . fst) (functions program) of
        [ ] -> error $ "unbound variable" ++ x
        [t] -> evaluate t -- Disallow shadowing at top-level
        _   -> error $ "ambiguous bindings for " ++ x
-evaluate' (PConstructor c ps a) =
-  do ts  <- mapM evaluate' ps
+evaluatePattern (PConstructor c ps a) =
+  do ts  <- mapM evaluatePattern ps
      let ps = map strengthenToPattern ts
-     return $ Pattern $ (PConstructor c ps a)
+     return $ Pattern $ PConstructor c ps a
 
-evaluate'' :: Show a => Value a -> Runtime a (Term a)
-evaluate'' v = return $ Pattern $ Value v
+evaluateValue :: Show a => Value a -> Runtime a (Term a)
+evaluateValue v = return $ Pattern $ Value v
 
 
 -- Substitution & Pattern matching
