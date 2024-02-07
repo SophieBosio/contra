@@ -24,8 +24,8 @@ fresh = Variable' <$> (get >>= \i ->     -- Get current index (state)
                           return i)      -- Return fresh
 
 bind :: Eq x => x -> a -> x `MapsTo` a
-bind x a look y = if x == y              -- If x is already bound
-                     then a              -- Update it
+bind x a look y = if x == y
+                     then a
                      else look y
 
 hasSameTypeAs :: Term Type -> Term Type -> Annotation ()
