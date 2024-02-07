@@ -3,7 +3,7 @@ module PartialEvaluator where
 import Syntax
 import Interpreter
   ( substitute,
-    bool, number, pair,
+    bool, number,
     firstMatch, applyTransformation
   )
 
@@ -29,10 +29,6 @@ partial (Pattern (Variable x a)) =
        [ ] -> return $ Pattern $ Variable x a
        [t] -> return t
        _   -> error  $ "ambiguous bindings for " ++ show x
-partial (Pattern (Pair t0 t1 a)) =
-  do t0' <- partial t0
-     t1' <- partial t1
-     return $ Pattern $ Pair t0' t1' a
 partial (Pattern (Constructor c ps a)) =
   do ts  <- mapM partial (Pattern <$> ps)
      ps' <- mapM (return . strengthenToPattern) ts
@@ -66,12 +62,6 @@ partial (Case t0 ts a) =
                let alts' = map strengthenToPattern alts
                bodies <- mapM (partial . snd) ts
                return $ Case v (zip alts' bodies) a
-partial (Fst p _) =
-  do p' <- partial p >>= pair
-     return $ fst p'
-partial (Snd p _) =
-  do p' <- partial p >>= pair
-     return $ snd p'
 partial (Plus t1 t2 a) =
   do t1' <- partial t1
      t2' <- partial t2

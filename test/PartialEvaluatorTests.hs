@@ -39,9 +39,6 @@ simpleTerms =
   [ Pattern (Unit Unit')
   , Pattern (Number 3 Integer')
   , Pattern (Boolean False Boolean')
-  , Pattern (Pair (Pattern (Number 3 Integer'))
-                  (Pattern (Boolean False Boolean'))
-             (Integer' :*: Boolean'))
   , Pattern (Constructor "x" [Number 5 Integer'] (ADT "C" [Integer']))
   ]
   

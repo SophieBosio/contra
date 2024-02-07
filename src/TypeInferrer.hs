@@ -80,18 +80,6 @@ annotate (Case t0 ts _) =
      mapM_ (`hasType` tau1) ps'
      mapM_ (`hasType` tau2) bs'
      return $ Case t0' (zip ps'' bs') tau2
-annotate (Fst t0 _) =
-  do t0'  <- annotate t0
-     tau1 <- fresh
-     tau2 <- fresh
-     t0' `hasType` (tau1 :*: tau2)
-     return $ Fst t0' tau1
-annotate (Snd t0 _) =
-  do t0'  <- annotate t0
-     tau1 <- fresh
-     tau2 <- fresh
-     t0' `hasType` (tau1 :*: tau2)
-     return $ Snd t0' tau2
 annotate (Plus t0 t1 _) =
   do t0' <- annotate t0
      t1' <- annotate t1
@@ -138,10 +126,6 @@ annotate' (Constructor c ts _) =
 annotate' (Unit        _) = return $ Pattern $ Unit Unit'
 annotate' (Number    n _) = return $ Pattern $ Number n Integer'
 annotate' (Boolean   b _) = return $ Pattern $ Boolean b Boolean'
-annotate' (Pair t0 t1 _) =
-  do t0' <- annotate t0
-     t1' <- annotate t1
-     return $ Pattern $ Pair t0' t1' (annotation t0' :*: annotation t1')
 
 solve :: [Constraint] -> Maybe Substitution
 solve [                 ] = return mempty
@@ -182,9 +166,6 @@ freeVariables (Unit         _) = mempty
 freeVariables (Number     _ _) = mempty
 freeVariables (Boolean    _ _) = mempty
 freeVariables (Variable   x _) = return x
-freeVariables (Pair   (Pattern p0) (Pattern p1) _) =
-     freeVariables p0
-  <> freeVariables p1
 freeVariables (Constructor x ps _) =
   [ y | y <- foldr (\p acc -> acc <> freeVariables p) mempty ps, x /= y ]
 freeVariables _ = mempty

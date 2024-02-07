@@ -154,7 +154,6 @@ pattern' = choice $
     , Unit        <$  unit
     , identifier  <&> Variable
     , Constructor <$> constructorName <*> many pattern'
-    , try $ parens $ Pair <$> term <*> (char ',' *> term)
     ]
 
 
@@ -170,8 +169,6 @@ term = choice $
   ++
   map info
     [ keyword "not" >> (Not <$> term)
-    , keyword "fst" >> (Fst <$> term)
-    , keyword "snd" >> (Snd <$> term)
     , keyword "\\"  >> Lambda <$> identifier <*> (arrow >> term)
     , keyword "rec" >> Rec <$> identifier <*> term
     , symbol  "let" >> Let <$> identifier <*>

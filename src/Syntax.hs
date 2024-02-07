@@ -49,8 +49,6 @@ data Term a =
   | Application (T1 a) (T2 a)            a
   | Case        (T0 a) [(Alt a, Body a)] a
   -- Utilities:
-  | Fst         (T0 a)                   a
-  | Snd         (T0 a)                   a
   | Plus        (T0 a) (T1 a)            a
   | Minus       (T0 a) (T1 a)            a 
   | Lt          (T0 a) (T1 a)            a
@@ -65,7 +63,6 @@ data Pattern a =
   | Unit                      a
   | Number      Integer       a
   | Boolean     Bool          a
-  | Pair        (T0 a) (T1 a) a
   deriving (Functor)
 
 
@@ -83,7 +80,6 @@ instance Canonical (Pattern a) where
   canonical (Unit             _) = True
   canonical (Number         _ _) = True
   canonical (Boolean        _ _) = True
-  canonical (Pair       t0 t1 _) = canonical t0 && canonical t1
   canonical (Constructor _ ps _) = all canonical ps
 
 strengthenToPattern :: Term a -> Pattern a
@@ -114,7 +110,6 @@ instance Show (Pattern a) where
   show (Unit       _) = "()"
   show (Number   n _) = show n
   show (Boolean     b        _) = show b
-  show (Pair           t1 t2 _) = parens $ show t1 ++ ", " ++ show t2
 
 instance Show (Term a) where
   show (Pattern              p) = show p
@@ -125,8 +120,6 @@ instance Show (Term a) where
   show (Application    t1 t2 _) = show t1 ++ parens (show t2)
   show (Case        t0 ts    _) = "case " ++ show t0 ++ " of" ++
     concatMap caseArrow ts
-  show (Fst         t0       _) = "fst " ++ show t0
-  show (Snd         t0       _) = "snd " ++ show t0
   show (Plus        t0 t1    _) = show t0 ++ " + "  ++ show t1
   show (Minus       t0 t1    _) = show t0 ++ " - "  ++ show t1
   show (Lt          t0 t1    _) = show t0 ++ " < "  ++ show t1
@@ -161,8 +154,6 @@ instance Annotated Term where
   annotations (Case     t0 ts    a) = a : annotations t0
                                       ++ concatMap (annotations . fst) ts
                                       ++ concatMap (annotations . snd) ts
-  annotations (Fst      t0       a) = a : annotations t0
-  annotations (Snd      t0       a) = a : annotations t0
   annotations (Plus     t0 t1    a) = a : ([t0, t1]     >>= annotations)
   annotations (Minus    t0 t1    a) = a : ([t0, t1]     >>= annotations)
   annotations (Lt       t0 t1    a) = a : ([t0, t1]     >>= annotations)
@@ -177,7 +168,6 @@ instance Annotated Pattern where
   annotations (Unit              a) = return a
   annotations (Number          _ a) = return a
   annotations (Boolean         _ a) = return a
-  annotations (Pair     t0 t1    a) = a : ([t0, t1] >>= annotations)
   annotation  p                     = head $ annotations p
 
 
@@ -198,8 +188,6 @@ equivalent _ _ = False
 
 instance (Eq a) => Eq (Term a) where
   (Pattern     p) == (Pattern       q) = p == q
-  (Fst   t0    a) == (Fst   t0'     b) = a == b && t0 == t0'
-  (Snd   t0    a) == (Snd   t0'     b) = a == b && t0 == t0'
   (Plus  t0 t1 a) == (Plus  t0' t1' b) = a == b && t0 == t0' && t1 == t1'
   (Minus t0 t1 a) == (Minus t0' t1' b) = a == b && t0 == t0' && t1 == t1'
   (Lt    t0 t1 a) == (Lt    t0' t1' b) = a == b && t0 == t0' && t1 == t1'
@@ -223,9 +211,6 @@ instance (Eq a) => Eq (Pattern a) where
   (Unit              _) == (Unit                _) = True
   (Number      n     _) == (Number      m       _) = n == m
   (Boolean     b     _) == (Boolean     c       _) = b == c
-  (Pair        t0 t1 a) == (Pair        t0' t1' b) = a  == b   &&
-                                                     t0 == t0' &&
-                                                     t1 == t1'
   (Constructor c  ps a) == (Constructor d   ps' b) = a  == b   &&
                                                      c  == d   &&
                                                      and (zipWith (==) ps ps')
@@ -240,8 +225,6 @@ meta (Rec         _ _   a) = a
 meta (Let         _ _ _ a) = a
 meta (Application _ _   a) = a
 meta (Case        _ _   a) = a
-meta (Fst         _     a) = a
-meta (Snd         _     a) = a
 meta (Plus        _ _   a) = a
 meta (Minus       _ _   a) = a
 meta (Lt          _ _   a) = a
@@ -254,7 +237,6 @@ meta' (Variable      _ a) = a
 meta' (Unit            a) = a
 meta' (Number        _ a) = a
 meta' (Boolean       _ a) = a
-meta' (Pair        _ _ a) = a
 meta' (Constructor _ _ a) = a
 
 instance Semigroup (Program a) where

@@ -32,7 +32,6 @@ unify' p              (Variable x _) | not $ p `contains` x = p `substitutes` x
 unify' (Unit       _) (Unit         _) = mempty
 unify' (Number   n _) (Number     m _) | n == m = mempty
 unify' (Boolean  b _) (Boolean    c _) | b == c = mempty
-unify' (Pair t0 t1 _) (Pair t0' t1' _) = unify t0 t0' `mappend` unify t1 t1'
 unify' (Constructor c ps _) (Constructor c' ps' _)
   | c == c' && length ps == length ps'
   = foldr (mappend . uncurry unify') mempty (zip ps ps')
@@ -55,7 +54,6 @@ substitutes p x = Substitution $ return $ x `mapsTo` p
 contains :: Pattern a -> X -> Bool
 contains (Variable                     x _) y | x == y = True
 contains (Constructor               _ ps _) y = any (`contains` y) ps
-contains (Pair (Pattern p0) (Pattern p1) _) y = p0 `contains` y || p1 `contains`y
 contains _                                  _ = False
 
 mapsTo :: X -> Pattern a -> Transformation Pattern a
