@@ -70,8 +70,8 @@ evaluatePattern (Variable x _) =
        _   -> error $ "ambiguous bindings for " ++ x
 evaluatePattern (PConstructor c ps a) =
   do ts  <- mapM evaluatePattern ps
-     let ps = map strengthenToPattern ts
-     return $ Pattern $ PConstructor c ps a
+     let ps' = map strengthenToPattern ts
+     return $ Pattern $ PConstructor c ps' a
 
 evaluateValue :: Show a => Value a -> Runtime a (Term a)
 evaluateValue v = return $ Pattern $ Value v

@@ -22,20 +22,7 @@ partiallyEvaluate p t = runState (runReaderT (partial t) p) p
 
 -- Main functions
 partial :: Show a => Term a -> PEvalState a (Term a)
-partial t | canonical t = return t
-partial (Pattern (Variable x a)) =
-  do program <- ask
-     case map snd $ filter ((== x) . fst) (functions program) of
-       [ ] -> return $ Pattern $ Variable x a
-       [t] -> return t
-       _   -> error  $ "ambiguous bindings for " ++ show x
-partial (Pattern (Constructor c ps a)) =
-  do ts  <- mapM partial (Pattern <$> ps)
-     ps' <- mapM (return . strengthenToPattern) ts
-     return $ Pattern $ Constructor c ps' a
--- partial (Rec x t0 a) =
---   do notAtTopLevel (x, a)
---      partial $ substitute x t0 (Rec x t0 a)
+partial (Pattern p) = partialPattern p
 partial (Let x t0 t1 a) =
   do notAtTopLevel (x, a)
      t0' <- partial t0
@@ -46,6 +33,8 @@ partial (Let x t0 t1 a) =
 partial (Lambda x t0 a) =
   do t0' <- partial t0
      return $ Lambda x t0' a
+-- /!\ Needs verification
+-- TODO Memoisation
 partial (Application t1 t2 a) =
   do t1' <- partial t1
      t2' <- partial t2
@@ -68,7 +57,7 @@ partial (Plus t1 t2 a) =
      if canonical t1' && canonical t2'
        then do m <- number t1'
                n <- number t1'
-               return $ Pattern $ Number (m + n) a
+               return $ Pattern $ Value $ Number (m + n) a
        else return $ Plus t1' t2' a
 partial (Minus t1 t2 a) =
   do t1' <- partial t1
@@ -76,7 +65,7 @@ partial (Minus t1 t2 a) =
      if canonical t1' && canonical t2'
        then do m <- number t1'
                n <- number t1'
-               return $ Pattern $ Number (m - n) a
+               return $ Pattern $ Value $ Number (m - n) a
        else return $ Minus t1' t2' a
 partial (Lt t1 t2 a) =
   do t1' <- partial t1
@@ -84,7 +73,7 @@ partial (Lt t1 t2 a) =
      if canonical t1' && canonical t2'
        then do m <- number t1'
                n <- number t1'
-               return $ Pattern $ Boolean (m < n) a
+               return $ Pattern $ Value $ Boolean (m < n) a
        else return $ Lt t1' t2' a
 partial (Gt t1 t2 a) =
   do t1' <- partial t1
@@ -92,7 +81,7 @@ partial (Gt t1 t2 a) =
      if canonical t1' && canonical t2'
        then do m <- number t1'
                n <- number t1'
-               return $ Pattern $ Boolean (m > n) a
+               return $ Pattern $ Value $ Boolean (m > n) a
        else return $ Gt t1' t2' a
 partial (Equal t1 t2 a) =
   do t1' <- partial t1
@@ -100,15 +89,34 @@ partial (Equal t1 t2 a) =
      if canonical t1' && canonical t2'
        then do m <- number t1'
                n <- number t1'
-               return $ Pattern $ Boolean (m == n) a
+               return $ Pattern $ Value $ Boolean (m == n) a
        else return $ Equal t1' t2' a
 partial (Not t0 a) =
   do t0' <- partial t0
      if canonical t0'
-       then do b <- bool t0'
-               return $ Pattern $ Boolean (not b) a
+       then do b <- boolean t0'
+               return $ Pattern $ Value $ Boolean (not b) a
        else return $ Not t0' a
 partial t = error $ "Partial evaluation failed for term " ++ show t
+-- partial (Rec x t0 a) =
+--   do notAtTopLevel (x, a)
+--      partial $ substitute x t0 (Rec x t0 a)
+
+partialPattern :: Show a => Pattern a -> PEvalState a (Term a)
+partialPattern (Value v) = partialValue v
+partialPattern (Variable x a) =
+  do program <- ask
+     case map snd $ filter ((== x) . fst) (functions program) of
+       [ ] -> return $ Pattern $ Variable x a
+       [t] -> return t
+       _   -> error  $ "ambiguous bindings for " ++ show x
+partialPattern (PConstructor c ps a) =
+  do ts  <- mapM partialPattern ps
+     let ps' = map strengthenToPattern ts
+     return $ Pattern $ PConstructor c ps' a
+
+partialValue :: Show a => Value a -> PEvalState a (Term a)
+partialValue v = return $ Pattern $ Value v
 
 
 -- Utility
