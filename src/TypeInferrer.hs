@@ -49,7 +49,7 @@ emptyEnvironment = error . (++ " is unbound!")
 
 -- Main functions
 annotate :: Term a -> Annotation (Term Type)
-annotate (Pattern     p) = annotate' p
+annotate (Pattern     p) = annotatePattern p
 annotate (TConstructor c ts _) =
   do tau <- fresh
      ts' <- local (bind c tau) $ mapM annotate ts
@@ -121,27 +121,27 @@ annotate (Not t0 _) =
 --      t0' <- local (bind x tau) $ annotate t0
 --      return $ Rec x t0' $ annotation t0'
 
-annotate' :: Pattern a -> Annotation (Term Type)
-annotate' (Value      v) = annotate'' v
-annotate' (Variable x _) =
+annotatePattern :: Pattern a -> Annotation (Term Type)
+annotatePattern (Value      v) = annotateValue v
+annotatePattern (Variable x _) =
   do env <- ask
      return $ Pattern $ Variable x $ env x
-annotate' (PConstructor c ps _) =
+annotatePattern (PConstructor c ps _) =
   do tau <- fresh
-     ts  <- local (bind c tau) $ mapM annotate' ps
+     ts  <- local (bind c tau) $ mapM annotatePattern ps
      ps' <- mapM (return . strengthenToPattern) ts
      if all canonical ps'
        then let vs' = map strengthenToValue ps'
             in  return $ Pattern $ Value $ VConstructor c vs' tau
        else return $ Pattern $ PConstructor c ps' tau
 
-annotate'' :: Value a -> Annotation (Term Type)
-annotate'' (Unit        _) = return $ Pattern $ Value $ Unit Unit'
-annotate'' (Number    n _) = return $ Pattern $ Value $ Number n Integer'
-annotate'' (Boolean   b _) = return $ Pattern $ Value $ Boolean b Boolean'
-annotate'' (VConstructor c vs _) =
+annotateValue :: Value a -> Annotation (Term Type)
+annotateValue (Unit        _) = return $ Pattern $ Value $ Unit Unit'
+annotateValue (Number    n _) = return $ Pattern $ Value $ Number n Integer'
+annotateValue (Boolean   b _) = return $ Pattern $ Value $ Boolean b Boolean'
+annotateValue (VConstructor c vs _) =
   do tau <- fresh
-     ts  <- local (bind c tau) $ mapM annotate'' vs
+     ts  <- local (bind c tau) $ mapM annotateValue vs
      vs' <- mapM (return . strengthenToValue . strengthenToPattern) ts
      return $ Pattern $ Value $ VConstructor c vs' tau
 
