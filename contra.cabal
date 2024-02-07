@@ -47,7 +47,7 @@ library
     , tasty-quickcheck ==0.10.*
   default-language: Haskell2010
 
-executable contra-exe
+executable contra
   main-is: Main.hs
   other-modules:
       Paths_contra

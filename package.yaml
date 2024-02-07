@@ -40,7 +40,7 @@ library:
   source-dirs: src
 
 executables:
-  contra-exe:
+  contra:
     main:                Main.hs
     source-dirs:         app
     ghc-options:

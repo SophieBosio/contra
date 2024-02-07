@@ -14,16 +14,15 @@ type Source = String
 type Parser = Parsec Source ()
 type Info   = (SourcePos, SourcePos)
 
-data Error =
-    ReservedKeyword      (X, Info)
-  | MultipleSignatures    X
+data ParsingError =
+    MultipleSignatures    X
   | MultipleADTs          X
   | MultipleFunctions    (X, Info)
   | MultipleProperties   (X, Info)
   | ParsingFailed        ParseError
   deriving Show
 
-reportErrors :: Program Info -> [Error]
+reportErrors :: Program Info -> [ParsingError]
 reportErrors p =
      [ MultipleSignatures  n         | n <- sigs  \\ nub sigs  ]
   ++ [ MultipleADTs        n         | n <- adts  \\ nub adts  ]
@@ -42,7 +41,7 @@ reportErrors p =
 
 
 -- Export
-parseProgram :: Source -> IO (Either [Error] (Program Info))
+parseProgram :: Source -> IO (Either [ParsingError] (Program Info))
 parseProgram path =
   do src <- readFile path
      return $

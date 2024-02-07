@@ -17,6 +17,12 @@ type Annotation   = RWS Environment [Constraint] Index
 type Substitution = [(Index, Type)]
 
 
+-- Export
+inferProgram :: Program a -> Program Type
+inferProgram = undefined
+-- TODO!
+
+
 -- Setup
 fresh :: Annotation Type
 fresh = Variable' <$> (get >>= \i ->     -- Get current index (state)
