@@ -148,7 +148,7 @@ instance Show a => Show (Program a) where
 
 instance Show (Term a) where
   show (Pattern               p) = show p
-  show (TConstructor c  ts    _) = c ++ concatMap show ts
+  show (TConstructor c  ts    _) = c ++ " " ++ parens (unwords (map show ts))
   show (Lambda       x  t0    _) = parens $ "\\" ++ x ++ " -> " ++ show t0
   show (Let          x  t1 t2 _) = "let " ++ x ++ " = " ++ show t1 ++
     " in " ++ show  t2
@@ -166,13 +166,13 @@ instance Show (Term a) where
 instance Show (Pattern a) where
   show (Value             v) = show v
   show (Variable     x    _) = show x
-  show (PConstructor c ps _) = c ++ concatMap show ps
+  show (PConstructor c ps _) = c ++ " " ++ parens (unwords (map show ps))
 
 instance Show (Value a) where
   show (Unit              _) = "()"
   show (Number       n    _) = show n
   show (Boolean      b    _) = show b
-  show (VConstructor c vs _) = c ++ concatMap show vs
+  show (VConstructor c vs _) = c ++ " " ++ parens (unwords (map show vs))
 
 
 -- Annotations
