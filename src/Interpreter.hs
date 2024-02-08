@@ -13,9 +13,8 @@ type Runtime a = Reader (Program a)
 -- Export
 normalise :: Show a => Program a -> (Term a -> Value a)
 normalise p t =
-  case runReader (evaluate t) p of
-    (Pattern (Value v)) -> v
-    _                   -> error $ "failed to normalise term " ++ show t
+  let result = runReader (evaluate t) p
+  in  (strengthenToValue . strengthenToPattern) result
 
 
 -- Main functions

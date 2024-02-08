@@ -92,25 +92,36 @@ instance Canonical (Value a) where
   canonical (Boolean         _ _) = True
   canonical (VConstructor _ vs _) = all canonical vs
 
-isPattern :: Term a -> Bool
-isPattern (Pattern _) = True
-isPattern _           = False
 
+-- Working between terms, patterns, and values
 strengthenToPattern :: Term a -> Pattern a
+strengthenToPattern (TConstructor c ts a)
+  | all isPattern ts = PConstructor c (map strengthenToPattern ts) a
 strengthenToPattern (Pattern p) = p
 strengthenToPattern t           = error $
   "expected pattern, but was given the non-canonical term " ++ show t
 
 strengthenToValue :: Pattern a -> Value a
+strengthenToValue (PConstructor c ps a)
+  | all canonical ps = VConstructor c (map strengthenToValue ps) a
 strengthenToValue (Value v) = v
 strengthenToValue p         = error $
-  "expected pattern, but was given the non-canonical term " ++ show p
+  "expected value, but was given the non-canonical term " ++ show p
+
+weakenToPattern :: Value a -> Pattern a
+weakenToPattern (VConstructor c vs a) = PConstructor c (map weakenToPattern vs) a
+weakenToPattern v                     = Value v
 
 weakenToTerm :: Pattern a -> Term a
-weakenToTerm = Pattern
+weakenToTerm (PConstructor c ps a) = TConstructor c (map weakenToTerm ps) a
+weakenToTerm p                     = Pattern p
 
-manipulateWith :: (Term a -> Term a) -> Pattern a -> Pattern a
+manipulateWith :: (Term a -> Term a) -> (Pattern a -> Pattern a)
 manipulateWith f = strengthenToPattern . f . weakenToTerm
+
+isPattern :: Term a -> Bool
+isPattern (Pattern _) = True
+isPattern _           = False
 
 
 -- Pretty printing

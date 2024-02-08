@@ -23,6 +23,7 @@ partiallyEvaluate p t = runState (runReaderT (partial t) p) p
 -- Main functions
 partial :: Show a => Term a -> PEvalState a (Term a)
 partial (Pattern p) = partialPattern p
+partial (TConstructor c ts a) = undefined -- TODO!
 partial (Let x t0 t1 a) =
   do notAtTopLevel (x, a)
      t0' <- partial t0

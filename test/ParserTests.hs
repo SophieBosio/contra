@@ -23,8 +23,6 @@ typeParser =
   testGroup "Type parser tests: " $
      testParseSimpleTypesOK
   ++ testParseSimpleTypesError
-  ++ testParseRegularTypesOK
-  ++ testParseRegularTypesError
   ++ testParseTypesOK
   ++ testParseTypesError
 
@@ -141,32 +139,6 @@ testParseSimpleTypesError =
              testSimpleError type' s)
   ("" : reservedKeywords)
 
-testParseRegularTypesOK :: [TestTree]
-testParseRegularTypesOK =
-  map (\(s, e) -> testCase ("Parsing regular type '" ++ s ++ "'") $
-                  testSimpleOK regularType s e)
-  [ ("(Integer, Integer)",         Integer' :*: Integer')
-  , ("(Boolean, Unit)",            Boolean' :*: Unit')
-  , ("(Integer, Boolean)",         Integer' :*: Boolean')
-  , ("((Integer, Unit), Boolean)", (Integer' :*: Unit') :*: Boolean')
-  , ("(Integer, (Unit, Boolean))", Integer' :*: (Unit' :*: Boolean'))
-  , ("3",                          Variable' 3)
-  , ("Unit",                       Unit')
-  , ("Integer",                    Integer')
-  , ("Boolean",                    Boolean')
-  , ("(Integer)",                  Integer')
-  ]
-
-testParseRegularTypesError :: [TestTree]
-testParseRegularTypesError =
-  map (\s -> testCase ("* Illegal type '" ++ s ++ "'") $
-             testSimpleError regularType s)
-  [ "(Integer, Integer"
-  , "(Integer, )"
-  , ""
-  ]
-  
-
 testParseTypesOK :: [TestTree]
 testParseTypesOK =
   map (\(s, e) -> testCase ("Parsing type '" ++ s ++ "'") $
@@ -178,17 +150,11 @@ testParseTypesOK =
   , ("Integer",            Integer')
   , ("Boolean",            Boolean')
   , ("(Unit)",             Unit')
-  , ("(Unit, Unit)",       Unit' :*: Unit')
-  , ("(Integer, Boolean)", Integer' :*: Boolean')
-  , ("(Integer ,Boolean)", Integer' :*: Boolean')
-  , ("( Integer,Boolean )", Integer' :*: Boolean')
   , ("Boolean -> Integer", Boolean' :->: Integer')
   , ("(Integer -> Boolean) -> Unit",
       (Integer' :->: Boolean') :->: Unit')
   , ("Integer -> (Boolean -> Unit)",
       Integer' :->: (Boolean' :->: Unit'))
-  , ("(Integer, Integer) -> Boolean",
-      (Integer' :*: Integer') :->: Boolean')
   , ("C Integer",          ADT "C" [Integer'])
   , ("Ctr Ctr_ Boolean Integer",
       ADT "Ctr" [ADT "Ctr_" [Boolean', Integer']])
