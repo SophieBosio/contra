@@ -89,12 +89,14 @@ report ((MultipleADTs n) : rest) =
   ("Multiple ADTs declared with name " ++ n ++ "\n")
   ++ report rest
 report ((MultipleFunctions (n, i) : rest)) =
-  let positions = ""
-  in ("Multiple functions declared with name " ++ n ++ " at " ++ positions ++ "\n")
+  let (start, end) = i
+  in ("Multiple functions declared with name " ++ n ++
+      "\n beginning at \n" ++ show start ++ "\n and ending at\n" ++ show end)
      ++ report rest
 report ((MultipleProperties (n, i) : rest)) =
-  let positions = ""
-  in ("Multiple properties declared with name " ++ n ++ " at " ++ positions ++ "\n")
+  let (start, end) = i
+  in ("Multiple properties declared with name " ++ n ++
+      "\n beginning at \n" ++ show start ++ "\n and ending at\n" ++ show end)
      ++ report rest
 report ((ParsingFailed err) : rest) =
   ("Parsing failed: " ++ show err ++ "\n")
