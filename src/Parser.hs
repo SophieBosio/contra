@@ -69,8 +69,8 @@ reservedKeywords =
   , "of"
   , "let"
   , "in"
-  -- , "rec"
   , "adt"
+  -- , "rec"
   ]
 
 identHead :: Parser Char

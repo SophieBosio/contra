@@ -36,7 +36,7 @@ data Type =
   | Boolean'
   | Variable' Index
   | Type :->: Type
-  | ADT  T    [Type]
+  | ADT  C    [Type]
   deriving (Show)
 
 data Term a =
@@ -64,10 +64,10 @@ data Pattern a =
   deriving (Functor)
 
 data Value a =
-    Unit                      a
-  | Number       Integer      a
-  | Boolean      Bool         a
-  | VConstructor C [Value a]  a
+    Unit                     a
+  | Number       Integer     a
+  | Boolean      Bool        a
+  | VConstructor C [Value a] a
   deriving (Functor)
 
 
