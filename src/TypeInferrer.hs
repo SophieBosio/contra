@@ -20,7 +20,16 @@ type Substitution = [(Index, Type)]
 
 -- Export
 inferProgram :: Program a -> Program Type
-inferProgram program = undefined
+inferProgram program = refine (resolveConstraints constraints) <$> annotatedProgram
+  where
+    definitions  prog = functions  prog ++ properties prog
+    constraints = annotationConstraints ++ signatureDefinitionAccord
+    (annotatedProgram, _, annotationConstraints) =
+      runRWS (annotateProgram program) emptyEnvironment 0
+    signatureDefinitionAccord =
+      [ t' :=: annotation t'' | (x, t')  <- signatures  annotatedProgram
+                              , (y, t'') <- definitions annotatedProgram
+                              , x == y ]
 
 
 -- Setup
@@ -249,5 +258,5 @@ alpha i t =
     increment :: Type -> Type
     increment (Variable'    j) = Variable' (i + j)
     increment (tau1 :->: tau2) = increment tau1 :->: increment tau2
-    increment (ADT       t ts) = ADT t $ map increment ts
-    increment t                = t
+    increment (ADT       c ts) = ADT c $ map increment ts
+    increment t'               = t'
