@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Main (main) where
 
 import Syntax
@@ -38,8 +40,7 @@ main = getArgs >>= run . action
 
 run :: IO Action -> IO ()
 run command =
-  command >>= \preprocessed ->
-  case preprocessed of
+  command >>= \case
     (REPL          program) -> repl program
     (Execute       program) -> execute program
     (PropertyCheck program) -> check program
@@ -51,10 +52,10 @@ action :: [String] -> IO Action
 action ["--check", file] = PropertyCheck <$> (parse file >>= typecheck)
 action ["--types", file] = TypeCheck     <$>  parse file
 action ["--load",  file] = REPL          <$> (parse file >>= typecheck)
-action [ ]               = return $ REPL    End
 action ["--version"    ] = return $ Version versionInfo
 action ["--help"       ] = return $ Fail    useInfo
 action [           file] = Execute       <$> (parse file >>= typecheck)
+action [ ]               = return $ REPL    End
 action _                 = return $ Fail    useInfo
 
 
