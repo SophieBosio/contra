@@ -1,0 +1,17 @@
+num1 :: Integer
+num1 = 5
+
+num2 :: Integer
+num2 = 3
+
+addCommutative :: Integer -> Integer -> Boolean
+addCommutative a b =*= (a + b) == (b + a)
+
+addAssociative :: Integer -> Integer -> Integer -> Boolean
+addAssociative a b c =*= ((a + b) + c) == (a + (b + c))
+
+subCommutative :: Integer -> Integer -> Boolean
+subCommutative a b =*= (a - b) == (b - a)
+
+subAssociative :: Integer -> Integer -> Integer -> Boolean
+subAssociative a b c =*= ((a - b) - c) == (a - (b - c))

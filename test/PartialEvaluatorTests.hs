@@ -31,7 +31,6 @@ evaluateToDifferentTerm p t =
 emptyProgram :: Program Type
 emptyProgram = End
 
--- TODO! Uh-oh, infinite loop...
 simpleTerms =
   map (\t -> testCase
              ("Interpreting and partially evaluating term  '" ++ show t ++ "'")
@@ -39,9 +38,10 @@ simpleTerms =
   [ Pattern (Value (Unit Unit'))
   , Pattern (Value (Number 3 Integer'))
   , Pattern (Value (Boolean False Boolean'))
-  , Pattern (PConstructor "x" [Value (Number 5 Integer')] (ADT "C" [Integer']))
+  , Pattern (PConstructor "x" [Value (Number 5 Integer')] (ADT "X" [Integer']))
+  , Pattern (Value (VConstructor "y" [VConstructor "z" [Boolean True Boolean', Number 3 Integer'] (ADT "Z" [Boolean', Integer'])] (ADT "Y" [ADT "Z" [Boolean', Integer']])))
   ]
-  
+
 
 -- Variables
 variables =

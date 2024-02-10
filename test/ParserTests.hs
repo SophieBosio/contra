@@ -5,9 +5,9 @@ import Parser
 
 import Test.Tasty
 import Test.Tasty.HUnit
-import Test.Tasty.QuickCheck as QC
-import Data.Either (isLeft)
-import Text.Parsec (eof)
+import Data.Either           (isLeft)
+import Text.Parsec           (eof)
+import Control.Monad         (void)
 
 
 utilityParsers :: TestTree
@@ -29,27 +29,12 @@ typeParser =
 termParser :: TestTree
 termParser =
   testGroup "Term parser tests: " $
-  []
-
-functionParser :: TestTree
-functionParser =
-  testGroup "Function parser tests: " $
-  []
-
-propertyParser :: TestTree
-propertyParser =
-  testGroup "Property parser tests: " $
-  []
-
-signatureParser :: TestTree
-signatureParser =
-  testGroup "Signature parser tests: " $
-  []
-
-adtParser :: TestTree
-adtParser =
-  testGroup "ADT parser tests: " $
-  []
+     testParseValuesOK
+  ++ testParseValuesError
+  ++ testParsePatternsOK
+  ++ testParsePatternsError
+  ++ testParseTermsOK
+  ++ testParseTermsError
 
 programTests :: TestTree
 programTests =
@@ -64,9 +49,22 @@ testSimpleOK p str expected =
   assertEqual ("Should parse: " ++ show str)
     (Right expected) (parseString p str)
 
+testSimpleError :: (Eq a, Show a) => Parser a -> String -> Assertion
 testSimpleError p str =
   assertBool ("*Should not parse: " ++ show str) $
     isLeft (parseString p str)
+
+typelessTestOK :: (Functor f, Eq (f ()), Show (f ())) =>
+                  Parser (f a) -> String -> f () -> Assertion
+typelessTestOK p str expected =
+  assertEqual ("Should parse: " ++ show str)
+    (Right expected) (void <$> parseString p str)
+
+typelessTestError :: (Functor f, Eq (f ()), Show (f ())) =>
+                     Parser (f a) -> String -> Assertion
+typelessTestError p str =
+  assertBool ("*Should not parse: " ++ show str) $
+    isLeft (void <$> parseString p str)
 
 
 -- Utility parsers
@@ -176,40 +174,113 @@ testParseTypesError =
 
 
 -- Parse terms
-testParseTerms :: [TestTree]
-testParseTerms = undefined
+testParseValuesOK :: [TestTree]
+testParseValuesOK =
+  map (\(s, e) -> testCase ("Parsing value '" ++ s ++ "'") $
+                  typelessTestOK value s e)
+  [ ("0",     Number 0    ())
+  , ("-1",    Number (-1) ())
+  , ("53",    Number 53   ())
+  , ("True",  Boolean True ())
+  , ("False", Boolean False ())
+  , ("Unit",  Unit ())
+  , ("(Unit)", Unit ())
+  , ("Ctr",   VConstructor "Ctr" [] ())
+  , ("(Ctr True 5)", VConstructor "Ctr" [Boolean True (), Number 5 ()] ())
+  , ("Ctr 3 False",  VConstructor "Ctr" [Number 3 (), Boolean False ()] ())
+  ]
+
+testParseValuesError :: [TestTree]
+testParseValuesError =
+  map (\s -> testCase ("*Illegal value '" ++ s ++ "'") $
+             typelessTestError value s)
+  [ "false"
+  , "true"
+  , "unit"
+  , "*ctr"
+  ]
+
+testParsePatternsOK :: [TestTree]
+testParsePatternsOK =
+  map (\(s, e) -> testCase ("Parsing pattern '" ++ s ++ "'") $
+                  typelessTestOK pattern' s e)
+  [ ("0",       Value (Number 0    ()))
+  , ("-1",      Value (Number (-1) ()))
+  , ("53",      Value (Number 53   ()))
+  , ("True",    Value (Boolean True ()))
+  , ("False",   Value (Boolean False ()))
+  , ("Unit",    Value (Unit ()))
+  , ("(False)", Value (Boolean False ()))
+  ]
+
+testParsePatternsError :: [TestTree]
+testParsePatternsError =
+  map (\s -> testCase ("*Illegal pattern '" ++ s ++ "'") $
+             typelessTestError pattern' s)
+  [ ""
+  , "=false"
+  , "*ctr"
+  ]
 
 
--- Parse functions
+testParseTermsOK :: [TestTree]
+testParseTermsOK =
+  map (\(s, e) -> testCase ("Parsing term '" ++ s ++ "'") $
+                  typelessTestOK term s e)
+  [
+    ("0",  Pattern (Value (Number 0    ())))
+  , ("-1", Pattern (Value (Number (-1) ())))
+  , ("53", Pattern (Value (Number 53   ())))
+  , ("3 + 5", Plus (Pattern (Value (Number 3 ()))) (Pattern (Value (Number 5 ()))) ())
+  , ("5 - 3", Minus (Pattern (Value (Number 5 ()))) (Pattern (Value (Number 3 ()))) ())
+  , ("3 < 5", Lt (Pattern (Value (Number 3 ()))) (Pattern (Value (Number 5 ()))) ())
+  , ("5 > 3", Gt (Pattern (Value (Number 5 ()))) (Pattern (Value (Number 3 ()))) ())
+  , ("(5 > 3)", Gt (Pattern (Value (Number 5 ()))) (Pattern (Value (Number 3 ()))) ())
+  , ("2 == 2", Equal (Pattern (Value (Number 2 ()))) (Pattern (Value (Number 2 ()))) ())
+  , ("(2 == 2)", Equal (Pattern (Value (Number 2 ()))) (Pattern (Value (Number 2 ()))) ())
+  , ("not (3 == 5)", Not (Equal (Pattern (Value (Number 3 ()))) (Pattern (Value (Number 5 ()))) ()) ())
+  , ("not (5 > 3)", Not (Gt (Pattern (Value (Number 5 ()))) (Pattern (Value (Number 3 ()))) ()) ())
+  , ("3 5", Application (Pattern (Value (Number 3 ()))) (Pattern (Value (Number 5 ()))) ())
+  , ("f x", Application (Pattern (Variable "f" ())) (Pattern (Variable "x" ())) ())
+  , ("\\x -> \\f -> \\y -> f x y"
+    , (Lambda "x"
+         (Lambda "f"
+            (Lambda "y"
+               (Application
+                  (Application
+                   (Pattern (Variable "f" ()))
+                    (Pattern (Variable "x" ())) ())
+                (Pattern (Variable "y" ())) ()) ()) ()) ()))
+    --let expressions, term constructors
+  , ("case True of "       ++
+     "| True  -> 5 " ++
+     "| False -> 3 "
+    ,  Case (Pattern (Value (Boolean True ())))
+            [ (Value (Boolean True ()), Pattern (Value (Number 5 ())))
+            , (Value (Boolean False ()), Pattern (Value (Number 3 ()))) ] ())
+  , ("case x of "       ++
+     "| 5     -> True " ++
+     "| False -> False "
+    ,  Case (Pattern (Variable "x" ()))
+            [ (Value (Number 5 ()), Pattern (Value (Boolean True ())))
+            , (Value (Boolean False ()), Pattern (Value (Boolean False ()))) ] ())
+  , ("if True then 5 else 3"
+    , Case (Pattern (Value (Number 3 ())))
+           [ (Value (Boolean True ()),  Pattern (Value (Number 5 ())))
+           , (Value (Boolean False ()), Pattern (Value (Number 3 ())))] ())
+  -- , ("", )
+  -- , ("", )
+  ]
 
 
--- Parse properties
-
-
--- Parse function signatures
--- testParseSignaturesOK :: [TestTree]
--- testParseSignaturesOK =
---   map (\(s, e) -> testCase ("Parsing function signature '" ++ s ++ "'") $
---                   testSimpleOK (signature' >> eof) s e)
---   [ ("add :: Integer -> Integer -> Integer",
---      Signature "add" ((Integer' :->: Integer') :->: Integer') End)
---   , ("addTuple :: (Integer, Integer) -> Integer", )
---   , ("addPedantic :: (Integer -> Integer) -> Integer", )
---   , ("constant :: Integer", )
---   , ("constant :: Boolean", )
---   , ("un :: Unit", )
---   , ("complex :: (Integer -> Integer) -> (Boolean -> Boolean)", )
---   , ("complex2 :: (Boolean -> Boolean) -> (Integer, Integer)", )
---   ]
-
--- testParseSignaturesError :: [TestTree]
--- testParseSignaturesError =
---   map (\s -> testCase ("* Illegal function signature '" ++ s ++ "'") $
---              testSimpleError signature' s)
---   []
-
-
--- Parse ADTs
+testParseTermsError :: [TestTree]
+testParseTermsError =
+  map (\s -> testCase ("*Illegal term '" ++ s ++ "'") $
+             typelessTestError term s)
+  [ ""
+  , "=false"
+  , "*ctr"
+  ]
 
 
 -- Parse whole programs

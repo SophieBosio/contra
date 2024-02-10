@@ -132,7 +132,7 @@ brackets :: String -> String
 brackets = ("[" ++) . (++ "]")
 
 caseArrow :: (Pattern a, Term a) -> String
-caseArrow (p, t) = " ; " ++ show p ++ " -> " ++ show t
+caseArrow (p, t) = " | " ++ show p ++ " -> " ++ show t
 
 instance Show a => Show (Program a) where
   show (Signature x t  rest) =
@@ -160,7 +160,7 @@ instance Show (Term a) where
   show (Lt           t0 t1    _) = show t0 ++ " < "  ++ show t1
   show (Gt           t0 t1    _) = show t0 ++ " > "  ++ show t1
   show (Equal        t0 t1    _) = show t0 ++ " == " ++ show t1
-  show (Not          t0       _) = "not" ++ parens (show t0)
+  show (Not          t0       _) = "not " ++ parens (show t0)
   -- show (Rec          x  t0    _) = "rec " ++ x ++ " . " ++ show t0
 
 instance Show (Pattern a) where

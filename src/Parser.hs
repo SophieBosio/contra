@@ -53,7 +53,7 @@ parseProgram path =
              _   -> Left $ reportErrors code
 
 parseString :: Parser a -> String -> Either ParseError a
-parseString p = runParser p () "<repl>"
+parseString p = runParser p () "<error>"
     
 
 -- Language basics
@@ -77,7 +77,7 @@ identHead :: Parser Char
 identHead = letter <|> underscore
 
 identTail :: Parser Char
-identTail = try $ choice [ identHead, digit, dash, underscore ]
+identTail = try $ choice [ letter, digit, dash, underscore ]
 
 identifier :: Parser String
 identifier =
@@ -88,10 +88,11 @@ identifier =
 constructorName :: Parser String
 constructorName =
   do name <- (:) <$> upper <*> many identTail
+     notFollowedBy identTail
      lexeme $ return name
 
 keyword :: String -> Parser ()
-keyword s = lexeme $ try $ string s >> notFollowedBy identTail
+keyword s = try $ void $ lexeme $ string s >> notFollowedBy identTail
 
 
 -- Types
@@ -133,13 +134,14 @@ unit = void $ symbol "Unit"
 
 value :: Parser (Value Info)
 value = choice $
-  try (parens value) :
   map info
     [ Unit         <$  unit
     , number       <&> Number
     , boolean      <&> Boolean
     , VConstructor <$> constructorName <*> many value
     ]
+  ++
+  [ parens value ]
 
 
 -- Patterns
@@ -154,69 +156,69 @@ pattern' = choice $
     , PConstructor <$> constructorName <*> many pattern'
     ]
 
--- Complex terms
+-- Terms
+-- TODO: For some reason, tries to parse 'case' and 'if' as identifiers...
 term :: Parser (Term Info)
 term = choice $
-  map try $
-  [ caseStatement
-  , desugaredIf
-  , binaryOperator term
-  , application term
-  ]
-  ++
-  [ Pattern <$> pattern'
-  , parens term
-  ]
+  parens term :
+  chainl1 patternTerm operator :
+  map try
+    [ caseStatement
+    , desugaredIf
+    ]
   ++
   map info
-    [ keyword "not" >> (Not <$> term)
-    , keyword "\\"  >> Lambda <$> identifier <*> (arrow >> term)
-    -- , keyword "rec" >> Rec <$> identifier <*> term
-    , symbol  "let" >> Let <$> identifier <*>
+    [ symbol "not" >> Not    <$> term
+    , symbol "\\"  >> Lambda <$> identifier <*> (arrow >> term)
+    , symbol "let" >> Let    <$> identifier <*>
                       (symbol "=" >> term) <*> (symbol "in" >> term)
     , TConstructor <$> constructorName <*> many term
+    -- , keyword "rec" >> Rec <$> identifier <*> term
     ]
+
+patternTerm :: Parser (Term Info)
+patternTerm = pattern' >>= \p -> return (Pattern p)
+
+operator :: Parser (Term Info -> Term Info -> Term Info)
+operator =
+  choice
+    [ symbol "+"  >> return (\t1 t2 -> Plus  t1 t2 $ sourcePositions t1 t2)
+    , symbol "-"  >> return (\t1 t2 -> Minus t1 t2 $ sourcePositions t1 t2)
+    , symbol "<"  >> return (\t1 t2 -> Lt    t1 t2 $ sourcePositions t1 t2)
+    , symbol ">"  >> return (\t1 t2 -> Gt    t1 t2 $ sourcePositions t1 t2)
+    , symbol "==" >> return (\t1 t2 -> Equal t1 t2 $ sourcePositions t1 t2)
+    , return $ \f x -> Application f x $ sourcePositions f x
+    ]
+  where
+    sourcePositions t1 t2 = (fst (annotation t1), snd (annotation t2))
 
 caseStatement :: Parser (Term Info)
 caseStatement =
-  do _ <- keyword "case"
+  do _ <- keyword "case "
      t <- term
-     _ <- keyword "of"
-     info $ Case t <$> many1
-       (do _    <- symbol "|"
-           alt  <- pattern'
-           _    <- arrow
-           body <- term
-           return (alt, body))
+     _ <- keyword "of "
+     info $ Case t <$> many1 branch
+
+branch :: Parser (Pattern Info, Term Info)
+branch =
+  do _    <- symbol "|"
+     alt  <- pattern'
+     _    <- arrow
+     body <- term
+     return (alt, body)
+
 
 desugaredIf :: Parser (Term Info)
 desugaredIf =
-  do _     <- keyword "if"
+  do _     <- keyword "if "
      t     <- term
-     _     <- keyword "then"
+     _     <- keyword "then "
      true  <- term
-     _     <- keyword "else"
+     _     <- keyword "else "
      false <- term
      b1    <- info $ return $ Boolean True
      b2    <- info $ return $ Boolean False
      info $ return $ Case t [(Value b1, true), (Value b2, false)]
-
-binaryOperator :: Parser (Term Info) -> Parser (Term Info)
-binaryOperator t2 =
-  do t1 <- term
-     operator <- choice
-       [ symbol "+"   >> return Plus
-       , symbol "-"   >> return Minus
-       , symbol "<"   >> return Lt
-       , symbol ">"   >> return Gt
-       , symbol "=="  >> return Equal
-       ]
-     info $ operator t1 <$> t2
-
-application :: Parser (Term Info) -> Parser (Term Info)
-application t2 =
-  do t1 <- term
-     info $ Application t1 <$> t2
 
 
 -- Functions, properties, signatures & data types
@@ -252,15 +254,12 @@ constructor =
      ts <- many type'
      return (c, ts)
 
-constructors :: Parser [(C, [Type])]
-constructors = constructor `sepBy1` symbol "|"
-
 adt :: Parser (Program Info -> Program Info)
 adt =
   do _  <- symbol "adt"
      t  <- constructorName
      _  <- symbol "="
-     Data t <$> constructors
+     Data t <$> sepByPipe constructor
 
 
 -- Program
@@ -314,3 +313,6 @@ arrow = symbol "->"
 
 reserved :: Name -> Bool
 reserved = flip elem reservedKeywords
+
+sepByPipe :: Parser a -> Parser [a]
+sepByPipe p = p `sepBy1` symbol "|"

@@ -19,13 +19,6 @@ sub    m     Z  = m
 sub    Z     _  = error "The natural numbers may only be positive"
 sub (S m) (S n) = sub m n
 
--- Is parsed into:
-sub m n =
-  case (m, n) of
-    | (m,    Z) -> m
-    | (Z,    _) -> error...
-    | (S m, Sn) -> Sub m n
-
 addCommutative :: Nat -> Nat -> Bool
 addCommutative m n =*= equal (add m n) (add n m)
 
