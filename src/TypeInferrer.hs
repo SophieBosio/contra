@@ -87,9 +87,10 @@ annotateProgram (Function f def rest) =
   do def'  <- annotate def
      rest' <- annotateProgram rest
      return $ Function f def' rest'
--- TODO!
--- annotateProgram (Property p def rest) =
---   do def'  <- annotate
+annotateProgram (Property p def rest) =
+  do def'  <- annotate def
+     rest' <- annotateProgram rest
+     return $ Property p def' rest'
 annotateProgram End = return End
 
 
