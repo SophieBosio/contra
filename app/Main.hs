@@ -15,6 +15,7 @@ import Parser
   )
 import TypeInferrer (inferProgram)
 -- import Interpreter  (normalise)
+import PropertyEngine (check)
 
 import System.Environment (getArgs)
 import System.Exit        (die)
@@ -43,7 +44,7 @@ run command =
   command >>= \case
     (REPL          program) -> repl program
     (Execute       program) -> execute program
-    (PropertyCheck program) -> check program
+    (PropertyCheck program) -> checkProperties program
     (TypeCheck     program) -> typecheck program >>= print
     (Version       message) -> die message
     (Fail          message) -> die message
@@ -76,8 +77,8 @@ repl = const $ die "REPL is future work"
 execute :: Program Type -> IO ()
 execute = undefined
 
-check :: Program Type -> IO ()
-check = undefined
+checkProperties :: Program Type -> IO ()
+checkProperties program = mapM_ check (properties program)
 
 
 -- Utilities
