@@ -123,6 +123,16 @@ isPattern :: Term a -> Bool
 isPattern (Pattern _) = True
 isPattern _           = False
 
+strengthenIfPossible :: Name -> [Term a] -> a -> Term a
+strengthenIfPossible c ts a =
+  if all isPattern ts
+     then let ps = map strengthenToPattern ts
+          in  if all canonical ps
+                 then let vs = map strengthenToValue ps
+                      in  Pattern $ Value $ VConstructor c vs a
+                 else Pattern $ PConstructor c ps a
+     else TConstructor c ts a
+
 
 -- Pretty printing
 parens :: String -> String

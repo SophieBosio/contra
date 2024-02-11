@@ -20,6 +20,9 @@ normalise p t =
 -- Main functions
 evaluate :: Show a => Term a -> Runtime a (Term a)
 evaluate (Pattern p) = evaluatePattern p
+evaluate (TConstructor c ts a) =
+  do ts' <- mapM evaluate ts
+     return $ strengthenIfPossible c ts' a
 evaluate (Let x t0 t1 a) =
   do notAtTopLevel (x, a)
      evaluate t0 >>= evaluate . substitute x t1
@@ -68,9 +71,8 @@ evaluatePattern (Variable x _) =
        [t] -> evaluate t -- Disallow shadowing at top-level
        _   -> error $ "ambiguous bindings for " ++ x
 evaluatePattern (PConstructor c ps a) =
-  do ts  <- mapM evaluatePattern ps
-     let ps' = map strengthenToPattern ts
-     return $ Pattern $ PConstructor c ps' a
+  do ts <- mapM evaluatePattern ps
+     return $ strengthenIfPossible c ts a
 
 evaluateValue :: Show a => Value a -> Runtime a (Term a)
 evaluateValue v = return $ Pattern $ Value v
