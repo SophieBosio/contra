@@ -46,6 +46,8 @@ unify'' (Boolean  b _) (Boolean    c _) | b == c = mempty
 unify'' (VConstructor c vs _) (VConstructor c' vs' _)
   | c == c' && length vs == length vs'
   = foldr (mappend . uncurry unify'') mempty (zip vs vs')
+unify'' _             _                 = Substitution Nothing
+
 
 -- Substitution
 instance Semigroup (Substitution meta a) where

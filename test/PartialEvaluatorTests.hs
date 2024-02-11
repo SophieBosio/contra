@@ -31,6 +31,7 @@ evaluateToDifferentTerm p t =
 emptyProgram :: Program Type
 emptyProgram = End
 
+simpleTerms :: [TestTree]
 simpleTerms =
   map (\t -> testCase
              ("Interpreting and partially evaluating term  '" ++ show t ++ "'")
@@ -44,6 +45,7 @@ simpleTerms =
 
 
 -- Variables
+variables :: [TestTree]
 variables =
   map (\t -> testCase
              ("Interpreting and partially evaluating term  '" ++ show t ++ "'")

@@ -42,9 +42,9 @@ u1 `equalTo` u2 = tell [u1 :=: u2]
 
 
 -- Main functions
-equalise :: Term Type -> Constrainer Unknown
-equalise (Pattern p) = equalise' p
--- equalise (Lambda x t0 _)
+-- equalise :: Term Type -> Constrainer Unknown
+-- equalise (Pattern p) = equalise' p
+-- -- equalise (Lambda x t0 _)
 
-equalise' :: Pattern a -> Constrainer Unknown
-equalise' = undefined
+-- equalise' :: Pattern a -> Constrainer Unknown
+-- equalise' = undefined
