@@ -108,7 +108,7 @@ simpleType = choice
   , Integer'  <$  symbol "Integer"
   , Boolean'  <$  symbol "Boolean"
   , Variable' <$> number
-  , ADT       <$> identifier <*> many type'
+  , ADT       <$> identifier
   , parens type'
   ]
 

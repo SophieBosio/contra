@@ -5,6 +5,7 @@ module TypeInferrer where
 import Syntax
 
 import Control.Monad.RWS
+import Control.Arrow (second)
 import Data.Maybe (fromMaybe)
 
 -- Abbreviations
@@ -76,13 +77,12 @@ annotateProgram (Signature x def rest) =
      put j
      rest' <- local (bind x tau) $ annotateProgram rest
      return $ Signature x tau rest'
--- TODO!
--- annotateProgram (Data      t def rest) =
---   do i <- get
---      let (j, tau) = alpha i def
---      put j
---      rest' <- local (bind x tau) $ annotateProgram rest
---      return $ ADT t tau rest'
+annotateProgram (Data t defs rest) =
+  do i <- get
+     let (j, defs') = alphaADT i defs
+     put j
+     rest' <- local (bind t (ADT t)) $ annotateProgram rest
+     return $ Data t defs' rest'
 annotateProgram (Function f def rest) =
   do def'  <- annotate def
      rest' <- annotateProgram rest
@@ -205,10 +205,10 @@ solve (constraint : rest) =
     Integer'      :=: Integer'      -> solve rest
     Boolean'      :=: Boolean'      -> solve rest
     (t0 :->: t1)  :=: (t2 :->: t3)  -> solve $ (t0 :=: t2) : (t1 :=: t3) : rest
-    (ADT  x1 t1)  :=: (ADT  x2 t2)  ->
+    (ADT     x1)  :=: (ADT     x2)  ->
       if   x1 /= x2
       then Nothing
-      else solve $ zipWith (:=:) t1 t2 ++ rest
+      else solve rest
     (Variable' i) :=: t1            ->
       if   i `elem` indices t1
       then (if Variable' i /= t1 then Nothing else solve rest)
@@ -229,13 +229,12 @@ refine _              Unit'                  = Unit'
 refine _              Integer'               = Integer'
 refine _              Boolean'               = Boolean'
 refine s              (tau1 :->: tau2)       = refine s tau1 :->: refine s tau2
-refine s              (ADT  name taus)       = ADT name $ map (refine s) taus
+refine _              (ADT name)             = ADT name
 
 
 -- Utility functions
 indices :: Type -> [Index]
 indices (Variable' i) = return i
-indices (ADT    _ ts) = concatMap indices ts
 indices (t0  :->: t1) = indices t0 ++ indices t1
 indices _             = mempty
 
@@ -259,5 +258,16 @@ alpha i t =
     increment :: Type -> Type
     increment (Variable'    j) = Variable' (i + j)
     increment (tau1 :->: tau2) = increment tau1 :->: increment tau2
-    increment (ADT       c ts) = ADT c $ map increment ts
     increment t'               = t'
+
+
+alphaADT :: Index -> ([(C, [Type])] -> (Index, [(C, [Type])]))
+alphaADT i =
+  foldr (\def (j, defs') -> second ((defs' ++) . return) (alphaDefs j def))
+  (i, [])
+
+alphaDefs :: Index -> ((C, [Type]) -> (Index, (C, [Type])))
+alphaDefs i (c, ts) =
+  let (k, ts') = foldr (\tau (j, taus) -> second ((taus ++) . return)
+                         (alpha j tau)) (i, []) ts
+  in  (k, (c, ts'))

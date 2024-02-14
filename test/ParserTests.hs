@@ -38,7 +38,7 @@ termParser =
 
 programTests :: TestTree
 programTests =
-  testGroup "Program parser tests: " $
+  testGroup "Program parser tests: "
   []
   
 
@@ -125,10 +125,7 @@ testParseSimpleTypesOK =
   , ("Boolean",     Boolean')
   , ("(Integer)",   Integer')
   , ("((Integer))", Integer')
-  , ("MyADT",       ADT "MyADT" [])
-  , ("C Integer",   ADT "C" [Integer'])
-  , ("Ctr Ctr_ Boolean Integer",
-      ADT "Ctr" [ADT "Ctr_" [Boolean', Integer']])
+  , ("MyADT",       ADT "MyADT")
   ]
 
 testParseSimpleTypesError :: [TestTree]
@@ -148,14 +145,12 @@ testParseTypesOK =
   , ("Integer",            Integer')
   , ("Boolean",            Boolean')
   , ("(Unit)",             Unit')
+  , ("C",                  ADT "C")
   , ("Boolean -> Integer", Boolean' :->: Integer')
   , ("(Integer -> Boolean) -> Unit",
       (Integer' :->: Boolean') :->: Unit')
   , ("Integer -> (Boolean -> Unit)",
       Integer' :->: (Boolean' :->: Unit'))
-  , ("C Integer",          ADT "C" [Integer'])
-  , ("Ctr Ctr_ Boolean Integer",
-      ADT "Ctr" [ADT "Ctr_" [Boolean', Integer']])
   ]
   
 
@@ -284,4 +279,4 @@ testParseTermsError =
 
 
 -- Parse whole programs
--- TODO! Write example programs to parse
+-- TODO Write example programs to parse

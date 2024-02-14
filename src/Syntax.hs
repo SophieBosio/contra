@@ -36,7 +36,7 @@ data Type =
   | Boolean'
   | Variable' Index
   | Type :->: Type
-  | ADT  C    [Type]
+  | ADT  T
   deriving (Show)
 
 data Term a =
@@ -233,7 +233,7 @@ equivalent Unit'    Unit'    = True
 equivalent Integer' Integer' = True
 equivalent Boolean' Boolean' = True
 equivalent (t0 :->: t1) (t0' :->: t1') = t0 == t0' && t1 == t1'
-equivalent (ADT   t ts) (ADT    s ts') = t  == s   && and (zipWith (==) ts ts')
+equivalent (ADT  t) (ADT  s) = t == s
 equivalent _ _ = False
 
 instance (Eq a) => Eq (Term a) where
@@ -245,7 +245,7 @@ instance (Eq a) => Eq (Term a) where
   (Equal t0 t1 a) == (Equal t0' t1' b) = a == b && t0 == t0' && t1 == t1'
   (Not   t0    a) == (Not   t0'     b) = a == b && t0 == t0'
   (Lambda x t0 a) == (Lambda  y t0' b) = x == y &&  a == b   && t0 == t0'
-  (Let x t0 t1 a) == (Let y t0' t1' b) = x == y   &&  a == b   &&
+  (Let x t0 t1 a) == (Let y t0' t1' b) = x == y &&  a == b   &&
                                         t0 == t0' && t1 == t1'
   (Application t1 t2 a) == (Application t1' t2' b) =
     a == b && t1 == t1' && t2 == t2'
@@ -253,8 +253,8 @@ instance (Eq a) => Eq (Term a) where
     a  == b   &&
     t0 == t0' &&
     all (\((x, y), (x', y')) -> x == x' && y == y') (zip cases cases')
-  (TConstructor c ts a) == (TConstructor d us b) = a  == b   &&
-                                                   c  == d   &&
+  (TConstructor c ts a) == (TConstructor d us b) = a == b &&
+                                                   c == d &&
                                                    and (zipWith (==) ts us)
   _ == _ = False
   -- (Rec    x t0 a) == (Rec     y t0' b) = x == y &&  a == b   && t0 == t0'
@@ -271,9 +271,9 @@ instance (Eq a) => Eq (Value a) where
   (Unit              _) == (Unit                _) = True
   (Number       n    _) == (Number       m      _) = n == m
   (Boolean      b    _) == (Boolean      c      _) = b == c
-  (VConstructor c vs a) == (VConstructor d ws b) = a  == b &&
-                                                   c  == d &&
-                                                   and (zipWith (==) vs ws)
+  (VConstructor c vs a) == (VConstructor d ws   b) = a == b &&
+                                                     c == d &&
+                                                     and (zipWith (==) vs ws)
   _ == _ = False
 
 
