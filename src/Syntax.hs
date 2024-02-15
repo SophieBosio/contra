@@ -37,7 +37,6 @@ data Type =
   | Variable' Index
   | Type :->: Type
   | ADT  T
-  deriving (Show)
 
 data Term a =
   -- Base terms:
@@ -311,6 +310,14 @@ instance Show a => Show (Program a) where
     -- /!\ Might have to destructure pair first
     t ++ " = "   ++ show cs ++ concatMap show cs ++ "\n\n" ++ show rest
   show End                   = ""
+
+instance Show Type where
+  show Unit'         = "Unit"
+  show Integer'      = "Integer"
+  show Boolean'      = "Boolean"
+  show (Variable' i) = "V" ++ show i
+  show (t0 :->: t1)  = show t0 ++ " -> " ++ show t1
+  show (ADT t)       = show t
 
 instance Show (Term a) where
   show (Pattern               p) = show p

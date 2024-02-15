@@ -1,0 +1,9 @@
+-- Comment
+
+simple :: Integer -> Integer -> Integer
+simple x y = x + y
+
+-- other x =
+--   case x of
+--     | 5 -> True
+--     | Unit -> False

@@ -162,6 +162,8 @@ testParseTypesOK =
       (Integer' :->: Boolean') :->: Unit')
   , ("Integer -> (Boolean -> Unit)",
       Integer' :->: (Boolean' :->: Unit'))
+  , ("Integer -> Integer -> Integer",
+      Integer' :->: (Integer' :->: Integer'))
   ]
   
 
@@ -331,7 +333,8 @@ testParsePrograms =
          let ast = void <$> runParser program () file src
          assertEqual "" (return p) ast)
   [ ("examples/simple.con",
-    Function "simple" (Lambda "x"
+     Signature "simple" (Integer' :->: (Integer' :->: Integer')) $
+     Function "simple" (Lambda "x"
                        (Lambda "y"
                         (Plus
                          (Pattern (Variable "x" ()))
@@ -339,6 +342,6 @@ testParsePrograms =
                           ())
                          ())
                         ()) $
-    -- Function "" () $
-    End)
+     -- Function "" () $
+     End)
   ]

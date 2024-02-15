@@ -270,7 +270,7 @@ adt =
 
 -- Program
 program :: Parser (Program Info)
-program = fmap (foldr id End) statements
+program = whitespace >> fmap (foldr id End) statements
   
 statements :: Parser [Program Info -> Program Info]
 statements =
