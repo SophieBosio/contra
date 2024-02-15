@@ -94,14 +94,14 @@ instance Canonical (Value a) where
 
 
 -- Working between terms, patterns, and values
-strengthenToPattern :: Term a -> Pattern a
+strengthenToPattern :: Show a => Term a -> Pattern a
 strengthenToPattern (TConstructor c ts a)
   | all isPattern ts = PConstructor c (map strengthenToPattern ts) a
 strengthenToPattern (Pattern p) = p
 strengthenToPattern t           = error $
   "expected pattern, but was given the non-canonical term " ++ show t
 
-strengthenToValue :: Pattern a -> Value a
+strengthenToValue :: Show a => Pattern a -> Value a
 strengthenToValue (PConstructor c ps a)
   | all canonical ps = VConstructor c (map strengthenToValue ps) a
 strengthenToValue (Value v) = v
@@ -116,14 +116,14 @@ weakenToTerm :: Pattern a -> Term a
 weakenToTerm (PConstructor c ps a) = TConstructor c (map weakenToTerm ps) a
 weakenToTerm p                     = Pattern p
 
-manipulateWith :: (Term a -> Term a) -> (Pattern a -> Pattern a)
+manipulateWith :: Show a => (Term a -> Term a) -> (Pattern a -> Pattern a)
 manipulateWith f = strengthenToPattern . f . weakenToTerm
 
 isPattern :: Term a -> Bool
 isPattern (Pattern _) = True
 isPattern _           = False
 
-strengthenIfPossible :: Name -> [Term a] -> a -> Term a
+strengthenIfPossible :: Show a => Name -> [Term a] -> a -> Term a
 strengthenIfPossible c ts a =
   if all isPattern ts
      then let ps = map strengthenToPattern ts
@@ -132,57 +132,6 @@ strengthenIfPossible c ts a =
                       in  Pattern $ Value $ VConstructor c vs a
                  else Pattern $ PConstructor c ps a
      else TConstructor c ts a
-
-
--- Pretty printing
-parens :: String -> String
-parens = ("(" ++) . (++ ")")
-
-brackets :: String -> String
-brackets = ("[" ++) . (++ "]")
-
-caseArrow :: (Pattern a, Term a) -> String
-caseArrow (p, t) = " | " ++ show p ++ " -> " ++ show t
-
-instance Show a => Show (Program a) where
-  show (Signature x t  rest) =
-    x ++ " :: "  ++ show t  ++ "\n\n" ++ show rest
-  show (Function  f t  rest) =
-    f ++ " = "   ++ show t  ++ "\n\n" ++ show rest
-  show (Property  p t  rest) =
-    p ++ " =*= " ++ show t  ++ "\n\n" ++ show rest
-  show (Data      t cs rest) =
-    -- /!\ Might have to destructure pair first
-    t ++ " = "   ++ show cs ++ concatMap show cs ++ "\n\n" ++ show rest
-  show End                   = ""
-
-instance Show (Term a) where
-  show (Pattern               p) = show p
-  show (TConstructor c  ts    _) = c ++ " " ++ parens (unwords (map show ts))
-  show (Lambda       x  t0    _) = parens $ "\\" ++ x ++ " -> " ++ show t0
-  show (Let          x  t1 t2 _) = "let " ++ x ++ " = " ++ show t1 ++
-    " in " ++ show  t2
-  show (Application     t1 t2 _) = show t1 ++ parens (show t2)
-  show (Case         t0 ts    _) = "case " ++ show t0 ++ " of" ++
-    concatMap caseArrow ts
-  show (Plus         t0 t1    _) = show t0 ++ " + "  ++ show t1
-  show (Minus        t0 t1    _) = show t0 ++ " - "  ++ show t1
-  show (Lt           t0 t1    _) = show t0 ++ " < "  ++ show t1
-  show (Gt           t0 t1    _) = show t0 ++ " > "  ++ show t1
-  show (Equal        t0 t1    _) = show t0 ++ " == " ++ show t1
-  show (Not          t0       _) = "not " ++ parens (show t0)
-  -- show (Rec          x  t0    _) = "rec " ++ x ++ " . " ++ show t0
-
-instance Show (Pattern a) where
-  show (Value             v) = show v
-  show (Variable     x    _) = show x
-  show (PConstructor c ps _) = c ++ " " ++ parens (unwords (map show ps))
-
-instance Show (Value a) where
-  show (Unit              _) = "()"
-  show (Number       n    _) = show n
-  show (Boolean      b    _) = show b
-  show (VConstructor c vs _) = c ++ " " ++ parens (unwords (map show vs))
 
 
 -- Annotations
@@ -262,8 +211,8 @@ instance (Eq a) => Eq (Term a) where
 instance (Eq a) => Eq (Pattern a) where
   (Value      v) == (Value      w) = v == w
   (Variable x a) == (Variable y b) = x == y && a == b
-  (PConstructor c ps a) == (PConstructor d rs b) = a  == b &&
-                                                   c  == d &&
+  (PConstructor c ps a) == (PConstructor d rs b) = a == b &&
+                                                   c == d &&
                                                    and (zipWith (==) ps rs)
   _ == _ = False
 
@@ -274,6 +223,29 @@ instance (Eq a) => Eq (Value a) where
   (VConstructor c vs a) == (VConstructor d ws   b) = a == b &&
                                                      c == d &&
                                                      and (zipWith (==) vs ws)
+  _ == _ = False
+
+
+
+-- Program Equality
+instance (Eq a) => Eq (Program a) where
+  End                   == End                    = True
+  (Signature x t  rest) == (Signature y s  rest') =
+    x == y &&
+    t == s &&
+    rest == rest'
+  (Data      t cs rest) == (Data      s ds rest') =
+    t  == s  &&
+    cs == ds &&
+    rest == rest'
+  (Function  f t  rest) == (Function  g s  rest') =
+    f == g &&
+    t == s &&
+    rest == rest'
+  (Property  p t  rest) == (Property  q s  rest') =
+    p == q &&
+    t == s &&
+    rest == rest'
   _ == _ = False
 
 
@@ -316,3 +288,58 @@ properties (Function  _ _ rest) = properties rest
 properties (Property  p x rest) = (p, x) : properties rest
 properties (Data      _ _ rest) = properties rest
 properties _                    = mempty
+
+
+-- Pretty printing
+parens :: String -> String
+parens = ("(" ++) . (++ ")")
+
+brackets :: String -> String
+brackets = ("[" ++) . (++ "]")
+
+caseArrow :: (Pattern a, Term a) -> String
+caseArrow (p, t) = " | " ++ show p ++ " -> " ++ show t
+
+instance Show a => Show (Program a) where
+  show (Signature x t  rest) =
+    x ++ " :: "  ++ show t  ++ "\n\n" ++ show rest
+  show (Function  f t  rest) =
+    f ++ " = "   ++ show t  ++ "\n\n" ++ show rest
+  show (Property  p t  rest) =
+    p ++ " =*= " ++ show t  ++ "\n\n" ++ show rest
+  show (Data      t cs rest) =
+    -- /!\ Might have to destructure pair first
+    t ++ " = "   ++ show cs ++ concatMap show cs ++ "\n\n" ++ show rest
+  show End                   = ""
+
+instance Show (Term a) where
+  show (Pattern               p) = show p
+  show (TConstructor c  ts    _) = c ++
+    " {" ++ parens (unwords (map show ts)) ++ "}"
+  show (Lambda       x  t0    _) = parens $ "\\" ++ x ++ " -> " ++ show t0
+  show (Let          x  t1 t2 _) = "let " ++ x ++ " = " ++ show t1 ++
+    " in " ++ show  t2
+  show (Application     t1 t2 _) = show t1 ++ parens (show t2)
+  show (Case         t0 ts    _) = "case " ++ show t0 ++ " of" ++
+    concatMap caseArrow ts
+  show (Plus         t0 t1    _) = show t0 ++ " + "  ++ show t1
+  show (Minus        t0 t1    _) = show t0 ++ " - "  ++ show t1
+  show (Lt           t0 t1    _) = show t0 ++ " < "  ++ show t1
+  show (Gt           t0 t1    _) = show t0 ++ " > "  ++ show t1
+  show (Equal        t0 t1    _) = show t0 ++ " == " ++ show t1
+  show (Not          t0       _) = "not " ++ parens (show t0)
+  -- show (Rec          x  t0    _) = "rec " ++ x ++ " . " ++ show t0
+
+instance Show (Pattern a) where
+  show (Value             v) = show v
+  show (Variable     x    _) = show x
+  show (PConstructor c ps _) = c ++
+    " {" ++ parens (unwords (map show ps)) ++ "}"
+
+instance Show (Value a) where
+  show (Unit              _) = "()"
+  show (Number       n    _) = show n
+  show (Boolean      b    _) = show b
+  show (VConstructor c vs _) = c ++
+    " {" ++ parens (unwords (map show vs)) ++ "}"
+    

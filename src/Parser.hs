@@ -70,25 +70,25 @@ reservedKeywords =
   , "let"
   , "in"
   , "adt"
+  , "not"
   -- , "rec"
   ]
 
 identHead :: Parser Char
-identHead = letter <|> underscore
+identHead = lower <|> underscore
 
 identTail :: Parser Char
 identTail = try $ choice [ letter, digit, dash, underscore ]
 
 identifier :: Parser String
-identifier =
+identifier = try $
   do name <- (:) <$> identHead <*> many identTail
-     when (reserved name) $ fail $ "reserved keyword " ++ name
+     when (reserved name) $ fail $ "Error: Reserved keyword " ++ name
      lexeme $ return name
 
 constructorName :: Parser String
-constructorName =
+constructorName = try $
   do name <- (:) <$> upper <*> many identTail
-     notFollowedBy identTail
      lexeme $ return name
 
 keyword :: String -> Parser ()
@@ -108,7 +108,7 @@ simpleType = choice
   , Integer'  <$  symbol "Integer"
   , Boolean'  <$  symbol "Boolean"
   , Variable' <$> number
-  , ADT       <$> identifier
+  , ADT       <$> constructorName
   , parens type'
   ]
 
@@ -134,30 +134,23 @@ unit = void $ symbol "Unit"
 
 value :: Parser (Value Info)
 value = choice $
+  parens value :
   map info
     [ Unit         <$  unit
     , number       <&> Number
     , boolean      <&> Boolean
-    , VConstructor <$> constructorName <*> many value
     ]
-  ++
-  [ parens value ]
 
 
 -- Patterns
 pattern' :: Parser (Pattern Info)
 pattern' = choice $
-  [ Value <$> value
-  , parens pattern'
+  [ parens pattern'
+  , Value <$> value
+  , info $ identifier <&> Variable
   ]
-  ++
-  map info
-    [ identifier   <&> Variable
-    , PConstructor <$> constructorName <*> many pattern'
-    ]
 
 -- Terms
--- TODO: For some reason, tries to parse 'case' and 'if' as identifiers...
 term :: Parser (Term Info)
 term = choice $
   parens term :
@@ -165,14 +158,14 @@ term = choice $
   map try
     [ caseStatement
     , desugaredIf
+    , termConstructor
     ]
   ++
   map info
-    [ symbol "not" >> Not    <$> term
-    , symbol "\\"  >> Lambda <$> identifier <*> (arrow >> term)
-    , symbol "let" >> Let    <$> identifier <*>
-                      (symbol "=" >> term) <*> (symbol "in" >> term)
-    , TConstructor <$> constructorName <*> many term
+    [ symbol  "\\"  >> Lambda <$> identifier <*> (arrow >> term)
+    , keyword "not" >> Not    <$> term
+    , keyword "let" >> Let    <$> identifier <*>
+                       (symbol "=" >> term)  <*> (symbol "in" >> term)
     -- , keyword "rec" >> Rec <$> identifier <*> term
     ]
 
@@ -194,13 +187,13 @@ operator =
 
 caseStatement :: Parser (Term Info)
 caseStatement =
-  do _ <- keyword "case "
+  do _ <- keyword "case"
      t <- term
-     _ <- keyword "of "
-     info $ Case t <$> many1 branch
+     _ <- keyword "of"
+     info $ Case t <$> many1 caseBranch
 
-branch :: Parser (Pattern Info, Term Info)
-branch =
+caseBranch :: Parser (Pattern Info, Term Info)
+caseBranch =
   do _    <- symbol "|"
      alt  <- pattern'
      _    <- arrow
@@ -210,15 +203,28 @@ branch =
 
 desugaredIf :: Parser (Term Info)
 desugaredIf =
-  do _     <- keyword "if "
+  do _     <- keyword "if"
      t     <- term
-     _     <- keyword "then "
+     _     <- keyword "then"
      true  <- term
-     _     <- keyword "else "
+     _     <- keyword "else"
      false <- term
      b1    <- info $ return $ Boolean True
      b2    <- info $ return $ Boolean False
      info $ return $ Case t [(Value b1, true), (Value b2, false)]
+
+termConstructor :: Parser (Term Info)
+termConstructor = info $
+  do ctr <- constructorName
+     ts  <- option [] constructorList
+     return $ TConstructor ctr ts
+
+constructorList :: Parser [Term Info]
+constructorList =
+  do _  <- symbol "{"
+     ts <- term `sepBy` symbol ","
+     _  <- symbol "}"
+     return ts
 
 
 -- Functions, properties, signatures & data types

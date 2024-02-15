@@ -11,7 +11,7 @@ A friendly, functional language for finding counterexamples!
 
 ## Features
 
-TODO
+TODO: Brief abstract
 
 ## Building, Testing, & Installing
 
@@ -52,6 +52,6 @@ This should install an executable called `contra` on your system.
 
 ## Getting Started
 
-TODO
+TODO: Brief instructions
 
 

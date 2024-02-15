@@ -16,12 +16,12 @@ type Unifier a = Maybe [(X, a)]
 newtype Substitution meta a = Substitution { unifier :: Unifier (meta a) }
   
 -- Export
-patternMatch :: Term a -> Term a -> PatternMatch a
+patternMatch :: Show a => Term a -> Term a -> PatternMatch a
 patternMatch p q = maybe NoMatch MatchBy (unifier $ unify p q)
 
 
 -- Unification
-unify :: Term a -> Term a -> Substitution Pattern a
+unify :: Show a => Term a -> Term a -> Substitution Pattern a
 unify (Pattern p) (Pattern q) = unify' p q
 unify (TConstructor c ts a) (TConstructor c' ts' a')
   | all canonical ts && all canonical ts'

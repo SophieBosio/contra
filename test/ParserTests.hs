@@ -2,11 +2,23 @@ module ParserTests where
 
 import Syntax
 import Parser
+  ( Parser
+  , parseString
+  , number
+  , boolean
+  , simpleType
+  , type'
+  , value
+  , pattern'
+  , term
+  , program
+  , reservedKeywords
+  )
 
 import Test.Tasty
 import Test.Tasty.HUnit
+import Text.Parsec           (eof, runParser)
 import Data.Either           (isLeft)
-import Text.Parsec           (eof)
 import Control.Monad         (void)
 
 
@@ -38,8 +50,7 @@ termParser =
 
 programTests :: TestTree
 programTests =
-  testGroup "Program parser tests: "
-  []
+  testGroup "Program parser tests: " testParsePrograms
   
 
 -- Abbreviations
@@ -180,9 +191,6 @@ testParseValuesOK =
   , ("False", Boolean False ())
   , ("Unit",  Unit ())
   , ("(Unit)", Unit ())
-  , ("Ctr",   VConstructor "Ctr" [] ())
-  , ("(Ctr True 5)", VConstructor "Ctr" [Boolean True (), Number 5 ()] ())
-  , ("Ctr 3 False",  VConstructor "Ctr" [Number 3 (), Boolean False ()] ())
   ]
 
 testParseValuesError :: [TestTree]
@@ -199,13 +207,15 @@ testParsePatternsOK :: [TestTree]
 testParsePatternsOK =
   map (\(s, e) -> testCase ("Parsing pattern '" ++ s ++ "'") $
                   typelessTestOK pattern' s e)
-  [ ("0",       Value (Number 0    ()))
-  , ("-1",      Value (Number (-1) ()))
-  , ("53",      Value (Number 53   ()))
-  , ("True",    Value (Boolean True ()))
-  , ("False",   Value (Boolean False ()))
-  , ("Unit",    Value (Unit ()))
-  , ("(False)", Value (Boolean False ()))
+  [ ("0",        Value (Number 0    ()))
+  , ("-1",       Value (Number (-1) ()))
+  , ("53",       Value (Number 53   ()))
+  , ("True",     Value (Boolean True ()))
+  , ("False",    Value (Boolean False ()))
+  , ("Unit",     Value (Unit ()))
+  , ("(False)",  Value (Boolean False ()))
+  , ("x",        Variable "x" ())
+  , ("myVar1",   Variable "myVar1" ())
   ]
 
 testParsePatternsError :: [TestTree]
@@ -237,16 +247,23 @@ testParseTermsOK =
   , ("not (5 > 3)", Not (Gt (Pattern (Value (Number 5 ()))) (Pattern (Value (Number 3 ()))) ()) ())
   , ("3 5", Application (Pattern (Value (Number 3 ()))) (Pattern (Value (Number 5 ()))) ())
   , ("f x", Application (Pattern (Variable "f" ())) (Pattern (Variable "x" ())) ())
-  , ("\\x -> \\f -> \\y -> f x y"
-    , (Lambda "x"
-         (Lambda "f"
-            (Lambda "y"
-               (Application
-                  (Application
-                   (Pattern (Variable "f" ()))
-                    (Pattern (Variable "x" ())) ())
-                (Pattern (Variable "y" ())) ()) ()) ()) ()))
-    --let expressions, term constructors
+  , ("let x = 3 in x + 5",
+     Let "x" (Pattern (Value (Number 3 ())))
+             (Plus (Pattern (Variable "x" ()))
+                   (Pattern (Value (Number 5 ())))
+              ())
+       ())
+  , ("\\x -> \\f -> \\y -> f x y", 
+     Lambda "x"
+      (Lambda "f"
+        (Lambda "y"
+          (Application
+            (Application
+              (Pattern (Variable "f" ())) (Pattern (Variable "x" ())) ())
+            (Pattern (Variable "y" ())) ())
+          ())
+        ())
+      ())
   , ("case True of "       ++
      "| True  -> 5 " ++
      "| False -> 3 "
@@ -259,12 +276,39 @@ testParseTermsOK =
     ,  Case (Pattern (Variable "x" ()))
             [ (Value (Number 5 ()), Pattern (Value (Boolean True ())))
             , (Value (Boolean False ()), Pattern (Value (Boolean False ()))) ] ())
+  , ("case 5 of "       ++
+     "| 3 -> False " ++
+     "| 5 -> True "
+    ,  Case (Pattern (Value (Number 5 ())))
+            [ (Value (Number 3 ()), Pattern (Value (Boolean False ())))
+            , (Value (Number 5 ()), Pattern (Value (Boolean True ()))) ] ())
   , ("if True then 5 else 3"
-    , Case (Pattern (Value (Number 3 ())))
-           [ (Value (Boolean True ()),  Pattern (Value (Number 5 ())))
+    , Case (Pattern (Value (Boolean True ())))
+           [ (Value (Boolean True  ()),  Pattern (Value (Number 5 ())))
            , (Value (Boolean False ()), Pattern (Value (Number 3 ())))] ())
-  -- , ("", )
-  -- , ("", )
+  , ("if (3 < 5) then 10 else (10 - 5)"
+    , Case (Lt (Pattern (Value (Number 3 ())))
+               (Pattern (Value (Number 5 ()))) ())
+           [ (Value (Boolean True  ()), Pattern (Value (Number 10 ())))
+           , (Value (Boolean False ()), Minus (Pattern (Value (Number 10 ())))
+                                              (Pattern (Value (Number 5  ())))
+                                        ())
+           ] ())
+  , ("Ctr", TConstructor "Ctr" [] ())
+  , ("Ctr {5}", TConstructor "Ctr" [Pattern (Value (Number 5 ()))] ())
+  , ("Ctr {True}", TConstructor "Ctr" [Pattern (Value (Boolean True ()))] ())
+  , ("Ctr {x}", TConstructor "Ctr" [Pattern (Variable "x" ())] ())
+  , ("Ctr {x, False}", TConstructor "Ctr"
+      [ Pattern (Variable "x" ())
+      , Pattern (Value (Boolean False ()))
+      ] ())
+  , ("Ctr {x, (5 + 3), True}"
+    , TConstructor "Ctr"
+        [ Pattern (Variable "x" ())
+        , Plus (Pattern (Value (Number 5 ())))
+               (Pattern (Value (Number 3 ()))) ()
+        , Pattern (Value (Boolean True ()))
+        ] ())
   ]
 
 
@@ -279,4 +323,22 @@ testParseTermsError =
 
 
 -- Parse whole programs
--- TODO Write example programs to parse
+-- TODO: Write example programs to parse
+testParsePrograms :: [TestTree]
+testParsePrograms =
+  map (\(file, p) -> testCase ("Parsing program '" ++ file ++ "'") $
+      do src <- readFile file
+         let ast = void <$> runParser program () file src
+         assertEqual "" (return p) ast)
+  [ ("examples/simple.con",
+    Function "simple" (Lambda "x"
+                       (Lambda "y"
+                        (Plus
+                         (Pattern (Variable "x" ()))
+                         (Pattern (Variable "y" ()))
+                          ())
+                         ())
+                        ()) $
+    -- Function "" () $
+    End)
+  ]

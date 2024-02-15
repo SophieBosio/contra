@@ -13,7 +13,7 @@ interpreterTests =
     [
     ]
 
--- TODO! Equivalence of terms
+-- TODO: Equivalence of terms
 -- Also probably, 'normalise' should return a Pattern, not a Term
 
 -- patternsNormaliseOK :: Show a => Program a -> Term a -> Term a -> TestTree

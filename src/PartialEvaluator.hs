@@ -37,7 +37,7 @@ partial (Lambda x t0 a) =
   do t0' <- partial t0
      return $ Lambda x t0' a
 -- /!\ Needs verification
--- TODO Memoisation
+-- TODO: Memoisation
 partial (Application t1 t2 a) =
   do t1' <- partial t1
      t2' <- partial t2

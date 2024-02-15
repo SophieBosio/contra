@@ -79,7 +79,7 @@ evaluateValue v = return $ Pattern $ Value v
 
 
 -- Substitution & Pattern matching
-substitute :: X -> Term a -> (Term a -> Term a)
+substitute :: Show a => X -> Term a -> (Term a -> Term a)
 substitute x t v = -- computes t[v/x]
   case t of
     Pattern (Variable  y  _) | x == y -> v
@@ -101,7 +101,7 @@ substitute x t v = -- computes t[v/x]
   where
     subs = flip (substitute x) v
 
-firstMatch :: (Monad m) => Term a -> [(Pattern a, Term a)]
+firstMatch :: Show a => (Monad m) => Term a -> [(Pattern a, Term a)]
            -> m (Transformation Pattern a, Term a)
 firstMatch v [] = error $ "No match for " ++ show v ++ " in case statement"
 firstMatch v ((p, t) : rest) =
@@ -109,7 +109,7 @@ firstMatch v ((p, t) : rest) =
        NoMatch   -> firstMatch v rest
        MatchBy u -> return (u, t)
 
-applyTransformation :: Transformation Pattern a -> Term a -> Term a
+applyTransformation :: Show a => Transformation Pattern a -> Term a -> Term a
 applyTransformation xs t =
   foldr ((\(x, v) t' -> substitute x t' v) . second weakenToTerm) t xs
 
