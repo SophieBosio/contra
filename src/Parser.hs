@@ -234,6 +234,7 @@ function =
      args <- many $ info $ (,) <$> identifier
      _    <- symbol "="
      t    <- term
+     _    <- symbol "."
      let def = foldr (\(x, a) partial -> Lambda x partial a) t args
      return $ Function f def
   
@@ -243,6 +244,7 @@ property =
      args <- many $ info $ (,) <$> identifier
      _    <- symbol "=*="
      t    <- term
+     _    <- symbol "."
      let def = foldr (\(x, a) partial -> Lambda x partial a) t args
      return $ Property p def
      
@@ -250,7 +252,9 @@ signature' :: Parser (Program Info -> Program Info)
 signature' =
   do s <- identifier
      _ <- symbol "::"
-     Signature s <$> type'
+     t <- type'
+     _ <- symbol "."
+     return $ Signature s t
 
 
 -- Algebraic Data Types
@@ -265,7 +269,9 @@ adt =
   do _  <- symbol "adt"
      t  <- constructorName
      _  <- symbol "="
-     Data t <$> sepByPipe constructor
+     cs <- constructor `sepBy1` symbol "|"
+     _  <- symbol "."
+     return $ Data t cs
 
 
 -- Program

@@ -335,13 +335,22 @@ testParsePrograms =
   [ ("examples/simple.con",
      Signature "simple" (Integer' :->: (Integer' :->: Integer')) $
      Function "simple" (Lambda "x"
-                       (Lambda "y"
-                        (Plus
-                         (Pattern (Variable "x" ()))
-                         (Pattern (Variable "y" ()))
+                        (Lambda "y"
+                         (Plus
+                          (Pattern (Variable "x" ()))
+                          (Pattern (Variable "y" ()))
+                           ())
                           ())
-                         ())
-                        ()) $
+                         ()) $
+      Signature "isFive" (Integer' :->: Boolean') $
+      Function "isFive" (Lambda "x"
+                          (Case (Pattern (Variable "x" ()))
+                            [ (Value (Number 5 ())
+                              , Pattern (Value (Boolean True ())))
+                            , (Value (Number 3 ())
+                              , Pattern (Value (Boolean False ())))
+                            ] ())
+                          ())
      -- Function "" () $
      End)
   ]

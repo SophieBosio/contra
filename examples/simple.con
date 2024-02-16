@@ -1,9 +1,10 @@
 -- Comment
 
-simple :: Integer -> Integer -> Integer
-simple x y = x + y
+simple :: Integer -> Integer -> Integer .
+simple x y = x + y .
 
--- other x =
---   case x of
---     | 5 -> True
---     | Unit -> False
+isFive :: Integer -> Boolean .
+isFive x =
+  case x of
+    | 5 -> True
+    | 3 -> False .
