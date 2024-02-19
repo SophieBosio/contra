@@ -4,6 +4,7 @@ module PropertyEngine where
 
 import Syntax
 import Interpreter (normalise)
+import Constrainer (constraints)
 
 import System.IO             (hFlush, stdout)
 -- import Data.SBV
@@ -35,17 +36,26 @@ check prog n (name, prop) =
 -- Main functions
 runTests :: Gen (Maybe (Term Type)) -> (Term Type -> Value Type)
          -> Term Type -> Int -> Int -> IO ()
-runTests _   _    _    0 total = putStrLn " ✓ OK"
+runTests _   _    _    0 _     = putStrLnGreen " ✓ OK - All tests were successful."
 runTests gen eval prop n total =
   generate gen >>= \case
-    Nothing -> putStrLn "No counterexamples found!"
+    Nothing -> putStrLnRed "Unable to satisfy property."
     Just  t -> case eval t of
       Boolean True _ -> putStr "∘" >> hFlush stdout >> runTests gen eval prop (n - 1) total
       _              -> do
-        putStrLn " ✱ FAIL"
+        putStrLnRed " ✱ FAIL"
         putStr "Counterexample: "
         print t
         putStrLn $ "\nAfter " ++ show (total - n) ++ " tests."
 
 generateGenerator :: Program Type -> Term Type -> Gen (Maybe (Term Type))
-generateGenerator = undefined
+generateGenerator program property = undefined
+  -- do cs <- constraints program property
+
+
+-- Utility
+putStrLnRed :: String -> IO ()
+putStrLnRed s = putStrLn $ "\ESC[91m\STX" ++ s ++ "\ESC[m\STX"
+
+putStrLnGreen :: String -> IO ()
+putStrLnGreen s = putStrLn $ "\ESC[92m\STX" ++ s ++ "\ESC[m\STX"
