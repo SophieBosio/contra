@@ -45,7 +45,7 @@ parseProgram :: Source -> IO (Either [ParsingError] (Program Info))
 parseProgram path =
   do src <- readFile path
      return $
-       case runParser (many whitespace >> program) () path src of
+       case runParser (whitespace >> program) () path src of
          (Left   err) -> Left $ return $ ParsingFailed err
          (Right code) ->
            case reportErrors code of
@@ -331,6 +331,3 @@ arrow = symbol "->"
 
 reserved :: Name -> Bool
 reserved = flip elem reservedKeywords
-
-sepByPipe :: Parser a -> Parser [a]
-sepByPipe p = p `sepBy1` symbol "|"

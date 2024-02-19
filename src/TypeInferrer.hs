@@ -23,7 +23,7 @@ type Substitution = [(Index, Type)]
 inferProgram :: Program a -> Program Type
 inferProgram program = refine (resolveConstraints constraints) <$> annotatedProgram
   where
-    definitions  prog = functions  prog ++ properties prog
+    definitions prog = functions  prog ++ properties prog
     constraints = annotationConstraints ++ signatureDefinitionAccord
     (annotatedProgram, _, annotationConstraints) =
       runRWS (annotateProgram program) emptyEnvironment 0
