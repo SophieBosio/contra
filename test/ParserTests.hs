@@ -325,16 +325,23 @@ testParseTermsError =
 
 
 -- Parse whole programs
--- TODO: Write example programs to parse
 testParsePrograms :: [TestTree]
 testParsePrograms =
   map (\(file, p) -> testCase ("Parsing program '" ++ file ++ "'") $
       do src <- readFile file
          let ast = void <$> runParser program () file src
          assertEqual "" (return p) ast)
-  [ ("examples/simple.con",
-     Signature "simple" (Integer' :->: (Integer' :->: Integer')) $
-     Function "simple" (Lambda "x"
+  [ ("examples/trivial/basicStatements.con",
+     Data "MyADT" [("YES", []), ("NO", [])] $
+     Signature "id" (ADT "MyADT" :->: ADT "MyADT") $
+     Function "id" (Lambda "x" (Pattern (Variable "x" ())) ()) $
+     Signature "propId" (ADT "MyADT" :->: Boolean') $
+     Property "propId" (Lambda "x" (Equal (Pattern (Variable "x" ()))
+                                          (Pattern (Variable "x" ())) ()) ()) $
+     End)
+  , ("examples/trivial/simpleAdd.con",
+     Signature "simpleAdd" (Integer' :->: (Integer' :->: Integer')) $
+     Function "simpleAdd" (Lambda "x"
                         (Lambda "y"
                          (Plus
                           (Pattern (Variable "x" ()))
@@ -350,7 +357,18 @@ testParsePrograms =
                             , (Value (Number 3 ())
                               , Pattern (Value (Boolean False ())))
                             ] ())
-                          ())
-     -- Function "" () $
+                          ()) $
+      Signature "sumEqualsFive" (Integer' :->: (Integer' :->: Boolean')) $
+      Property "sumEqualsFive"
+        (Lambda "x"
+         (Lambda "y"
+          (Application (Pattern (Variable "isFive" ()))
+           (Application (Application (Pattern (Variable "simpleAdd" ()))
+                         (Pattern (Variable "x" ())) ())
+                         (Pattern (Variable "y" ()))
+             ())
+            ())
+          ())
+         ())
      End)
   ]

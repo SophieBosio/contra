@@ -284,8 +284,8 @@ statements =
        choice
          [ try signature'
          , try adt
-         , function
-         , property
+         , try property
+         , try function
          ]
      _ <- eof
      return prog

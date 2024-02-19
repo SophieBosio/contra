@@ -1,0 +1,12 @@
+-- This is a comment
+
+-- This is an ADT definition
+adt MyADT = YES | NO .
+
+-- This is an id function for MyADT
+id :: MyADT -> MyADT .
+id x = x .
+
+-- This is a trivially true property
+propId :: MyADT -> Boolean .
+propId x =*= x == x .

@@ -1,0 +1,12 @@
+-- Simple addition and a property
+simpleAdd :: Integer -> Integer -> Integer .
+simpleAdd x y = x + y .
+
+isFive :: Integer -> Boolean .
+isFive x =
+  case x of
+    | 5 -> True
+    | 3 -> False .
+
+sumEqualsFive :: Integer -> Integer -> Boolean .
+sumEqualsFive x y =*= isFive (simpleAdd x y) .
