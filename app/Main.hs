@@ -44,7 +44,8 @@ run command =
   command >>= \case
     (REPL          program) -> repl program
     (Execute       program) -> execute program
-    (PropertyCheck program) -> checkProperties program
+    -- 50 is the default number of tests
+    (PropertyCheck program) -> checkProperties program 50 
     (TypeCheck     program) -> typecheck program >>= print
     (Version       message) -> die message
     (Fail          message) -> die message
@@ -77,8 +78,8 @@ repl = const $ die "REPL is future work"
 execute :: Program Type -> IO ()
 execute = undefined
 
-checkProperties :: Program Type -> IO ()
-checkProperties program = mapM_ check (properties program)
+checkProperties :: Program Type -> Int -> IO ()
+checkProperties program n = mapM_ (check program n) (properties program)
 
 
 -- Utilities
