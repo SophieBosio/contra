@@ -54,10 +54,12 @@ class HasSubstitution a where
   substitute :: Type -> Index -> (a -> a)
 
 instance HasSubstitution Type where
-  substitute = undefined
+  substitute t i (Variable' j) | i == j = t
+  substitute t i (t0 :->:  t1) = substitute t i t0 :->: substitute t i t1
+  substitute _ _ t             = t
 
 instance HasSubstitution Constraint where
-  substitute = undefined
+  substitute t i (t0 :=: t1) = substitute t i t0 :=: substitute t i t1
 
 emptyEnvironment :: Environment
 emptyEnvironment = error . (++ " is unbound!")
