@@ -23,7 +23,7 @@ type Substitution = [(Index, Type)]
 inferProgram :: Program a -> Program Type
 inferProgram program = refine (resolveConstraints constraints) <$> annotatedProgram
   where
-    definitions prog = functions  prog ++ properties prog
+    definitions prog = functions prog ++ properties prog
     constraints = annotationConstraints ++ signatureDefinitionAccord
     (annotatedProgram, _, annotationConstraints) =
       runRWS (annotateProgram program) emptyEnvironment 0
@@ -92,13 +92,14 @@ annotateProgram (Function f def rest) =
 annotateProgram (Property p def rest) =
   do def'  <- annotate def
      rest' <- annotateProgram rest
+     mustReturnBool p def'
      return $ Property p def' rest'
 annotateProgram End = return End
 
 
 -- Annotate terms
 annotate :: Term a -> Annotation (Term Type)
-annotate (Pattern     p) = annotatePattern p
+annotate (Pattern p) = annotatePattern p
 annotate (TConstructor c ts _) =
   do tau <- fresh
      ts' <- local (bind c tau) $ mapM annotate ts
@@ -273,3 +274,10 @@ alphaDefs i (c, ts) =
   let (k, ts') = foldr (\tau (j, taus) -> second ((taus ++) . return)
                          (alpha j tau)) (i, []) ts
   in  (k, (c, ts'))
+
+mustReturnBool :: P -> Term Type -> Annotation ()
+mustReturnBool p t =
+  case annotation t of
+    Boolean' -> return ()
+    _        -> error $
+      "Type error: Property '" ++ show p ++ "'must return Boolean."
