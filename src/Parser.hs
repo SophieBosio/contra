@@ -144,7 +144,7 @@ value = choice $
 
 -- Patterns
 pattern' :: Parser (Pattern Info)
-pattern' = choice $
+pattern' = choice
   [ parens pattern'
   , Value <$> value
   , info $ identifier <&> Variable
@@ -153,8 +153,8 @@ pattern' = choice $
 -- Terms
 term :: Parser (Term Info)
 term = choice $
-  parens term :
-  chainl1 patternTerm operator :
+  -- parens term :
+  chainl1 simpleTerm operator :
   map try
     [ caseStatement
     , desugaredIf
@@ -169,8 +169,14 @@ term = choice $
     -- , keyword "rec" >> Rec <$> identifier <*> term
     ]
 
-patternTerm :: Parser (Term Info)
-patternTerm = pattern' >>= \p -> return (Pattern p)
+simpleTerm :: Parser (Term Info)
+simpleTerm =
+  choice
+    [ -- Parentheses around any term, to explicate right-associative operations
+      parens term
+      -- Pattern interpreted as a term
+    , pattern' >>= \p -> return (Pattern p)
+    ]
 
 operator :: Parser (Term Info -> Term Info -> Term Info)
 operator =

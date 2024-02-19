@@ -247,6 +247,11 @@ testParseTermsOK =
   , ("(2 == 2)", Equal (Pattern (Value (Number 2 ()))) (Pattern (Value (Number 2 ()))) ())
   , ("not (3 == 5)", Not (Equal (Pattern (Value (Number 3 ()))) (Pattern (Value (Number 5 ()))) ()) ())
   , ("not (5 > 3)", Not (Gt (Pattern (Value (Number 5 ()))) (Pattern (Value (Number 3 ()))) ()) ())
+  , ("5 + (3 + 1)", Plus (Pattern (Value (Number 5 ())))
+                      (Plus (Pattern (Value (Number 3 ())))
+                            (Pattern (Value (Number 1 ())))
+                      ())
+                    ())
   , ("3 5", Application (Pattern (Value (Number 3 ()))) (Pattern (Value (Number 5 ()))) ())
   , ("f x", Application (Pattern (Variable "f" ())) (Pattern (Variable "x" ())) ())
   , ("let x = 3 in x + 5",
@@ -337,37 +342,78 @@ testParsePrograms =
      Function "id" (Lambda "x" (Pattern (Variable "x" ())) ()) $
      Signature "propId" (ADT "MyADT" :->: Boolean') $
      Property "propId" (Lambda "x" (Equal (Pattern (Variable "x" ()))
-                                          (Pattern (Variable "x" ())) ()) ()) $
+                                          (Pattern (Variable "x" ())) ()) ())
      End)
   , ("examples/trivial/simpleAdd.con",
      Signature "simpleAdd" (Integer' :->: (Integer' :->: Integer')) $
-     Function "simpleAdd" (Lambda "x"
-                        (Lambda "y"
-                         (Plus
-                          (Pattern (Variable "x" ()))
-                          (Pattern (Variable "y" ()))
-                           ())
-                          ())
-                         ()) $
+     Function "simpleAdd"
+      (Lambda "x"
+        (Lambda "y"
+          (Plus
+            (Pattern (Variable "x" ()))
+            (Pattern (Variable "y" ()))
+            ())
+          ())
+        ()) $
+      Signature "double" (Integer' :->: Integer') $
+      Function "double"
+        (Lambda "x"
+          (Application
+           (Application
+             (Pattern (Variable "simpleAdd" ()))
+             (Pattern (Variable "x" ()))
+            ())
+           (Pattern (Variable "x" ()))
+          ())
+         ()) $
       Signature "isFive" (Integer' :->: Boolean') $
-      Function "isFive" (Lambda "x"
-                          (Case (Pattern (Variable "x" ()))
-                            [ (Value (Number 5 ())
-                              , Pattern (Value (Boolean True ())))
-                            , (Value (Number 3 ())
-                              , Pattern (Value (Boolean False ())))
-                            ] ())
+      Function "isFive" (Lambda "x" (Equal (Pattern (Variable "x" ()))
+                                           (Pattern (Value (Number 5 ()))) ())
                           ()) $
+      Signature "sillyIsFive" (Integer' :->: Boolean') $
+      Function "sillyIsFive"
+        (Lambda "x"
+         (Case (Equal (Pattern (Variable "x" ()))
+                      (Pattern (Value (Number 5 ()))) ())
+           [ (Value (Boolean True  ()), Pattern (Value (Boolean True ())))
+           , (Value (Boolean False ()), Pattern (Value (Boolean False ())))
+           ]
+          ())
+         ()) $
+      Signature "fiveNotThree" (Integer' :->: Boolean') $
+      Function "fiveNotThree"
+        (Lambda "x"
+          (Case (Pattern (Variable "x" ()))
+            [ (Value (Number 5 ())
+              , Pattern (Value (Boolean True ())))
+            , (Value (Number 3 ())
+              , Pattern (Value (Boolean False ())))
+            ] ())
+          ()) $
+      Signature "greaterThanFive" (Integer' :->: Boolean') $
+      Function "greaterThanFive"
+        (Lambda "x"
+          (Gt (Pattern (Variable "x" ())) (Pattern (Value (Number 5 ()))) ())
+         ())$
+      Signature "trivialProp" (Integer' :->: Boolean') $
+      Property "trivialProp"
+        (Lambda "x"
+          (Application
+            (Pattern (Variable "isFive" ()))
+            (Pattern (Variable "x" ()))
+            ())
+          ()) $
       Signature "sumEqualsFive" (Integer' :->: (Integer' :->: Boolean')) $
       Property "sumEqualsFive"
         (Lambda "x"
          (Lambda "y"
           (Application (Pattern (Variable "isFive" ()))
-           (Application (Application (Pattern (Variable "simpleAdd" ()))
+           (Application
+            (Application (Pattern (Variable "simpleAdd" ()))
                          (Pattern (Variable "x" ())) ())
-                         (Pattern (Variable "y" ()))
-             ())
+            (Pattern (Variable "y" ()))
             ())
+           ())
           ())
          ())
      End)

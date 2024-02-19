@@ -326,7 +326,7 @@ instance Show (Term a) where
   show (Lambda       x  t0    _) = parens $ "\\" ++ x ++ " -> " ++ show t0
   show (Let          x  t1 t2 _) = "let " ++ x ++ " = " ++ show t1 ++
     " in " ++ show  t2
-  show (Application     t1 t2 _) = show t1 ++ parens (show t2)
+  show (Application     t1 t2 _) = show t1 ++ " " ++ parens (show t2)
   show (Case         t0 ts    _) = "case " ++ show t0 ++ " of" ++
     concatMap caseArrow ts
   show (Plus         t0 t1    _) = show t0 ++ " + "  ++ show t1

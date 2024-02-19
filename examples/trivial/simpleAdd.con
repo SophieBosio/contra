@@ -1,0 +1,32 @@
+-- Simple addition and properties
+simpleAdd :: Integer -> Integer -> Integer .
+simpleAdd x y = x + y .
+
+double :: Integer -> Integer .
+double x = simpleAdd x x .
+
+isFive :: Integer -> Boolean .
+isFive x = x == 5 .
+
+sillyIsFive :: Integer -> Boolean .
+sillyIsFive x = if (x == 5) then True else False .
+
+fiveNotThree :: Integer -> Boolean .
+fiveNotThree x =
+  case x of
+    | 5 -> True
+    | 3 -> False .
+
+greaterThanFive :: Integer -> Boolean .
+greaterThanFive x = x > 5 .
+
+trivialProp :: Integer -> Boolean .
+trivialProp x =*= isFive x .
+
+sumEqualsFive :: Integer -> Integer -> Boolean .
+sumEqualsFive x y =*= isFive (simpleAdd x y) .
+
+-- preconditionProp :: Integer -> Boolean .
+-- preconditionProp x = if greaterThanFive x
+--        then greaterThanFive (simpleAdd x x)
+--        else True .
