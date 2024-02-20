@@ -20,13 +20,18 @@ fiveNotThree x =
 greaterThanFive :: Integer -> Boolean .
 greaterThanFive x = x > 5 .
 
+addFive :: Integer -> Integer .
+addFive x = simpleAdd 5 x .
+
+
+-- Simple properties
 trivialProp :: Integer -> Boolean .
 trivialProp x =*= isFive x .
 
 sumEqualsFive :: Integer -> Integer -> Boolean .
 sumEqualsFive x y =*= isFive (simpleAdd x y) .
 
--- preconditionProp :: Integer -> Boolean .
--- preconditionProp x = if greaterThanFive x
---        then greaterThanFive (simpleAdd x x)
---        else True .
+preconditionProp :: Integer -> Boolean .
+preconditionProp x =*= if greaterThanFive x
+       then greaterThanFive (simpleAdd x x)
+       else True .

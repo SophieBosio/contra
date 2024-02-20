@@ -1,0 +1,3 @@
+clone x =*= x == x .
+
+clone y =*= y == y .

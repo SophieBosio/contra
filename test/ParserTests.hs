@@ -3,7 +3,9 @@ module ParserTests where
 import Syntax
 import Parser
   ( Parser
+  , report
   , parseString
+  , parseProgram
   , number
   , boolean
   , simpleType
@@ -50,7 +52,9 @@ termParser =
 
 programTests :: TestTree
 programTests =
-  testGroup "Program parser tests: " testParsePrograms
+  testGroup "Program parser tests: " $
+       testParsePrograms
+    ++ testParseErrorsPrograms
   
 
 -- Abbreviations
@@ -336,7 +340,7 @@ testParsePrograms =
       do src <- readFile file
          let ast = void <$> runParser program () file src
          assertEqual "" (return p) ast)
-  [ ("examples/trivial/basicStatements.con",
+  [ ("examples/simple/basicStatements.con",
      Data "MyADT" [("YES", []), ("NO", [])] $
      Signature "id" (ADT "MyADT" :->: ADT "MyADT") $
      Function "id" (Lambda "x" (Pattern (Variable "x" ())) ()) $
@@ -344,7 +348,7 @@ testParsePrograms =
      Property "propId" (Lambda "x" (Equal (Pattern (Variable "x" ()))
                                           (Pattern (Variable "x" ())) ()) ())
      End)
-  , ("examples/trivial/simpleAdd.con",
+  , ("examples/simple/simpleAdd.con",
      Signature "simpleAdd" (Integer' :->: (Integer' :->: Integer')) $
      Function "simpleAdd"
       (Lambda "x"
@@ -355,66 +359,111 @@ testParsePrograms =
             ())
           ())
         ()) $
-      Signature "double" (Integer' :->: Integer') $
-      Function "double"
-        (Lambda "x"
+     Signature "double" (Integer' :->: Integer') $
+     Function "double"
+       (Lambda "x"
+         (Application
           (Application
-           (Application
-             (Pattern (Variable "simpleAdd" ()))
-             (Pattern (Variable "x" ()))
-            ())
-           (Pattern (Variable "x" ()))
-          ())
-         ()) $
-      Signature "isFive" (Integer' :->: Boolean') $
-      Function "isFive" (Lambda "x" (Equal (Pattern (Variable "x" ()))
-                                           (Pattern (Value (Number 5 ()))) ())
-                          ()) $
-      Signature "sillyIsFive" (Integer' :->: Boolean') $
-      Function "sillyIsFive"
-        (Lambda "x"
-         (Case (Equal (Pattern (Variable "x" ()))
-                      (Pattern (Value (Number 5 ()))) ())
-           [ (Value (Boolean True  ()), Pattern (Value (Boolean True ())))
-           , (Value (Boolean False ()), Pattern (Value (Boolean False ())))
-           ]
-          ())
-         ()) $
-      Signature "fiveNotThree" (Integer' :->: Boolean') $
-      Function "fiveNotThree"
-        (Lambda "x"
-          (Case (Pattern (Variable "x" ()))
-            [ (Value (Number 5 ())
-              , Pattern (Value (Boolean True ())))
-            , (Value (Number 3 ())
-              , Pattern (Value (Boolean False ())))
-            ] ())
-          ()) $
-      Signature "greaterThanFive" (Integer' :->: Boolean') $
-      Function "greaterThanFive"
-        (Lambda "x"
-          (Gt (Pattern (Variable "x" ())) (Pattern (Value (Number 5 ()))) ())
-         ())$
-      Signature "trivialProp" (Integer' :->: Boolean') $
-      Property "trivialProp"
-        (Lambda "x"
-          (Application
-            (Pattern (Variable "isFive" ()))
+            (Pattern (Variable "simpleAdd" ()))
             (Pattern (Variable "x" ()))
-            ())
-          ()) $
-      Signature "sumEqualsFive" (Integer' :->: (Integer' :->: Boolean')) $
-      Property "sumEqualsFive"
-        (Lambda "x"
-         (Lambda "y"
-          (Application (Pattern (Variable "isFive" ()))
-           (Application
-            (Application (Pattern (Variable "simpleAdd" ()))
-                         (Pattern (Variable "x" ())) ())
-            (Pattern (Variable "y" ()))
-            ())
+           ())
+          (Pattern (Variable "x" ()))
+         ())
+        ()) $
+     Signature "isFive" (Integer' :->: Boolean') $
+     Function "isFive" (Lambda "x" (Equal (Pattern (Variable "x" ()))
+                                          (Pattern (Value (Number 5 ()))) ())
+                         ()) $
+     Signature "sillyIsFive" (Integer' :->: Boolean') $
+     Function "sillyIsFive"
+      (Lambda "x"
+        (Case (Equal (Pattern (Variable "x" ()))
+                     (Pattern (Value (Number 5 ()))) ())
+          [ (Value (Boolean True  ()), Pattern (Value (Boolean True ())))
+          , (Value (Boolean False ()), Pattern (Value (Boolean False ())))
+          ]
+         ())
+        ()) $
+     Signature "fiveNotThree" (Integer' :->: Boolean') $
+     Function "fiveNotThree"
+       (Lambda "x"
+         (Case (Pattern (Variable "x" ()))
+           [ (Value (Number 5 ())
+             , Pattern (Value (Boolean True ())))
+           , (Value (Number 3 ())
+             , Pattern (Value (Boolean False ())))
+           ] ())
+         ()) $
+     Signature "greaterThanFive" (Integer' :->: Boolean') $
+     Function "greaterThanFive"
+       (Lambda "x"
+         (Gt (Pattern (Variable "x" ())) (Pattern (Value (Number 5 ()))) ())
+        ()) $
+     Signature "addFive" (Integer' :->: Integer') $
+     Function "addFive"
+       (Lambda "x"
+        (Application
+          (Application 
+            (Pattern (Variable "simpleAdd" ()))
+            (Pattern (Value (Number 5 ())))
+          ())
+          (Pattern (Variable "x" ()))
+         ())
+       ()) $
+     Signature "trivialProp" (Integer' :->: Boolean') $
+     Property "trivialProp"
+       (Lambda "x"
+         (Application
+           (Pattern (Variable "isFive" ()))
+           (Pattern (Variable "x" ()))
+           ())
+         ()) $
+     Signature "sumEqualsFive" (Integer' :->: (Integer' :->: Boolean')) $
+     Property "sumEqualsFive"
+       (Lambda "x"
+        (Lambda "y"
+         (Application (Pattern (Variable "isFive" ()))
+          (Application
+           (Application (Pattern (Variable "simpleAdd" ()))
+                        (Pattern (Variable "x" ())) ())
+           (Pattern (Variable "y" ()))
            ())
           ())
          ())
+        ()) $
+     Signature "preconditionProp" (Integer' :->: Boolean') $
+     Property "preconditionProp"
+      (Lambda "x"
+       (Case (Application (Pattern (Variable "greaterThanFive" ()))
+                          (Pattern (Variable "x" ())) ())
+         [ (Value (Boolean True  ()), (Application
+                                        (Pattern (Variable "greaterThanFive" ()))
+                                        (Application
+                                          (Application (Pattern (Variable "simpleAdd" ()))
+                                                      (Pattern (Variable "x" ()))
+                                            ())
+                                          (Pattern (Variable "x" ())) ())
+                                       ()))
+         , (Value (Boolean False ()), Pattern (Value (Boolean True ())))
+         ]
+        ())
+      ())
      End)
+  ]
+
+testParseErrorsPrograms :: [TestTree]
+testParseErrorsPrograms =
+  map (\(file, err) -> testCase ("Parsing erronous program '" ++ file ++ "'") $
+      do result <- parseProgram file
+         case result of
+           Right _ -> assertFailure "Should have produced a parsing error."
+           Left es -> assertEqual "" err (report es))
+  [ ("examples/errors/MultipleSignatures.con"
+    , "Multiple type signatures declared for function/property with name 'clone'\n")
+  , ("examples/errors/MultipleADTs.con"
+    , "Multiple ADTs declared with name 'MyADT'\n")
+  , ("examples/errors/MultipleProperties.con"
+    , "Multiple properties declared with name 'clone'\n beginning at \n\"examples/errors/MultipleProperties.con\" (line 1, column 7)\n and ending at\n\"examples/errors/MultipleProperties.con\" (line 1, column 9)\n")
+  , ("examples/errors/MultipleFunctions.con"
+    , "Multiple functions declared with name 'clone'\n beginning at \n\"examples/errors/MultipleFunctions.con\" (line 1, column 7)\n and ending at\n\"examples/errors/MultipleFunctions.con\" (line 1, column 9)\n")
   ]

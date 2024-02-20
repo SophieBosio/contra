@@ -1,0 +1,2 @@
+clone x = x .
+clone y = y .

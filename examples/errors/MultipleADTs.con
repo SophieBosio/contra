@@ -1,0 +1,3 @@
+adt MyADT = MY | TYPE .
+
+adt MyADT = OTHER .

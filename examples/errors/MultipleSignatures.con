@@ -1,0 +1,4 @@
+clone :: Integer -> Integer .
+clone x = x .
+
+clone :: Integer -> Integer .

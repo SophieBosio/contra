@@ -22,23 +22,6 @@ data ParsingError =
   | ParsingFailed        ParseError
   deriving Show
 
-reportErrors :: Program Info -> [ParsingError]
-reportErrors p =
-     [ MultipleSignatures  n         | n <- sigs  \\ nub sigs  ]
-  ++ [ MultipleADTs        n         | n <- adts  \\ nub adts  ]
-  ++ [ MultipleFunctions  (n, pos n) | n <- funcs \\ nub funcs ]
-  ++ [ MultipleProperties (n, pos n) | n <- props \\ nub props ]
-  where
-    sigs  = fst <$> signatures p
-    adts  = fst <$> datatypes  p
-    funcs = fst <$> functions  p
-    props = fst <$> properties p
-    pos n =
-      maybe
-      (newPos "unknown parse error" 0 0, 
-       newPos "unknown parse error" 0 0)
-      annotation (lookup n (functions p ++ properties p))
-
 
 -- Export
 parseProgram :: Source -> IO (Either [ParsingError] (Program Info))
@@ -317,9 +300,6 @@ symbol = lexeme . void . try . string
 parens :: Parser a -> Parser a
 parens = between (symbol "(") (symbol ")")
 
-brackets :: Parser a -> Parser a
-brackets = between (symbol "[") (symbol "]")
-
 dash :: Parser Char
 dash = char '-'
 
@@ -331,3 +311,45 @@ arrow = symbol "->"
 
 reserved :: Name -> Bool
 reserved = flip elem reservedKeywords
+
+
+-- Handling errors
+reportErrors :: Program Info -> [ParsingError]
+reportErrors p =
+     [ MultipleSignatures  n         | n <- sigs  \\ nub sigs  ]
+  ++ [ MultipleADTs        n         | n <- adts  \\ nub adts  ]
+  ++ [ MultipleFunctions  (n, pos n) | n <- funcs \\ nub funcs ]
+  ++ [ MultipleProperties (n, pos n) | n <- props \\ nub props ]
+  where
+    sigs  = fst <$> signatures p
+    adts  = fst <$> datatypes  p
+    funcs = fst <$> functions  p
+    props = fst <$> properties p
+    pos n =
+      maybe
+      (newPos "unknown parse error" 0 0, 
+       newPos "unknown parse error" 0 0)
+      annotation (lookup n (functions p ++ properties p))
+
+report :: [ParsingError] -> String
+report [] = ""
+report ((MultipleSignatures n) : rest) =
+  ("Multiple type signatures declared for function/property with name '" ++ n ++ "'\n")
+  ++ report rest
+report ((MultipleADTs n) : rest) =
+  ("Multiple ADTs declared with name '" ++ n ++ "'\n")
+  ++ report rest
+report ((MultipleFunctions (n, i) : rest)) =
+  let (start, end) = i
+  in ("Multiple functions declared with name '" ++ n ++
+      "'\n beginning at \n" ++ show start ++ "\n and ending at\n" ++ show end ++ "\n")
+     ++ report rest
+report ((MultipleProperties (n, i) : rest)) =
+  let (start, end) = i
+  in ("Multiple properties declared with name '" ++ n ++
+      "'\n beginning at \n" ++ show start ++ "\n and ending at\n" ++ show end ++ "\n")
+     ++ report rest
+report ((ParsingFailed err) : rest) =
+  ("Parsing failed: " ++ show err ++ "\n")
+  ++ report rest
+
