@@ -57,7 +57,7 @@ evaluate (Equal t0 t1 a) =
 evaluate (Not t0 a) =
   do b <- evaluate t0 >>= boolean
      return $ Pattern $ Value $ Boolean (not b) a
-evaluate _ = error "expected a non-canonical term!"
+evaluate t = error $ "expected a non-canonical term but got " ++ show t
 -- evaluate (Rec x t0 a) =
 --   do notAtTopLevel (x, a)
 --      evaluate $ substitute x t0 (Rec x t0 a)
