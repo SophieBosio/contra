@@ -436,14 +436,14 @@ testParsePrograms =
       (Lambda "x"
        (Case (Application (Pattern (Variable "greaterThanFive" ()))
                           (Pattern (Variable "x" ())) ())
-         [ (Value (Boolean True  ()), (Application
-                                        (Pattern (Variable "greaterThanFive" ()))
-                                        (Application
-                                          (Application (Pattern (Variable "simpleAdd" ()))
+         [ (Value (Boolean True  ()), Application
+                                      (Pattern (Variable "greaterThanFive" ()))
+                                       (Application
+                                         (Application (Pattern (Variable "simpleAdd" ()))
                                                       (Pattern (Variable "x" ()))
-                                            ())
-                                          (Pattern (Variable "x" ())) ())
-                                       ()))
+                                           ())
+                                         (Pattern (Variable "x" ())) ())
+                                      ())
          , (Value (Boolean False ()), Pattern (Value (Boolean True ())))
          ]
         ())

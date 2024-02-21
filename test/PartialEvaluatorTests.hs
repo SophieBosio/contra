@@ -109,18 +109,18 @@ p1 =
      End
 
 t1 =
-  (Lambda "x"
-         (Application
-           (Application
-             (Pattern (Variable "simpleAdd" ()))
-             (Pattern (Value (Number 5 ())))
-           ())
-           (Pattern (Variable "x" ()))
-          ())
-        ())
+  Lambda "x"
+    (Application
+      (Application
+        (Pattern (Variable "simpleAdd" ()))
+        (Pattern (Value (Number 5 ())))
+      ())
+      (Pattern (Variable "x" ()))
+     ())
+   ()
 
 e1 =
-  (Lambda "x"
+  Lambda "x"
     (Application
       (Lambda "y"
        (Plus
@@ -130,4 +130,4 @@ e1 =
        ())
       (Pattern (Variable "x" ()))
     ())
-  ())
+  ()
