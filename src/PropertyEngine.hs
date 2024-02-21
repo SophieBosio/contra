@@ -1,55 +1,47 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module PropertyEngine where
 
 import Syntax
-import Interpreter (normalise)
-import Constrainer (constraints)
+import PartialEvaluator (partiallyEvaluate)
 
-import System.IO             (hFlush, stdout)
--- import Data.SBV
-
-import Test.Tasty.QuickCheck
-  ( Gen
-  , generate
-  -- , oneof
-  -- , frequency
-  -- , arbitrary
-  -- , elements
-  -- , suchThat
-  -- , sized
-  )
+import Control.Monad    (foldM_)
+import Data.SBV
 
 
 -- Abbrevations
+data Prover a = Prover {}
 
 
 -- Export
-check :: Program Type -> Int -> (P, Term Type) -> IO ()
-check prog n (name, prop) =
-  do putStr $ "Testing " ++ name ++ " ❯ "
-     let gen  = generateGenerator prog prop
-     let eval = normalise prog
-     runTests gen eval prop n n
+check :: Program Type -> IO ()
+check program =
+  -- For each property, collect the residual program
+  -- and check next property with already specialised program
+  foldM_ checkProp program (properties program)
+
+
+checkProp :: Program Type -> (P, Term Type) -> IO (Program Type)
+checkProp prog (propName, prop) =
+  do putStr $ "Testing " ++ propName ++ " ❯ "
+     let (prop', residual) = partiallyEvaluate prog prop
+     let f = generateFormula residual prop'
+     proveFormula f
+     return residual
 
 
 -- Main functions
-runTests :: Gen (Maybe (Term Type)) -> (Term Type -> Value Type)
-         -> Term Type -> Int -> Int -> IO ()
-runTests _   _    _    0 _     = putStrLnGreen " ✓ OK - All tests were successful."
-runTests gen eval prop n total =
-  generate gen >>= \case
-    Nothing -> putStrLnRed "Unable to satisfy property."
-    Just  t -> case eval t of
-      Boolean True _ -> putStr "∘" >> hFlush stdout >> runTests gen eval prop (n - 1) total
-      _              -> do
-        putStrLnRed " ✱ FAIL"
-        putStr "Counterexample: "
-        print t
-        putStrLn $ "\nAfter " ++ show (total - n) ++ " tests."
+proveFormula :: Provable a => a -> IO ()
+proveFormula f =
+  do result <- prove f
+     if modelExists result
+       then putStrLnGreen  " ✓ OK "
+       else do putStrLnRed " ✱ FAIL "
+               putStrLn "Counterexample: "
+               print result -- TODO: Translate back into pretty terms
 
-generateGenerator :: Program Type -> Term Type -> Gen (Maybe (Term Type))
-generateGenerator program property = undefined
+generateFormula :: Program Type -> Term Type -> SBool
+generateFormula program property = undefined
   -- do cs <- constraints program property
 
 
