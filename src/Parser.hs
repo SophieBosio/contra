@@ -30,10 +30,10 @@ parseProgram path =
      return $
        case runParser (whitespace >> program) () path src of
          (Left   err) -> Left $ return $ ParsingFailed err
-         (Right code) ->
-           case reportErrors code of
-             [ ] -> return code
-             _   -> Left $ reportErrors code
+         (Right code) -> let flatCode = flatten code in
+           case reportErrors flatCode of
+             [ ] -> return flatCode
+             _   -> Left $ reportErrors flatCode
 
 parseString :: Parser a -> String -> Either ParseError a
 parseString p = runParser p () "<error>"
@@ -183,7 +183,7 @@ caseStatement =
 
 caseBranch :: Parser (Pattern Info, Term Info)
 caseBranch =
-  do _    <- symbol "|"
+  do _    <- symbol ";"
      alt  <- pattern'
      _    <- arrow
      body <- term
@@ -311,6 +311,18 @@ arrow = symbol "->"
 
 reserved :: Name -> Bool
 reserved = flip elem reservedKeywords
+
+
+-- TODO: Flatten
+-- Flatten function definitions into one big case statement
+-- E.g., from 'reverse [] = ..., reverse (x:xs) = ...'
+-- to 'reverse l = case l of [] -> ... (x:xs) -> ...'
+flatten :: Program Info -> Program Info
+flatten p = p
+
+duplicates :: [(F, Term a)] -> [(F, Term a)]
+duplicates fs = filter (\(x, _) -> length (filter (== x) names) > 1) fs
+  where names = map fst fs
 
 
 -- Handling errors
