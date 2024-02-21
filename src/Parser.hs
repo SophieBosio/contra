@@ -136,7 +136,6 @@ pattern' = choice
 -- Terms
 term :: Parser (Term Info)
 term = choice $
-  -- parens term :
   chainl1 simpleTerm operator :
   map try
     [ caseStatement

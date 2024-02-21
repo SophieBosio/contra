@@ -16,9 +16,10 @@ main = defaultMain $ localOption (timeoutSeconds 10) tests
 
 tests :: TestTree
 tests =
-  testGroup "Contra - Main Test Suite"
+  testGroup " ✱ Contra - Main Test Suite"
     [ testGroup "Interpreter: "
         [
+
           interpreterTests
         ]
     , testGroup "Parser: "

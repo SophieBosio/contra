@@ -53,6 +53,7 @@ data Term a =
   | Lt           (T0 a) (T1 a)            a
   | Gt           (T0 a) (T1 a)            a
   | Equal        (T0 a) (T1 a)            a
+  -- | And          (T0 a) (T1 a)            a
   | Not          (T0 a)                   a
   deriving (Functor)
 
