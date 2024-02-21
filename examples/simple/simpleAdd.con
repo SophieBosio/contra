@@ -14,8 +14,8 @@ sillyIsFive x = if (x == 5) then True else False .
 fiveNotThree :: Integer -> Boolean .
 fiveNotThree x =
   case x of
-    | 5 -> True
-    | 3 -> False .
+    ; 5 -> True
+    ; 3 -> False .
 
 greaterThanFive :: Integer -> Boolean .
 greaterThanFive x = x > 5 .

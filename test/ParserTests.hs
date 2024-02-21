@@ -276,20 +276,20 @@ testParseTermsOK =
         ())
       ())
   , ("case True of "       ++
-     "| True  -> 5 " ++
-     "| False -> 3 "
+     "; True  -> 5 " ++
+     "; False -> 3 "
     ,  Case (Pattern (Value (Boolean True ())))
             [ (Value (Boolean True ()), Pattern (Value (Number 5 ())))
             , (Value (Boolean False ()), Pattern (Value (Number 3 ()))) ] ())
   , ("case x of "       ++
-     "| 5     -> True " ++
-     "| False -> False "
+     "; 5     -> True " ++
+     "; False -> False "
     ,  Case (Pattern (Variable "x" ()))
             [ (Value (Number 5 ()), Pattern (Value (Boolean True ())))
             , (Value (Boolean False ()), Pattern (Value (Boolean False ()))) ] ())
   , ("case 5 of "       ++
-     "| 3 -> False " ++
-     "| 5 -> True "
+     "; 3 -> False " ++
+     "; 5 -> True "
     ,  Case (Pattern (Value (Number 5 ())))
             [ (Value (Number 3 ()), Pattern (Value (Boolean False ())))
             , (Value (Number 5 ()), Pattern (Value (Boolean True ()))) ] ())
