@@ -11,6 +11,9 @@ import Control.Arrow (second)
 type Runtime a = Reader (Program a)
 
 -- Export
+runMain :: Show a => Program a -> Term a
+runMain p = runReader (evaluate (mainFunction p)) p
+
 normalise :: Show a => Program a -> (Term a -> Value a)
 normalise p t =
   let result = runReader (evaluate t) p
@@ -115,6 +118,14 @@ applyTransformation xs t =
 
 
 -- Utility functions
+mainFunction :: Show a => Program a -> Term a
+mainFunction (Function "main" t _) = t
+mainFunction (Function   _ _ rest) = mainFunction rest
+mainFunction (Property   _ _ rest) = mainFunction rest
+mainFunction (Signature  _ _ rest) = mainFunction rest
+mainFunction (Data       _ _ rest) = mainFunction rest
+mainFunction End = error "No main function found."
+
 number :: (Show a, Monad m) => Term a -> m Integer
 number (Pattern (Value (Number n _))) = return n
 number t = error $ "expected an integer, but got a " ++ show t

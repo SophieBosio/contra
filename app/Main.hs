@@ -8,8 +8,8 @@ import Parser
   , report
   , Info
   )
-import TypeInferrer (inferProgram)
--- import Interpreter  (normalise)
+import TypeInferrer   (inferProgram)
+import Interpreter    (runMain)
 import PropertyEngine (check)
 
 import System.Environment (getArgs)
@@ -70,11 +70,11 @@ repl :: Program Type -> IO ()
 repl = const $ die "* REPL is future work"
 
 execute :: Program Type -> IO ()
-execute = undefined
+execute program = print $ runMain program
 
 checkProperties :: Program Type -> IO ()
 checkProperties program =
-  do putStrLn "CHECKING PROPERTIES: "
+  do putStrLn "--- Contra: Checking properties ---"
      check program
 
 
