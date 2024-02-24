@@ -84,6 +84,7 @@ testPartialEvalPrograms =
 
 
 
+p1 :: Program ()
 p1 =
   Signature "simpleAdd" (Integer' :->: (Integer' :->: Integer')) $
      Function "simpleAdd"
@@ -108,6 +109,7 @@ p1 =
        ())
      End
 
+t1 :: Term ()
 t1 =
   Lambda "x"
     (Application
@@ -119,6 +121,7 @@ t1 =
      ())
    ()
 
+e1 :: Term ()
 e1 =
   Lambda "x"
     (Application
