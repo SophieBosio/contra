@@ -89,7 +89,7 @@ partial (Plus t1 t2 a) =
      t2' <- partial t2
      if canonical t1' && canonical t2'
        then do m <- number t1'
-               n <- number t1'
+               n <- number t2'
                return $ Pattern $ Value $ Number (m + n) a
        else return $ Plus t1' t2' a
 partial (Minus t1 t2 a) =
@@ -97,7 +97,7 @@ partial (Minus t1 t2 a) =
      t2' <- partial t2
      if canonical t1' && canonical t2'
        then do m <- number t1'
-               n <- number t1'
+               n <- number t2'
                return $ Pattern $ Value $ Number (m - n) a
        else return $ Minus t1' t2' a
 partial (Lt t1 t2 a) =
@@ -149,8 +149,6 @@ partialPattern (PConstructor c ps a) =
 partialValue :: Show a => Value a -> PartialState a (Term a)
 partialValue v = return $ Pattern $ Value v
 
-
-
 -- memoise :: Show a => Term a -> Term a -> a -> PartialState a (Term a)
 -- memoise def arg a =
 --   do let x' = show $ hash $ show arg
@@ -161,6 +159,7 @@ partialValue v = return $ Pattern $ Value v
 --                        def' <- partial (f arg)
 --                        put (program <> Function x' def' End)
 --                        return $ Application def' arg a
+
 
 -- Utility
 alpha :: Name -> Term a -> Term a
