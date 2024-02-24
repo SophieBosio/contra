@@ -32,6 +32,11 @@ inferProgram program = refine (resolveConstraints constraints) <$> annotatedProg
                               , (y, t'') <- definitions annotatedProgram
                               , x == y ]
 
+inferTerm :: Term a -> Term Type
+inferTerm t =
+  let (t', _, _) = runRWS (annotate t) emptyEnvironment 0
+  in  t'
+
 
 -- Setup
 fresh :: Annotation Type

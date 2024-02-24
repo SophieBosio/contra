@@ -30,6 +30,7 @@ library
       Parser
       PartialEvaluator
       PropertyEngine
+      REPL
       Syntax
       TypeInferrer
       Unification

@@ -10,6 +10,7 @@ import Parser
   )
 import TypeInferrer   (inferProgram)
 import Interpreter    (runMain)
+import REPL           (evalLoop)
 import PropertyEngine (check)
 
 import System.Environment (getArgs)
@@ -67,7 +68,7 @@ typecheck :: Program Info -> IO (Program Type)
 typecheck = return . inferProgram
 
 repl :: Program Type -> IO ()
-repl = const $ die "* REPL is future work"
+repl = evalLoop
 
 execute :: Program Type -> IO ()
 execute program = print $ runMain program
