@@ -69,7 +69,7 @@ evaluatePattern :: Show a => Pattern a -> Runtime a (Term a)
 evaluatePattern (Value v) = evaluateValue v
 evaluatePattern (Variable x _) =
   do program <- ask
-     case map snd $ filter ((== x) . fst) (functions program) of
+     case map snd $ filter ((== x) . fst) (functions program ++ properties program) of
        [ ] -> error $ "unbound variable" ++ x
        [t] -> evaluate t -- Disallow shadowing at top-level
        _   -> error $ "ambiguous bindings for " ++ x
