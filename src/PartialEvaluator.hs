@@ -140,7 +140,7 @@ partialPattern (Variable x a) =
   do program <- ask
      case map snd $ filter ((== x) . fst) (functions program ++ properties program) of
        [ ] -> return $ Pattern $ Variable x a
-       [t] -> return t
+       [t] -> partial t
        _   -> error  $ "ambiguous bindings for " ++ show x
 partialPattern (PConstructor c ps a) =
   do ts  <- mapM partialPattern ps
