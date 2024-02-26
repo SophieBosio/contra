@@ -149,17 +149,6 @@ partialPattern (PConstructor c ps a) =
 partialValue :: Show a => Value a -> PartialState a (Term a)
 partialValue v = return $ Pattern $ Value v
 
--- memoise :: Show a => Term a -> Term a -> a -> PartialState a (Term a)
--- memoise def arg a =
---   do let x' = show $ hash $ show arg
---      program <- get
---      case lookup x' (functions program) of
---        Just def' -> return $ Application def' arg a
---        Nothing   -> do f <- function def
---                        def' <- partial (f arg)
---                        put (program <> Function x' def' End)
---                        return $ Application def' arg a
-
 
 -- Utility
 alpha :: Name -> Term a -> Term a
