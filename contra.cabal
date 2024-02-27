@@ -44,6 +44,7 @@ library
   build-depends:
       base >=4.7 && <5
     , containers >=0.6.7 && <=0.7.0
+    , hashable ==1.4.3.*
     , mtl ==2.2.*
     , parsec ==3.1.*
     , sbv >=10.0 && <10.4
@@ -63,6 +64,7 @@ executable contra
       base >=4.7 && <5
     , containers >=0.6.7 && <=0.7.0
     , contra
+    , hashable ==1.4.3.*
     , mtl ==2.2.*
     , parsec ==3.1.*
     , sbv >=10.0 && <10.4
@@ -88,6 +90,7 @@ test-suite contra-test
       base >=4.7 && <5
     , containers >=0.6.7 && <=0.7.0
     , contra
+    , hashable ==1.4.3.*
     , mtl ==2.2.*
     , parsec ==3.1.*
     , sbv >=10.0 && <10.4
