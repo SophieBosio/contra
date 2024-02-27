@@ -99,7 +99,7 @@ substitute x t v = -- computes t[v/x]
     Gt    t0 t1  a          -> Gt    (subs t0) (subs t1)       a
     Equal t0 t1  a          -> Equal (subs t0) (subs t1)       a
     Not   t0     a          -> Not   (subs t0)                 a
-    _                         -> t
+    _                       -> t
     -- Rec  y t1    a | x /= y -> Rec y (subs t1)                 a
   where
     subs = flip (substitute x) v

@@ -42,7 +42,7 @@ data Term a =
   -- Base terms:
     Pattern                     (Pattern a)
   | Lambda       X      (T0 a)            a
-  | Application  (T1 a) (T2 a)            a
+  | Application         (T1 a) (T2 a)     a
   | Let          X      (T1 a) (T2 a)     a
   | Case         (T0 a) [(Alt a, Body a)] a
   | TConstructor C      [Term a]          a
@@ -53,14 +53,13 @@ data Term a =
   | Lt           (T0 a) (T1 a)            a
   | Gt           (T0 a) (T1 a)            a
   | Equal        (T0 a) (T1 a)            a
-  -- | And          (T0 a) (T1 a)            a
   | Not          (T0 a)                   a
   deriving (Functor)
 
 data Pattern a =
     Value               (Value a)
-  | Variable     X             a
-  | PConstructor C [Pattern a] a
+  | Variable     X              a
+  | PConstructor C  [Pattern a] a
   deriving (Functor)
 
 data Value a =
