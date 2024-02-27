@@ -43,17 +43,17 @@ partial ns (Pattern p) = partialPattern ns p
 partial ns (TConstructor c ts a) =
   do ts' <- mapM (partial ns) ts
      return $ strengthenIfPossible c ts' a
-partial ns (Let x t0 t1 a) =
+partial ns (Let (Variable x b) t0 t1 a) =
   do notAtTopLevel (x, a)
      t0' <- partial ns t0
      if canonical t0'
        then partial ns $ substitute x t1 t0'
        else do t1' <- partial ns t1
-               return $ Let x t0' t1' a
-partial ns (Lambda x t0 a) =
+               return $ Let (Variable x b) t0' t1' a
+partial ns (Lambda (Variable x b) t0 a) =
   do let (ns', x', alphaT0) = alpha ns x t0
      t0' <- partial ns' alphaT0
-     return $ Lambda x' t0' a
+     return $ Lambda (Variable x' b) t0' a
 -- Specialise named function
 partial ns (Application t1@(Pattern (Variable x _)) t2 a) =
   do t2' <- partial ns t2
@@ -154,7 +154,7 @@ partialValue v = return $ Pattern $ Value v
 
 -- Utility
 function :: Show a => Term a -> PartialState a (Term a -> Term a)
-function (Lambda x t a) =
+function (Lambda (Variable x _) t a) =
   do notAtTopLevel (x, a)
      return $ substitute x t
 function t = error $ "expected a function, but got " ++ show t
@@ -179,7 +179,8 @@ subst x x' (Pattern (Variable y a)) | x == y = Pattern (Variable x' a)
 subst x x' (Pattern (PConstructor c ps a)) =
   let ps' = map (manipulateWith (subst x x')) ps
   in  Pattern (PConstructor c ps' a)
-subst x x' (Lambda       y t0 a) | x == y = Lambda x' (subst x x' t0) a
+subst x x' (Lambda (Variable y b) t0 a)
+  | x == y = Lambda (Variable x' b) (subst x x' t0) a
 subst x x' (Application t1 t2 a) = Application (subst x x' t1) (subst x x' t2) a
 subst _ _  t@(Let            {}) = t -- local scope takes precedence
 subst _ _  t@(Case           {}) = t -- local scope takes precedence

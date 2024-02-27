@@ -259,15 +259,15 @@ testParseTermsOK =
   , ("3 5", Application (Pattern (Value (Number 3 ()))) (Pattern (Value (Number 5 ()))) ())
   , ("f x", Application (Pattern (Variable "f" ())) (Pattern (Variable "x" ())) ())
   , ("let x = 3 in x + 5",
-     Let "x" (Pattern (Value (Number 3 ())))
+     Let (Variable "x" ()) (Pattern (Value (Number 3 ())))
              (Plus (Pattern (Variable "x" ()))
                    (Pattern (Value (Number 5 ())))
               ())
        ())
   , ("\\x -> \\f -> \\y -> f x y", 
-     Lambda "x"
-      (Lambda "f"
-        (Lambda "y"
+     Lambda (Variable "x" ())
+      (Lambda (Variable "f" ())
+        (Lambda (Variable "y" ())
           (Application
             (Application
               (Pattern (Variable "f" ())) (Pattern (Variable "x" ())) ())
@@ -343,16 +343,17 @@ testParsePrograms =
   [ ("examples/simple/basicStatements.con",
      Data "MyADT" [("YES", []), ("NO", [])] $
      Signature "id" (ADT "MyADT" :->: ADT "MyADT") $
-     Function "id" (Lambda "x" (Pattern (Variable "x" ())) ()) $
+     Function "id" (Lambda (Variable "x" ()) (Pattern (Variable "x" ())) ()) $
      Signature "propId" (ADT "MyADT" :->: Boolean') $
-     Property "propId" (Lambda "x" (Equal (Pattern (Variable "x" ()))
-                                          (Pattern (Variable "x" ())) ()) ())
+     Property "propId" (Lambda (Variable "x" ())
+                        (Equal (Pattern (Variable "x" ()))
+                               (Pattern (Variable "x" ())) ()) ())
      End)
   , ("examples/simple/simpleAdd.con",
      Signature "simpleAdd" (Integer' :->: (Integer' :->: Integer')) $
      Function "simpleAdd"
-      (Lambda "x"
-        (Lambda "y"
+      (Lambda (Variable "x" ())
+        (Lambda (Variable "y" ())
           (Plus
             (Pattern (Variable "x" ()))
             (Pattern (Variable "y" ()))
@@ -361,7 +362,7 @@ testParsePrograms =
         ()) $
      Signature "double" (Integer' :->: Integer') $
      Function "double"
-       (Lambda "x"
+       (Lambda (Variable "x" ())
          (Application
           (Application
             (Pattern (Variable "simpleAdd" ()))
@@ -371,12 +372,13 @@ testParsePrograms =
          ())
         ()) $
      Signature "isFive" (Integer' :->: Boolean') $
-     Function "isFive" (Lambda "x" (Equal (Pattern (Variable "x" ()))
-                                          (Pattern (Value (Number 5 ()))) ())
+     Function "isFive" (Lambda (Variable "x" ())
+                         (Equal (Pattern (Variable "x" ()))
+                                (Pattern (Value (Number 5 ()))) ())
                          ()) $
      Signature "sillyIsFive" (Integer' :->: Boolean') $
      Function "sillyIsFive"
-      (Lambda "x"
+      (Lambda (Variable "x" ())
         (Case (Equal (Pattern (Variable "x" ()))
                      (Pattern (Value (Number 5 ()))) ())
           [ (Value (Boolean True  ()), Pattern (Value (Boolean True ())))
@@ -386,7 +388,7 @@ testParsePrograms =
         ()) $
      Signature "fiveNotThree" (Integer' :->: Boolean') $
      Function "fiveNotThree"
-       (Lambda "x"
+       (Lambda (Variable "x" ())
          (Case (Pattern (Variable "x" ()))
            [ (Value (Number 5 ())
              , Pattern (Value (Boolean True ())))
@@ -396,12 +398,12 @@ testParsePrograms =
          ()) $
      Signature "greaterThanFive" (Integer' :->: Boolean') $
      Function "greaterThanFive"
-       (Lambda "x"
+       (Lambda (Variable "x" ())
          (Gt (Pattern (Variable "x" ())) (Pattern (Value (Number 5 ()))) ())
         ()) $
      Signature "addFive" (Integer' :->: Integer') $
      Function "addFive"
-       (Lambda "x"
+       (Lambda (Variable "x" ())
         (Application
           (Application 
             (Pattern (Variable "simpleAdd" ()))
@@ -412,7 +414,7 @@ testParsePrograms =
        ()) $
      Signature "trivialProp" (Integer' :->: Boolean') $
      Property "trivialProp"
-       (Lambda "x"
+       (Lambda (Variable "x" ())
          (Application
            (Pattern (Variable "isFive" ()))
            (Pattern (Variable "x" ()))
@@ -420,8 +422,8 @@ testParsePrograms =
          ()) $
      Signature "sumEqualsFive" (Integer' :->: (Integer' :->: Boolean')) $
      Property "sumEqualsFive"
-       (Lambda "x"
-        (Lambda "y"
+       (Lambda (Variable "x" ())
+        (Lambda (Variable "y" ())
          (Application (Pattern (Variable "isFive" ()))
           (Application
            (Application (Pattern (Variable "simpleAdd" ()))
@@ -433,7 +435,7 @@ testParsePrograms =
         ()) $
      Signature "preconditionProp" (Integer' :->: Boolean') $
      Property "preconditionProp"
-      (Lambda "x"
+      (Lambda (Variable "x" ())
        (Case (Application (Pattern (Variable "greaterThanFive" ()))
                           (Pattern (Variable "x" ())) ())
          [ (Value (Boolean True  ()), Application

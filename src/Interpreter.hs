@@ -26,7 +26,7 @@ evaluate (Pattern p) = evaluatePattern p
 evaluate (TConstructor c ts a) =
   do ts' <- mapM evaluate ts
      return $ strengthenIfPossible c ts' a
-evaluate (Let x t0 t1 a) =
+evaluate (Let (Variable x _) t0 t1 a) =
   do notAtTopLevel (x, a)
      evaluate t0 >>= evaluate . substitute x t1
 evaluate (Application t1 t2 _) =
@@ -88,18 +88,19 @@ substitute x t v = -- computes t[v/x]
     Pattern (Variable  y  _) | x == y -> v
     Pattern (PConstructor c ps a) ->
       Pattern (PConstructor c (map (manipulateWith subs) ps) a)
-    TConstructor c ts a     -> TConstructor    c (map subs ts) a
-    Lambda  y t1 a | x /= y -> Lambda y (subs t1)              a
-    Application  t1 t2 a    -> Application (subs t1) (subs t2) a
-    Let  y t1 t2 a          ->
-      Let y (subs t1) ((if x == y then id else subs) t2) a
-    Plus  t0 t1  a          -> Plus  (subs t0) (subs t1)       a
-    Minus t0 t1  a          -> Minus (subs t0) (subs t1)       a
-    Lt    t0 t1  a          -> Lt    (subs t0) (subs t1)       a
-    Gt    t0 t1  a          -> Gt    (subs t0) (subs t1)       a
-    Equal t0 t1  a          -> Equal (subs t0) (subs t1)       a
-    Not   t0     a          -> Not   (subs t0)                 a
-    _                       -> t
+    TConstructor c ts a           -> TConstructor    c (map subs ts) a
+    Lambda v'@(Variable y _) t1 a  | x /= y
+                                  -> Lambda v' (subs t1)              a
+    Application  t1 t2 a          -> Application (subs t1) (subs t2) a
+    Let v'@(Variable y _) t1 t2 a ->
+      Let v' (subs t1) ((if x == y then id else subs) t2) a
+    Plus  t0 t1  a                -> Plus  (subs t0) (subs t1)       a
+    Minus t0 t1  a                -> Minus (subs t0) (subs t1)       a
+    Lt    t0 t1  a                -> Lt    (subs t0) (subs t1)       a
+    Gt    t0 t1  a                -> Gt    (subs t0) (subs t1)       a
+    Equal t0 t1  a                -> Equal (subs t0) (subs t1)       a
+    Not   t0     a                -> Not   (subs t0)                 a
+    _                             -> t
     -- Rec  y t1    a | x /= y -> Rec y (subs t1)                 a
   where
     subs = flip (substitute x) v
@@ -135,7 +136,7 @@ boolean (Pattern (Value (Boolean b _))) = return b
 boolean t = error $ "expected a boolean value, but got a " ++ show t
 
 function :: Show a => Term a -> Runtime a (Term a -> Term a)
-function (Lambda x t a) =
+function (Lambda (Variable x _) t a) =
   do notAtTopLevel (x, a)
      return $ substitute x t
 function t = error $ "expected a function, but got a " ++ show t

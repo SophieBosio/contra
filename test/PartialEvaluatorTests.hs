@@ -88,8 +88,8 @@ p1 :: Program ()
 p1 =
   Signature "simpleAdd" (Integer' :->: (Integer' :->: Integer')) $
      Function "simpleAdd"
-      (Lambda "x"
-        (Lambda "y"
+      (Lambda (Variable "x" ())
+        (Lambda (Variable "y" ())
           (Plus
             (Pattern (Variable "x" ()))
             (Pattern (Variable "y" ()))
@@ -98,7 +98,7 @@ p1 =
         ()) $
      Signature "addFive" (Integer' :->: Integer') $
      Function "addFive"
-       (Lambda "x"
+       (Lambda (Variable "x" ())
         (Application
           (Application
             (Pattern (Variable "simpleAdd" ()))
@@ -111,7 +111,7 @@ p1 =
 
 t1 :: Term ()
 t1 =
-  Lambda "x"
+  Lambda (Variable "x" ())
     (Application
       (Application
         (Pattern (Variable "simpleAdd" ()))
@@ -123,9 +123,9 @@ t1 =
 
 e1 :: Term ()
 e1 =
-  Lambda "x"
+  Lambda (Variable "x" ())
     (Application
-      (Lambda "y"
+      (Lambda (Variable "y" ())
        (Plus
          (Pattern (Value (Number 5 ())))
          (Pattern (Variable "y" ()))

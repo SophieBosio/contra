@@ -1,7 +1,7 @@
 module UnificationTests where
 
-import Syntax
-import Unification
+-- import Syntax
+-- import Unification
 
 
   

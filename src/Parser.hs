@@ -144,9 +144,9 @@ term = choice $
     ]
   ++
   map info
-    [ symbol  "\\"  >> Lambda <$> identifier <*> (arrow >> term)
+    [ symbol  "\\"  >> Lambda <$> pattern' <*> (arrow >> term)
     , keyword "not" >> Not    <$> term
-    , keyword "let" >> Let    <$> identifier <*>
+    , keyword "let" >> Let    <$> pattern' <*>
                        (symbol "=" >> term)  <*> (symbol "in" >> term)
     -- , keyword "rec" >> Rec <$> identifier <*> term
     ]
@@ -219,7 +219,7 @@ constructorList =
 function :: Parser (Program Info -> Program Info)
 function =
   do f    <- identifier
-     args <- many $ info $ (,) <$> identifier
+     args <- many $ info $ (,) <$> pattern'
      _    <- symbol "="
      t    <- term
      _    <- symbol "."
@@ -229,7 +229,7 @@ function =
 property :: Parser (Program Info -> Program Info)
 property =
   do p    <- identifier
-     args <- many $ info $ (,) <$> identifier
+     args <- many $ info $ (,) <$> pattern'
      _    <- symbol "=*="
      t    <- term
      _    <- symbol "."
@@ -318,10 +318,31 @@ reserved = flip elem reservedKeywords
 -- to 'reverse l = case l of [] -> ... (x:xs) -> ...'
 flatten :: Program Info -> Program Info
 flatten p = p
+  -- where
+  --   dups = duplicates (functions p)
 
 duplicates :: [(F, Term a)] -> [(F, Term a)]
 duplicates fs = filter (\(x, _) -> length (filter (== x) names) > 1) fs
   where names = map fst fs
+
+-- caseBranches :: [(F, Term a)] -> [(Pattern a, Term a)]
+-- caseBranches [                        ] = []
+-- caseBranches ((_, Lambda x t a) : rest) =
+--   (Variable x a, t) : caseBranches rest
+-- caseBranches ((f, _) : _) = error $ "Function definitions for " ++
+--                             f ++ " have different no. of arguments."
+
+removeDefinition :: (F, Term a) -> Program a -> Program a
+removeDefinition (f', t') (Function f t rest)
+  | f == f'   = removeDefinition (f', t') rest
+  | otherwise = Function f t (removeDefinition (f', t') rest)
+removeDefinition def (Property  x t  rest) =
+  Property  x t  (removeDefinition def rest)
+removeDefinition def (Signature x t  rest) =
+  Signature x t  (removeDefinition def rest)
+removeDefinition def (Data      x ts rest) =
+  Data      x ts (removeDefinition def rest)
+removeDefinition _ End = End
 
 
 -- Handling errors

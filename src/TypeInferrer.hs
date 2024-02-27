@@ -47,7 +47,7 @@ fresh = Variable' <$> (get >>= \i ->     -- Get current index (state)
 bind :: Eq x => x -> a -> x `MapsTo` a
 bind x a look y = if x == y
                      then a
-                     else look y
+                     else look y -- Apply the accumulated mapping to y
 
 hasSameTypeAs :: Term Type -> Term Type -> Annotation ()
 t0 `hasSameTypeAs` t1 = tell [annotation t0 :=: annotation t1]
@@ -112,14 +112,15 @@ annotate (TConstructor c ts _) =
        then let ps = map strengthenToPattern ts'
             in  return $ Pattern $ PConstructor c ps tau
        else return $ TConstructor c ts' tau
-annotate (Lambda x t0 _) =
+annotate (Lambda (Variable x _) t0 _) =
   do tau <- fresh
      t0' <- local (bind x tau) $ annotate t0
-     return $ Lambda x t0' (tau :->: annotation t0')
-annotate (Let x t1 t2 _) =
+     return $ Lambda (Variable x tau) t0' (tau :->: annotation t0')
+annotate (Let (Variable x _) t1 t2 _) =
   do t1' <- annotate t1
-     t2' <- local (bind x (annotation t1')) $ annotate t2
-     return $ Let x t1' t2' (annotation t2')
+     let tau = annotation t1'
+     t2' <- local (bind x tau) $ annotate t2
+     return $ Let (Variable x tau) t1' t2' (annotation t2')
 annotate (Application t1 t2 _) =
   do tau <- fresh
      t1' <- annotate t1
