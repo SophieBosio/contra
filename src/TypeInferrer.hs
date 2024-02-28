@@ -12,11 +12,11 @@ import Data.Maybe (fromMaybe)
 data Constraint = Type :=: Type
   deriving Show
 
-type Mapping  a b = a -> b
-type MapsTo   a b = Mapping a b -> Mapping a b
-type Environment  = Mapping Name Type
-type Annotation   = RWS Environment [Constraint] Index
-type Substitution = [(Index, Type)]
+type Mapping      a b = a -> b
+type MapsTo       a b = Mapping a b -> Mapping a b
+type Environment      = Mapping Name Type
+type Annotation       = RWS Environment [Constraint] Index
+type TypeSubstitution = [(Index, Type)]
 
 
 -- Export
@@ -31,6 +31,10 @@ inferProgram program = refine (resolveConstraints constraints) <$> annotatedProg
       [ t' :=: annotation t'' | (x, t')  <- signatures  annotatedProgram
                               , (y, t'') <- definitions annotatedProgram
                               , x == y ]
+
+-- TODO : Find constructor with correct arity in program text, and
+-- enforce the corresponding type for all the terms
+-- Probably an additional list of constraints on the constructors
 
 inferTerm :: Term a -> Term Type
 inferTerm t =
@@ -56,15 +60,15 @@ hasType :: Term Type -> Type -> Annotation ()
 t0 `hasType` tau = tell [annotation t0 :=: tau]
 
 class HasSubstitution a where
-  substitute :: Type -> Index -> (a -> a)
+  substitution :: Type -> Index -> (a -> a)
 
 instance HasSubstitution Type where
-  substitute t i (Variable' j) | i == j = t
-  substitute t i (t0 :->:  t1) = substitute t i t0 :->: substitute t i t1
-  substitute _ _ t             = t
+  substitution t i (Variable' j) | i == j = t
+  substitution t i (t0 :->:  t1) = substitution t i t0 :->: substitution t i t1
+  substitution _ _ t             = t
 
 instance HasSubstitution Constraint where
-  substitute t i (t0 :=: t1) = substitute t i t0 :=: substitute t i t1
+  substitution t i (t0 :=: t1) = substitution t i t0 :=: substitution t i t1
 
 emptyEnvironment :: Environment
 emptyEnvironment = error . (++ " is unbound!")
@@ -116,11 +120,43 @@ annotate (Lambda (Variable x _) t0 _) =
   do tau <- fresh
      t0' <- local (bind x tau) $ annotate t0
      return $ Lambda (Variable x tau) t0' (tau :->: annotation t0')
+annotate (Lambda p@(PConstructor {}) t0 _) =
+  do tau1 <- fresh
+     tau2 <- fresh
+     t'   <- annotatePattern p
+     t' `hasType` tau1
+     let p' = strengthenToPattern t'
+     fvs  <- mapM (\x -> (,) x <$> fresh) $ freeVariables t0
+     t0'  <- local (liftFreeVariables fvs) $ annotate t0
+     t0' `hasType` tau2
+     return $ Lambda p' t0' (tau1 :->: tau2)
+annotate (Lambda (Value v) t0 _) =
+  do t'  <- annotateValue v
+     let v' = (strengthenToValue . strengthenToPattern) t'
+     t0' <- annotate t0
+     let tau1 = annotation v'
+     let tau2 = annotation t0'
+     return $ Lambda (Value v') t0' (tau1 :->: tau2)
 annotate (Let (Variable x _) t1 t2 _) =
   do t1' <- annotate t1
      let tau = annotation t1'
      t2' <- local (bind x tau) $ annotate t2
      return $ Let (Variable x tau) t1' t2' (annotation t2')
+annotate (Let p@(PConstructor {}) t1 t2 _) =
+  do t'  <- annotatePattern p
+     t1' <- annotate t1
+     t' `hasSameTypeAs` t1'
+     let p' = strengthenToPattern t'
+     t2' <- annotate t2
+     return $ Let p' t1' t2' (annotation t2')
+annotate (Let (Value v) t1 t2 _) =
+  do t'  <- annotateValue v
+     let v'  = (strengthenToValue . strengthenToPattern) t'
+     let tau = annotation v'
+     t1' <- annotate t1
+     t1' `hasType` tau
+     t2' <- annotate t2
+     return $ Let (Value v') t1' t2' (annotation t2')
 annotate (Application t1 t2 _) =
   do tau <- fresh
      t1' <- annotate t1
@@ -132,7 +168,7 @@ annotate (Case t0 ts _) =
      tau2 <- fresh
      t0'  <- annotate t0
      t0' `hasType` tau1
-     fvs  <- mapM (\x -> (,) x <$> fresh) $ concatMap (freeVariables . fst) ts
+     fvs  <- mapM (\x -> (,) x <$> fresh) $ concatMap (freeVariables' . fst) ts
      ps'  <- local (liftFreeVariables fvs) $ mapM (annotate . weakenToTerm . fst) ts
      ps'' <- mapM (return . strengthenToPattern) ps'
      bs'  <- local (liftFreeVariables fvs) $ mapM (annotate . snd) ts
@@ -203,10 +239,10 @@ annotateValue (VConstructor c vs _) =
 
 
 -- Resolve constraints
-resolveConstraints :: [Constraint] -> Substitution
+resolveConstraints :: [Constraint] -> TypeSubstitution
 resolveConstraints = fromMaybe (error "Type error occurred") . solve
 
-solve :: [Constraint] -> Maybe Substitution
+solve :: [Constraint] -> Maybe TypeSubstitution
 solve [                 ] = return mempty
 solve (constraint : rest) =
   case constraint of
@@ -221,16 +257,16 @@ solve (constraint : rest) =
     (Variable' i) :=: t1            ->
       if   i `elem` indices t1
       then (if Variable' i /= t1 then Nothing else solve rest)
-      else do c <- solve (substitute t1 i <$> rest)
+      else do c <- solve (substitution t1 i <$> rest)
               return $ (i, t1) : c
     t0 :=: Variable' i ->
       if   i `elem` indices t0
       then (if Variable' i /= t0 then Nothing else solve rest)
-      else do c <- solve (substitute t0 i <$> rest)
+      else do c <- solve (substitution t0 i <$> rest)
               return $ (i, t0) : c
     _                               -> error $ show constraint
 
-refine :: Substitution -> (Type -> Type)
+refine :: TypeSubstitution -> (Type -> Type)
 refine [            ] t                      = t
 refine s@((i, u) : _) (Variable' j) | i == j = refine s u
 refine (_     : rest) (Variable' j)          = refine rest (Variable' j)
@@ -241,17 +277,47 @@ refine s              (tau1 :->: tau2)       = refine s tau1 :->: refine s tau2
 refine _              (ADT name)             = ADT name
 
 
+-- Find corresponding ADT and param types given a constructor name
+
+correspondingADT :: [(T, [(C, [Type])])] -> C -> Maybe (T, [Type])
+correspondingADT [] _ = Nothing
+correspondingADT ((tname, ctrs) : rest) c =
+  case lookup c ctrs >>= nonEmpty of
+    Just types -> Just (tname, types)
+    Nothing    -> correspondingADT rest c
+  where
+    nonEmpty [   ] = Nothing
+    nonEmpty types = Just types
+
+
 -- Utility functions
 indices :: Type -> [Index]
 indices (Variable' i) = return i
 indices (t0  :->: t1) = indices t0 ++ indices t1
 indices _             = mempty
 
-freeVariables :: Pattern a -> [Name]
-freeVariables (Value             _) = mempty
-freeVariables (Variable     x    _) = return x
-freeVariables (PConstructor x ps _) =
-  [ y | y <- foldr (\p acc -> acc <> freeVariables p) mempty ps, x /= y ]
+freeVariables :: Term a -> [Name]
+freeVariables (Pattern           p) = freeVariables' p
+freeVariables (TConstructor _ ts _) = concatMap freeVariables ts
+freeVariables (Lambda       x t0 _) = freeVariables' x ++ freeVariables t0
+freeVariables (Application t1 t2 _) = freeVariables t1 ++ freeVariables t2
+freeVariables (Let       x t1 t2 _) = freeVariables' x ++ freeVariables t1
+                                                       ++ freeVariables t2
+freeVariables (Case        t0 bs _) = freeVariables t0 ++
+                                      concatMap (freeVariables' . fst) bs ++
+                                      concatMap (freeVariables  . snd) bs
+freeVariables (Plus        t0 t1 _) = freeVariables t0 ++ freeVariables t1
+freeVariables (Minus       t0 t1 _) = freeVariables t0 ++ freeVariables t1
+freeVariables (Lt          t0 t1 _) = freeVariables t0 ++ freeVariables t1
+freeVariables (Gt          t0 t1 _) = freeVariables t0 ++ freeVariables t1
+freeVariables (Equal       t0 t1 _) = freeVariables t0 ++ freeVariables t1
+freeVariables (Not            t0 _) = freeVariables t0
+
+freeVariables' :: Pattern a -> [Name]
+freeVariables' (Value             _) = mempty
+freeVariables' (Variable     x    _) = return x
+freeVariables' (PConstructor x ps _) =
+  [ y | y <- foldr (\p acc -> acc <> freeVariables' p) mempty ps, x /= y ]
 
 liftFreeVariables :: [(Name, Type)] -> (Environment -> Environment)
 liftFreeVariables [              ] e = e
@@ -268,7 +334,6 @@ alpha i t =
     increment (Variable'    j) = Variable' (i + j)
     increment (tau1 :->: tau2) = increment tau1 :->: increment tau2
     increment t'               = t'
-
 
 alphaADT :: Index -> ([(C, [Type])] -> (Index, [(C, [Type])]))
 alphaADT i =
