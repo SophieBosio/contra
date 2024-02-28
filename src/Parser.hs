@@ -6,7 +6,7 @@ import Text.Parsec
 import Text.Parsec.Pos (newPos)
 import Control.Monad (void, when)
 import Data.Functor ((<&>))
-import Data.List (nub, (\\))
+import Data.List (nub, (\\), groupBy, sortBy)
 
 
 -- Abbreviations
@@ -312,25 +312,38 @@ reserved :: Name -> Bool
 reserved = flip elem reservedKeywords
 
 
--- TODO: Flatten
 -- Flatten function definitions into one big case statement
 -- E.g., from 'reverse [] = ..., reverse (x:xs) = ...'
 -- to 'reverse l = case l of [] -> ... (x:xs) -> ...'
 flatten :: Program Info -> Program Info
-flatten p = p
-  -- where
-  --   dups = duplicates (functions p)
+flatten p = newDefs defs <> remaining
+  where
+    dups      = duplicates (functions p)
+    defs      = collectDuplicates dups
+    remaining = foldr removeDefinition p dups
 
 duplicates :: [(F, Term a)] -> [(F, Term a)]
 duplicates fs = filter (\(x, _) -> length (filter (== x) names) > 1) fs
   where names = map fst fs
 
--- caseBranches :: [(F, Term a)] -> [(Pattern a, Term a)]
--- caseBranches [                        ] = []
--- caseBranches ((_, Lambda x t a) : rest) =
---   (Variable x a, t) : caseBranches rest
--- caseBranches ((f, _) : _) = error $ "Function definitions for " ++
---                             f ++ " have different no. of arguments."
+collectDuplicates :: [(F, Term a)] -> [[(F, Term a)]]
+collectDuplicates defs = groupBy (\(f, _) (g, _) -> f == g)
+                         (sortBy (\(f, _) (g, _) -> compare f g) defs)
+
+caseBranches :: [(F, Term a)] -> [(Pattern a, Term a)]
+caseBranches [                        ] = []
+caseBranches ((_, Lambda p t _) : rest) =
+  (p, t) : caseBranches rest
+caseBranches ((f, _) : _) = error $
+  "Different number of arguments to function definitions for '"
+  ++ show f ++ "'."
+
+newDefs :: [[(F, Term Info)]] -> Program Info
+newDefs [                     ] = End
+newDefs ([            ] : rest) = newDefs rest
+newDefs (d@((f, t) : _) : rest) =
+  Function f (Case (Pattern (Variable "*x" (annotation t)))
+              (caseBranches d) (annotation t)) $ newDefs rest
 
 removeDefinition :: (F, Term a) -> Program a -> Program a
 removeDefinition (f', t') (Function f t rest)

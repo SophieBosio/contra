@@ -237,7 +237,7 @@ annotatePattern (Value      v) = annotateValue v
 annotatePattern (Variable x _) =
   do env <- ask
      case env x of
-       (Single  tau) -> return $ Pattern $ Variable x $ tau
+       (Single  tau) -> return $ Pattern $ Variable x tau
        (Many (t, _)) -> error  $ "Illegal: Variable '" ++ show x ++
                                  "' pointed to type '" ++ show t ++ "'." 
 annotatePattern (PConstructor c ps _) =
