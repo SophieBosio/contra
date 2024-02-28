@@ -1,10 +1,13 @@
 module PartialEvaluator where
 
 import Syntax
-import Interpreter
+import Unification
   ( substitute,
-    boolean, number,
-    firstMatch, applyTransformation
+    applyTransformation
+  )
+import Interpreter
+  ( boolean, number,
+    firstMatch
   )
 
 import Control.Monad.Reader
