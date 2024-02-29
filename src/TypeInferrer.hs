@@ -7,8 +7,8 @@ import Unification
   ( freeVariables
   , freeVariables'
   )
+import ERWS
 
-import Control.Monad.RWS
 import Control.Arrow (second)
 import Data.Maybe (fromMaybe)
 
@@ -18,19 +18,19 @@ data Constraint = Type :=: Type
 
 type Mapping      a b = a -> b
 type MapsTo       a b = Mapping a b -> Mapping a b
-type Environment      = Mapping Name Type
-type Annotation       = RWS Environment [Constraint] Index
+type Bindings         = Mapping Name Type
+type Annotation     a = ERWS a Bindings [Constraint] Index
 type TypeSubstitution = [(Index, Type)]
 
 
 -- Export
 inferProgram :: Program a -> Program Type
-inferProgram program = refine (resolveConstraints constraints) <$> annotatedProgram
+inferProgram program = addSignatures $ refine (resolveConstraints constraints) <$> annotatedProgram
   where
     definitions prog = functions prog ++ properties prog
     constraints = annotationConstraints ++ signatureDefinitionAccord
     (annotatedProgram, _, annotationConstraints) =
-      runRWS (annotateProgram program) emptyEnvironment 0
+      runERWS (annotateProgram program) program emptyBindings 0
     signatureDefinitionAccord =
       [ t' :=: annotation t'' | (x, t')  <- signatures  annotatedProgram
                               , (y, t'') <- definitions annotatedProgram
@@ -38,12 +38,12 @@ inferProgram program = refine (resolveConstraints constraints) <$> annotatedProg
 
 inferTerm :: Term a -> Term Type
 inferTerm t =
-  let (t', _, _) = runRWS (annotate t) emptyEnvironment 0
+  let (t', _, _) = runERWS (annotate t) End emptyBindings 0
   in  t'
 
 
 -- Setup
-fresh :: Annotation Type
+fresh :: Annotation a Type
 fresh = Variable' <$> (get >>= \i ->     -- Get current index (state)
                           put (i + 1) >> -- Increment
                           return i)      -- Return fresh
@@ -51,10 +51,10 @@ fresh = Variable' <$> (get >>= \i ->     -- Get current index (state)
 bind :: Eq x => x -> a -> x `MapsTo` a
 bind x a look y = if x == y then a else look y
 
-hasSameTypeAs :: Term Type -> Term Type -> Annotation ()
+hasSameTypeAs :: Term Type -> Term Type -> Annotation a ()
 t0 `hasSameTypeAs` t1 = tell [annotation t0 :=: annotation t1]
 
-hasType :: Term Type -> Type -> Annotation ()
+hasType :: Term Type -> Type -> Annotation a ()
 t0 `hasType` tau = tell [annotation t0 :=: tau]
 
 class HasSubstitution a where
@@ -68,11 +68,11 @@ instance HasSubstitution Type where
 instance HasSubstitution Constraint where
   substitution t i (t0 :=: t1) = substitution t i t0 :=: substitution t i t1
 
-emptyEnvironment :: Environment
-emptyEnvironment = error . (++ " is unbound!")
+emptyBindings :: Bindings
+emptyBindings = error . (++ " is unbound!")
 
--- adtDefinitions :: Program a -> Environment
--- adtDefinitions p = createEnvironment defs
+-- adtDefinitions :: Program a -> Bindings
+-- adtDefinitions p = createBindings defs
 --   where
 --     swap (a, b) = (b, a)
     
@@ -85,9 +85,9 @@ emptyEnvironment = error . (++ " is unbound!")
 -- --     fromConstructor :: ([(C, [Type])], T) -> [(C, (T, [Type]))]
 -- --     fromConstructor (ctrs, adt) = [ (c, (adt, types)) | (c, types) <- ctrs ]
 
--- createEnvironment :: [(C, (T, [Type]))] -> Environment
--- createEnvironment = undefined
--- -- createEnvironment defs = mapping
+-- createBindings :: [(C, (T, [Type]))] -> Bindings
+-- createBindings = undefined
+-- -- createBindings defs = mapping
 -- --   where
 -- --     mapping c = case lookup c defs of
 -- --       Just (t, ts) -> Many (ADT t, ts)
@@ -102,7 +102,7 @@ emptyEnvironment = error . (++ " is unbound!")
          -- constraint on recursive things at top-level. This may be be more
          -- restrictive than what we want, but on the other hand, it was
          -- easy to implement {^_^}.
-annotateProgram :: Program a -> Annotation (Program Type)
+annotateProgram :: Program a -> Annotation a (Program Type)
 annotateProgram (Signature x def rest) =
   do i <- get
      let (j, tau) = alpha i def
@@ -128,7 +128,7 @@ annotateProgram End = return End
 
 
 -- Annotate terms
-annotate :: Term a -> Annotation (Term Type)
+annotate :: Term a -> Annotation a (Term Type)
 annotate (Pattern p) = annotatePattern p
 -- annotate (TConstructor c ts _) =
 --   do env <- ask
@@ -236,7 +236,7 @@ annotate (Not t0 _) =
 --      t0' <- local (bind x tau) $ annotate t0
 --      return $ Rec x t0' $ annotation t0'
 
-annotatePattern :: Pattern a -> Annotation (Term Type)
+annotatePattern :: Pattern a -> Annotation a (Term Type)
 annotatePattern (Value      v) = annotateValue v
 annotatePattern (Variable x _) =
   do env <- ask
@@ -254,7 +254,7 @@ annotatePattern (Variable x _) =
 --            else return $ Pattern $ PConstructor c ps' adt
 --        _ -> error $ "Undefined constructor '" ++ show c ++ "'."
 
-annotateValue :: Value a -> Annotation (Term Type)
+annotateValue :: Value a -> Annotation a (Term Type)
 annotateValue (Unit        _) = return $ Pattern $ Value $ Unit Unit'
 annotateValue (Number    n _) = return $ Pattern $ Value $ Number n Integer'
 annotateValue (Boolean   b _) = return $ Pattern $ Value $ Boolean b Boolean'
@@ -327,7 +327,7 @@ indices (Variable' i) = return i
 indices (t0  :->: t1) = indices t0 ++ indices t1
 indices _             = mempty
 
-liftFreeVariables :: [(Name, Type)] -> (Environment -> Environment)
+liftFreeVariables :: [(Name, Type)] -> (Bindings -> Bindings)
 liftFreeVariables [             ] e = e
 liftFreeVariables ((x, t) : rest) e = bind x t $ liftFreeVariables rest e
 
@@ -355,9 +355,23 @@ returnType :: Type -> Type
 returnType (_ :->: t2) = returnType t2
 returnType t           = t
 
-mustReturnBool :: P -> Term Type -> Annotation ()
+mustReturnBool :: P -> Term Type -> Annotation a ()
 mustReturnBool p t =
   case returnType (annotation t) of
     Boolean' -> return ()
     _        -> error $
       "Type error: Property '" ++ show p ++ "'must return Boolean."
+
+
+addSignatures :: Program Type -> Program Type
+addSignatures p@(Function f t rest) =
+  case lookup f (signatures p) of
+    Just  _ -> Function f t (addSignatures rest)
+    Nothing -> Signature f (annotation t) $ Function f t $ addSignatures rest
+addSignatures p@(Property q t rest) =
+  case lookup q (signatures p) of
+    Just  _ -> Property q t (addSignatures rest)
+    Nothing -> Signature q (annotation t) $ Property q t $ addSignatures rest
+addSignatures (Signature x t rest) = Signature x t $ addSignatures rest
+addSignatures (Data      x t rest) = Data      x t $ addSignatures rest
+addSignatures End = End
