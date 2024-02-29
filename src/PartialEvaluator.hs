@@ -2,17 +2,16 @@ module PartialEvaluator where
 
 import Syntax
 import Unification
-  ( substitute,
-    applyTransformation
-  )
 import Interpreter
   ( boolean, number,
-    firstMatch
+    firstMatch,
+    unificationError
   )
 
 import Control.Monad.Reader
 import Control.Monad.State
 import Data.Hashable
+import Data.Set             (toList, fromList)
 
 
 -- Abbreviations
@@ -46,17 +45,31 @@ partial ns (Pattern p) = partialPattern ns p
 partial ns (TConstructor c ts a) =
   do ts' <- mapM (partial ns) ts
      return $ strengthenIfPossible c ts' a
-partial ns (Let (Variable x b) t0 t1 a) =
-  do notAtTopLevel (x, a)
+partial ns (Let v@(Variable x b) t0 t1 a) =
+  do notAtTopLevel v
      t0' <- partial ns t0
      if canonical t0'
        then partial ns $ substitute x t1 t0'
        else do t1' <- partial ns t1
                return $ Let (Variable x b) t0' t1' a
+partial ns (Let p@(PConstructor _ ps _) t0 t1 _) =
+  do mapM_ notAtTopLevel ps
+     p'  <- partialPattern ns p
+     t0' <- partial ns t0
+     case patternMatch p' t0' of
+       MatchBy u -> partial ns (applyTransformation u t1)
+       NoMatch   -> unificationError p t0
 partial ns (Lambda (Variable x b) t0 a) =
   do let (ns', x', alphaT0) = alpha ns x t0
      t0' <- partial ns' alphaT0
      return $ Lambda (Variable x' b) t0' a
+partial ns (Lambda (PConstructor c ps b) t0 a) =
+  do let fvs = concatMap freeVariables' ps
+     let ts  = map weakenToTerm ps
+     let (ns', ts', alphaT0) = alphaAll fvs ns ts t0
+     let ps' = map strengthenToPattern ts'
+     t0' <- partial ns' alphaT0
+     return $ Lambda (PConstructor c ps' b) t0' a
 -- Specialise named function
 partial ns (Application t1@(Pattern (Variable x _)) t2 a) =
   do t2' <- partial ns t2
@@ -135,6 +148,7 @@ partial ns (Not t0 a) =
        then do b <- boolean t0'
                return $ Pattern $ Value $ Boolean (not b) a
        else return $ Not t0' a
+partial _ t = error $ "Malformed term '" ++ show t ++ "'."
 -- partial (Rec x t0 a) =
 --   do notAtTopLevel (x, a)
 --      partial $ substitute x t0 (Rec x t0 a)
@@ -155,19 +169,6 @@ partialValue :: Show a => Value a -> PartialState a (Term a)
 partialValue v = return $ Pattern $ Value v
 
 
--- Utility
-function :: Show a => Term a -> PartialState a (Term a -> Term a)
-function (Lambda (Variable x _) t a) =
-  do notAtTopLevel (x, a)
-     return $ substitute x t
-function t = error $ "expected a function, but got " ++ show t
-
-notAtTopLevel :: (X, a) -> PartialState a ()
-notAtTopLevel (x, _) =
-  do program <- ask
-     when (x `elem` (fst <$> functions program)) $
-       error $ "the name " ++ x ++ "shadows the top level declaration of " ++ x
-
 -- Alpha renaming
 alpha :: Show a => [Name] -> Name -> Term a -> ([Name], Name, Term a)
 alpha ns x t
@@ -176,6 +177,23 @@ alpha ns x t
                          then alpha ns x' t
                          else (ns ++ [ x'], x', subst x x' t)
   | otherwise   = (ns, x, t)
+
+alphaAll :: Show a => [Name] -> [Name] -> [Term a] -> Term a
+         -> ([Name], [Term a], Term a)
+alphaAll [] [    ]  ts t0 = ([], ts, t0)
+alphaAll ns fvs ts t0 =
+  let (ns',  ts') = foldr (\t (ns'', ts'') ->
+                             let (ns_, t_) = checkVars ns fvs t
+                             in (ns'' ++ ns_, ts'' ++ [t_])) (ns, []) ts in
+  let (ns'', t0') = checkVars ns' fvs t0 in
+  let noDupsNs = removeDups ns''
+  in (noDupsNs, ts', t0')
+  where
+    checkVars :: Show a => [Name] -> [Name] -> Term a -> ([Name], Term a)
+    checkVars ns_ fvs_ t = foldr (\v (ns', _) ->
+                                  let (ns'', _, t'') = alpha ns' v t
+                                  in (ns' ++ ns'', t'')) (ns_, t) fvs_
+    removeDups = toList . fromList
 
 subst :: Show a => X -> X -> Term a -> Term a
 subst x x' (Pattern (Variable y a)) | x == y = Pattern (Variable x' a)
@@ -197,3 +215,18 @@ subst x x' (TConstructor c ts a) =
   let ts' = map (subst x x') ts
   in  TConstructor c ts' a
 subst _ _ t = t
+
+
+-- Utility
+function :: Show a => Term a -> PartialState a (Term a -> Term a)
+function (Lambda v@(Variable x _) t _) =
+  do notAtTopLevel v
+     return $ substitute x t
+function t = error $ "expected a function, but got " ++ show t
+
+notAtTopLevel :: Pattern a -> PartialState a ()
+notAtTopLevel (Variable x _) =
+  do program <- ask
+     when (x `elem` (fst <$> functions program)) $
+       error $ "the name " ++ x ++ "shadows the top level declaration of " ++ x
+notAtTopLevel _ = return ()
