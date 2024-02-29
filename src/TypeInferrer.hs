@@ -16,12 +16,9 @@ import Data.Maybe (fromMaybe)
 data Constraint = Type :=: Type
   deriving Show
 
-data TargetType =
-    Single  Type
-  | Many    (Type, [Type])
 type Mapping      a b = a -> b
 type MapsTo       a b = Mapping a b -> Mapping a b
-type Environment      = Mapping Name TargetType
+type Environment      = Mapping Name Type
 type Annotation       = RWS Environment [Constraint] Index
 type TypeSubstitution = [(Index, Type)]
 
@@ -33,7 +30,7 @@ inferProgram program = refine (resolveConstraints constraints) <$> annotatedProg
     definitions prog = functions prog ++ properties prog
     constraints = annotationConstraints ++ signatureDefinitionAccord
     (annotatedProgram, _, annotationConstraints) =
-      runRWS (annotateProgram program) (adtDefinitions program) 0
+      runRWS (annotateProgram program) emptyEnvironment 0
     signatureDefinitionAccord =
       [ t' :=: annotation t'' | (x, t')  <- signatures  annotatedProgram
                               , (y, t'') <- definitions annotatedProgram
@@ -74,26 +71,28 @@ instance HasSubstitution Constraint where
 emptyEnvironment :: Environment
 emptyEnvironment = error . (++ " is unbound!")
 
-adtDefinitions :: Program a -> Environment
-adtDefinitions p = createEnvironment defs
-  where
-    swap (a, b) = (b, a)
+-- adtDefinitions :: Program a -> Environment
+-- adtDefinitions p = createEnvironment defs
+--   where
+--     swap (a, b) = (b, a)
     
-    adts ::  [([(C, [Type])], T)]
-    adts = map swap (datatypes p)
+--     adts ::  [([Constructor], T)]
+--     adts = map swap (datatypes p)
     
-    defs :: [(C, (T, [Type]))]
-    defs = concatMap fromConstructor adts
+--     defs :: [(C, (T, [Type]))]
+--     defs = concatMap fromConstructor adts
     
-    fromConstructor :: ([(C, [Type])], T) -> [(C, (T, [Type]))]
-    fromConstructor (ctrs, adt) = [ (c, (adt, types)) | (c, types) <- ctrs ]
+-- --     fromConstructor :: ([(C, [Type])], T) -> [(C, (T, [Type]))]
+-- --     fromConstructor (ctrs, adt) = [ (c, (adt, types)) | (c, types) <- ctrs ]
 
-createEnvironment :: [(C, (T, [Type]))] -> Environment
-createEnvironment defs = mapping
-  where
-    mapping c = case lookup c defs of
-      Just (t, ts) -> Many (ADT t, ts)
-      Nothing      -> error $ "Undefined constructor '" ++ show c ++ "'."
+-- createEnvironment :: [(C, (T, [Type]))] -> Environment
+-- createEnvironment = undefined
+-- -- createEnvironment defs = mapping
+-- --   where
+-- --     mapping c = case lookup c defs of
+-- --       Just (t, ts) -> Many (ADT t, ts)
+-- --       Nothing      -> error $ "Undefined constructor '" ++ show c ++ "'."
+
 
 
 -- Annotate program
@@ -108,13 +107,13 @@ annotateProgram (Signature x def rest) =
   do i <- get
      let (j, tau) = alpha i def
      put j
-     rest' <- local (bind x (Single tau)) $ annotateProgram rest
+     rest' <- local (bind x tau) $ annotateProgram rest
      return $ Signature x tau rest'
 annotateProgram (Data t defs rest) =
   do i <- get
      let (j, defs') = alphaADT i defs
      put j
-     rest' <- local (bind t (Single (ADT t))) $ annotateProgram rest
+     rest' <- local (bind t (ADT t)) $ annotateProgram rest
      return $ Data t defs' rest'
 annotateProgram (Function f def rest) =
   do def'  <- annotate def
@@ -131,17 +130,17 @@ annotateProgram End = return End
 -- Annotate terms
 annotate :: Term a -> Annotation (Term Type)
 annotate (Pattern p) = annotatePattern p
-annotate (TConstructor c ts _) =
-  do env <- ask
-     case env c of
-       Many (adt, ds) -> do
-         ts' <- mapM annotate ts
-         zipWithM_ hasType ts' ds
-         return $ strengthenIfPossible c ts' adt
-       _ -> error $ "Undefined constructor '" ++ show c ++ "'."
+-- annotate (TConstructor c ts _) =
+--   do env <- ask
+--      case env c of
+--        Many (adt, ds) -> do
+--          ts' <- mapM annotate ts
+--          zipWithM_ hasType ts' ds
+--          return $ strengthenIfPossible c ts' adt
+--        _ -> error $ "Undefined constructor '" ++ show c ++ "'."
 annotate (Lambda (Variable x _) t0 _) =
   do tau <- fresh
-     t0' <- local (bind x (Single tau)) $ annotate t0
+     t0' <- local (bind x tau) $ annotate t0
      return $ Lambda (Variable x tau) t0' (tau :->: annotation t0')
 annotate (Lambda p@(PConstructor {}) t0 _) =
   do tau1 <- fresh
@@ -163,7 +162,7 @@ annotate (Lambda (Value v) t0 _) =
 annotate (Let (Variable x _) t1 t2 _) =
   do t1' <- annotate t1
      let tau = annotation t1'
-     t2' <- local (bind x (Single tau)) $ annotate t2
+     t2' <- local (bind x tau) $ annotate t2
      return $ Let (Variable x tau) t1' t2' (annotation t2')
 annotate (Let p@(PConstructor {}) t1 t2 _) =
   do t'  <- annotatePattern p
@@ -241,36 +240,33 @@ annotatePattern :: Pattern a -> Annotation (Term Type)
 annotatePattern (Value      v) = annotateValue v
 annotatePattern (Variable x _) =
   do env <- ask
-     case env x of
-       (Single  tau) -> return $ Pattern $ Variable x tau
-       (Many (t, _)) -> error  $ "Illegal: Variable '" ++ show x ++
-                                 "' pointed to type '" ++ show t ++ "'." 
-annotatePattern (PConstructor c ps _) =
-  do env <- ask
-     case env c of
-       Many (adt, ds) -> do
-         ts  <- mapM annotatePattern ps
-         zipWithM_ hasType ts ds
-         ps' <- mapM (return . strengthenToPattern) ts
-         if all canonical ps'
-           then let vs' = map strengthenToValue ps'
-                in  return $ Pattern $ Value $ VConstructor c vs' adt
-           else return $ Pattern $ PConstructor c ps' adt
-       _ -> error $ "Undefined constructor '" ++ show c ++ "'."
+     return $ Pattern $ Variable x (env x)
+-- annotatePattern (PConstructor c ps _) =
+--   do env <- ask
+--      case env c of
+--        Many (adt, ds) -> do
+--          ts  <- mapM annotatePattern ps
+--          zipWithM_ hasType ts ds
+--          ps' <- mapM (return . strengthenToPattern) ts
+--          if all canonical ps'
+--            then let vs' = map strengthenToValue ps'
+--                 in  return $ Pattern $ Value $ VConstructor c vs' adt
+--            else return $ Pattern $ PConstructor c ps' adt
+--        _ -> error $ "Undefined constructor '" ++ show c ++ "'."
 
 annotateValue :: Value a -> Annotation (Term Type)
 annotateValue (Unit        _) = return $ Pattern $ Value $ Unit Unit'
 annotateValue (Number    n _) = return $ Pattern $ Value $ Number n Integer'
 annotateValue (Boolean   b _) = return $ Pattern $ Value $ Boolean b Boolean'
-annotateValue (VConstructor c vs _) =
-  do env <- ask
-     case env c of
-       Many (adt, ds) -> do
-         ts  <- mapM annotateValue vs
-         zipWithM_ hasType ts ds
-         vs' <- mapM (return . strengthenToValue . strengthenToPattern) ts
-         return $ Pattern $ Value $ VConstructor c vs' adt
-       _ -> error $ "Undefined constructor '" ++ show c ++ "'."
+-- annotateValue (VConstructor c vs _) =
+--   do env <- ask
+--      case env c of
+--        Many (adt, ds) -> do
+--          ts  <- mapM annotateValue vs
+--          zipWithM_ hasType ts ds
+--          vs' <- mapM (return . strengthenToValue . strengthenToPattern) ts
+--          return $ Pattern $ Value $ VConstructor c vs' adt
+--        _ -> error $ "Undefined constructor '" ++ show c ++ "'."
 
 
 -- Resolve constraints
@@ -333,7 +329,7 @@ indices _             = mempty
 
 liftFreeVariables :: [(Name, Type)] -> (Environment -> Environment)
 liftFreeVariables [             ] e = e
-liftFreeVariables ((x, t) : rest) e = bind x (Single t) $ liftFreeVariables rest e
+liftFreeVariables ((x, t) : rest) e = bind x t $ liftFreeVariables rest e
 
 alpha :: Index -> (Type -> (Index, Type))
 alpha i t =
@@ -347,16 +343,13 @@ alpha i t =
     increment (tau1 :->: tau2) = increment tau1 :->: increment tau2
     increment t'               = t'
 
-alphaADT :: Index -> ([(C, [Type])] -> (Index, [(C, [Type])]))
-alphaADT i =
-  foldr (\def (j, defs') -> second ((defs' ++) . return) (alphaDefs j def))
-  (i, [])
+alphaADT :: Index -> [Constructor] -> (Index, [Constructor])
+alphaADT i = foldr (\c (j, k) -> second (: k) (alphaDef j c)) (i, [])
 
-alphaDefs :: Index -> ((C, [Type]) -> (Index, (C, [Type])))
-alphaDefs i (c, ts) =
-  let (k, ts') = foldr (\tau (j, taus) -> second ((taus ++) . return)
-                         (alpha j tau)) (i, []) ts
-  in  (k, (c, ts'))
+alphaDef :: Index -> Constructor -> (Index, Constructor)
+alphaDef i (Constructor c cs) = second (Constructor c)
+                                  (foldr (\t (j, ts) ->
+                                          second (: ts) (alpha j t)) (i, []) cs)
 
 returnType :: Type -> Type
 returnType (_ :->: t2) = returnType t2

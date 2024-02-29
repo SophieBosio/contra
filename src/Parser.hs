@@ -246,11 +246,11 @@ signature' =
 
 
 -- Algebraic Data Types
-constructor :: Parser (C, [Type])
+constructor :: Parser Constructor
 constructor =
   do c  <- constructorName
      ts <- many type'
-     return (c, ts)
+     return $ Constructor c ts
 
 adt :: Parser (Program Info -> Program Info)
 adt =

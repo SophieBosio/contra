@@ -10,8 +10,8 @@ type Name = String
 type X    = Name    -- Variable name
 type F    = Name    -- Function name
 type P    = Name    -- Property name
-type C    = Name    -- Constructor name
-type T    = Name    -- Type name
+type C    = Name    -- Data constructor name
+type T    = Name    -- Data type name
 
 type T0   a = Term    a
 type T1   a = Term    a
@@ -25,7 +25,7 @@ type Body a = Term    a  -- Case alternative body
 -- Abstract Syntax
 data Program a =
     Signature X  Type         (Program a)  -- Type signature declaration
-  | Data      T [(C, [Type])] (Program a)  -- Algebraic data type declaration
+  | Data      T [Constructor] (Program a)  -- Algebraic data type declaration
   | Function  F (Term a)      (Program a)  -- Function declaration
   | Property  P (Term a)      (Program a)  -- Property declaration
   | End
@@ -38,6 +38,8 @@ data Type =
   | Variable' Index
   | Type :->: Type
   | ADT  T
+
+data Constructor = Constructor C [Type]
 
 data Term a =
   -- Base terms:
@@ -185,6 +187,10 @@ equivalent (t0 :->: t1) (t0' :->: t1') = t0 == t0' && t1 == t1'
 equivalent (ADT  t) (ADT  s) = t == s
 equivalent _ _ = False
 
+instance Eq Constructor where
+  Constructor c [] == Constructor d [] = c == d
+  Constructor c cs == Constructor d ds = c == d && and (zipWith (==) cs ds)
+
 instance (Eq a) => Eq (Term a) where
   (Pattern     p) == (Pattern       q) = p == q
   (Plus  t0 t1 a) == (Plus  t0' t1' b) = a == b && t0 == t0' && t1 == t1'
@@ -250,6 +256,9 @@ instance (Eq a) => Eq (Program a) where
 
 
 -- Utility functions
+swap :: (a, b) -> (b, a)
+swap (a, b) = (b, a)
+
 instance Semigroup (Program a) where
   (Signature x t  p1) <> p2 = Signature x t  (p1 <> p2)
   (Function  f x  p1) <> p2 = Function  f x  (p1 <> p2)
@@ -275,19 +284,28 @@ functions (Property  _ _ rest) = functions rest
 functions (Data _ _ rest) = functions rest
 functions _                    = mempty
 
-datatypes :: Program a -> [(T, [(C, [Type])])]
-datatypes (Signature _ _ rest) = datatypes rest
-datatypes (Function  _ _ rest) = datatypes rest
-datatypes (Property  _ _ rest) = datatypes rest
-datatypes (Data      x t rest) = (x, t) : datatypes rest
-datatypes _                    = mempty
-
 properties :: Program a -> [(P, Term a)]
 properties (Signature _ _ rest) = properties rest
 properties (Function  _ _ rest) = properties rest
 properties (Property  p x rest) = (p, x) : properties rest
 properties (Data      _ _ rest) = properties rest
 properties _                    = mempty
+
+datatypes :: Program a -> [(T, [Constructor])]
+datatypes (Signature _ _ rest) = datatypes rest
+datatypes (Function  _ _ rest) = datatypes rest
+datatypes (Property  _ _ rest) = datatypes rest
+datatypes (Data      x c rest) = (x, c) : datatypes rest
+datatypes _                    = mempty
+
+dataConstructors :: Program a -> [(Constructor, T)]
+dataConstructors p = concatMap (fromConstructor . swap) (datatypes p)
+  where
+    fromConstructor :: ([Constructor], T) -> [(Constructor, T)]
+    fromConstructor (ctrs, t) = [ (c, t) | c <- ctrs ]
+
+constructorNames :: Program a -> [(C, T)]
+constructorNames p = map (\(Constructor c _, t) -> (c, t)) (dataConstructors p)
 
 
 -- Pretty printing
@@ -302,14 +320,13 @@ caseArrow (p, t) = " | " ++ show p ++ " -> " ++ show t
 
 instance Show a => Show (Program a) where
   show (Signature x t  rest) =
-    x ++ " :: "  ++ show t  ++ "\n\n" ++ show rest
+    x ++ " :: "  ++ show t  ++ "\n" ++ show rest
   show (Function  f t  rest) =
     f ++ " = "   ++ show t  ++ "\n\n" ++ show rest
   show (Property  p t  rest) =
     p ++ " =*= " ++ show t  ++ "\n\n" ++ show rest
   show (Data      t cs rest) =
-    -- /!\ Might have to destructure pair first
-    t ++ " = "   ++ show cs ++ concatMap show cs ++ "\n\n" ++ show rest
+    t ++ " = "   ++ show cs ++ "\n\n" ++ show rest
   show End                   = ""
 
 instance Show Type where
@@ -318,7 +335,11 @@ instance Show Type where
   show Boolean'      = "Boolean"
   show (Variable' i) = "V" ++ show i
   show (t0 :->: t1)  = show t0 ++ " -> " ++ show t1
-  show (ADT t)       = show t
+  show (ADT t)       = t
+
+instance Show Constructor where
+  show (Constructor c []) = show c
+  show (Constructor c cs) = show c ++ concatMap show cs
 
 instance Show (Term a) where
   show (Pattern               p) = show p
