@@ -3,6 +3,10 @@
 module TypeInferrer where
 
 import Syntax
+import Unification
+  ( freeVariables
+  , freeVariables'
+  )
 
 import Control.Monad.RWS
 import Control.Arrow (second)
@@ -325,29 +329,6 @@ indices :: Type -> [Index]
 indices (Variable' i) = return i
 indices (t0  :->: t1) = indices t0 ++ indices t1
 indices _             = mempty
-
-freeVariables :: Term a -> [Name]
-freeVariables (Pattern           p) = freeVariables' p
-freeVariables (TConstructor _ ts _) = concatMap freeVariables ts
-freeVariables (Lambda       x t0 _) = freeVariables' x ++ freeVariables t0
-freeVariables (Application t1 t2 _) = freeVariables t1 ++ freeVariables t2
-freeVariables (Let       x t1 t2 _) = freeVariables' x ++ freeVariables t1
-                                                       ++ freeVariables t2
-freeVariables (Case        t0 bs _) = freeVariables t0 ++
-                                      concatMap (freeVariables' . fst) bs ++
-                                      concatMap (freeVariables  . snd) bs
-freeVariables (Plus        t0 t1 _) = freeVariables t0 ++ freeVariables t1
-freeVariables (Minus       t0 t1 _) = freeVariables t0 ++ freeVariables t1
-freeVariables (Lt          t0 t1 _) = freeVariables t0 ++ freeVariables t1
-freeVariables (Gt          t0 t1 _) = freeVariables t0 ++ freeVariables t1
-freeVariables (Equal       t0 t1 _) = freeVariables t0 ++ freeVariables t1
-freeVariables (Not            t0 _) = freeVariables t0
-
-freeVariables' :: Pattern a -> [Name]
-freeVariables' (Value             _) = mempty
-freeVariables' (Variable     x    _) = return x
-freeVariables' (PConstructor x ps _) =
-  [ y | y <- foldr (\p acc -> acc <> freeVariables' p) mempty ps, x /= y ]
 
 liftFreeVariables :: [(Name, Type)] -> (Environment -> Environment)
 liftFreeVariables [             ] e = e
