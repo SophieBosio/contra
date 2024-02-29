@@ -170,7 +170,8 @@ annotate (Let p@(PConstructor {}) t1 t2 _) =
      t1' <- annotate t1
      t' `hasSameTypeAs` t1'
      let p' = strengthenToPattern t'
-     t2' <- annotate t2
+     fvs <- mapM (\x -> (,) x <$> fresh) $ freeVariables t2
+     t2' <- local (liftFreeVariables fvs) $ annotate t2
      return $ Let p' t1' t2' (annotation t2')
 annotate (Let (Value v) t1 t2 _) =
   do t'  <- annotateValue v
