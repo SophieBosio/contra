@@ -1,12 +1,14 @@
-adt IntList = Nil | Cons Int (List Int)
+adt IntAlias = Integer .
 
-reverse :: IntList -> Boolean
-reverse (Cons x Nil) = x
-reverse (Cons x   l) = (Cons (reverse l) (Cons x Nil))
+adt IntList = Nil | Cons Integer IntList .
 
-length :: IntList -> Integer
-length Nil         = 0
-length (Const x l) = 1 + (length l)
+reverse :: IntList -> Boolean .
+reverse (Cons x Nil) = x .
+reverse (Cons x   l) = (Cons (reverse l) (Cons x Nil)) .
 
-revLength :: IntList -> Boolean
-revLength xs =*= length (reverse xs) == length xs
+length :: IntList -> Integer .
+length Nil         = 0 .
+length (Const x l) = 1 + (length l) .
+
+revLength :: IntList -> Boolean .
+revLength xs =*= length (reverse xs) == length xs .

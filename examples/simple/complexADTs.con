@@ -1,0 +1,5 @@
+adt Single = Ctr | Dtr Integer .
+
+adt Recursive = C | D Recursive .
+
+adt RecursiveMulti = A | B Integer RecursiveMulti .

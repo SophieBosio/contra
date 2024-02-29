@@ -1,0 +1,5 @@
+-- Should be type-inferred as Integer -> Integer -> Integer .
+plus x y = x + y .
+
+-- Should be type-inferred as Integer -> Integer -> Boolean .
+lessThan x y = x < y .
