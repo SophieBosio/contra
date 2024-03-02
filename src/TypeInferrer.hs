@@ -9,8 +9,9 @@ import Unification
   )
 import ERWS
 
+import Control.Monad (zipWithM_)
 import Control.Arrow (second)
-import Data.Maybe (fromMaybe)
+import Data.Maybe    (fromMaybe)
 
 -- Abbreviations
 data Constraint = Type :=: Type
@@ -130,14 +131,13 @@ annotateProgram End = return End
 -- Annotate terms
 annotate :: Term a -> Annotation a (Term Type)
 annotate (Pattern p) = annotatePattern p
--- annotate (TConstructor c ts _) =
---   do env <- ask
---      case env c of
---        Many (adt, ds) -> do
---          ts' <- mapM annotate ts
---          zipWithM_ hasType ts' ds
---          return $ strengthenIfPossible c ts' adt
---        _ -> error $ "Undefined constructor '" ++ show c ++ "'."
+annotate (TConstructor c ts _) =
+  do env <- environment
+     adt <- datatype env c
+     ts' <- mapM annotate ts
+     cs  <- constructorTypes env c
+     zipWithM_ hasType ts' cs
+     return $ strengthenIfPossible c ts' (ADT adt)
 annotate (Lambda (Variable x _) t0 _) =
   do tau <- fresh
      t0' <- local (bind x tau) $ annotate t0
@@ -239,34 +239,27 @@ annotate (Not t0 _) =
 annotatePattern :: Pattern a -> Annotation a (Term Type)
 annotatePattern (Value      v) = annotateValue v
 annotatePattern (Variable x _) =
-  do env <- ask
-     return $ Pattern $ Variable x (env x)
--- annotatePattern (PConstructor c ps _) =
---   do env <- ask
---      case env c of
---        Many (adt, ds) -> do
---          ts  <- mapM annotatePattern ps
---          zipWithM_ hasType ts ds
---          ps' <- mapM (return . strengthenToPattern) ts
---          if all canonical ps'
---            then let vs' = map strengthenToValue ps'
---                 in  return $ Pattern $ Value $ VConstructor c vs' adt
---            else return $ Pattern $ PConstructor c ps' adt
---        _ -> error $ "Undefined constructor '" ++ show c ++ "'."
+  do bindings <- ask
+     return $ Pattern $ Variable x (bindings x)
+annotatePattern (PConstructor c ps _) =
+  do env <- environment
+     adt <- datatype env c
+     ts' <- mapM annotatePattern ps
+     cs  <- constructorTypes env c
+     zipWithM_ hasType ts' cs
+     return $ strengthenIfPossible c ts' (ADT adt)
 
 annotateValue :: Value a -> Annotation a (Term Type)
 annotateValue (Unit        _) = return $ Pattern $ Value $ Unit Unit'
 annotateValue (Number    n _) = return $ Pattern $ Value $ Number n Integer'
 annotateValue (Boolean   b _) = return $ Pattern $ Value $ Boolean b Boolean'
--- annotateValue (VConstructor c vs _) =
---   do env <- ask
---      case env c of
---        Many (adt, ds) -> do
---          ts  <- mapM annotateValue vs
---          zipWithM_ hasType ts ds
---          vs' <- mapM (return . strengthenToValue . strengthenToPattern) ts
---          return $ Pattern $ Value $ VConstructor c vs' adt
---        _ -> error $ "Undefined constructor '" ++ show c ++ "'."
+annotateValue (VConstructor c vs _) =
+  do env <- environment
+     adt <- datatype env c
+     ts' <- mapM annotateValue vs
+     cs  <- constructorTypes env c
+     zipWithM_ hasType ts' cs
+     return $ strengthenIfPossible c ts' (ADT adt)
 
 
 -- Resolve constraints

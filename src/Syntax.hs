@@ -307,6 +307,11 @@ dataConstructors p = concatMap (fromConstructor . swap) (datatypes p)
 constructorNames :: Program a -> [(C, T)]
 constructorNames p = map (\(Constructor c _, t) -> (c, t)) (dataConstructors p)
 
+constructorArgs :: Program a -> [(C, [Type])]
+constructorArgs p = map (\(Constructor c ts) -> (c, ts)) constructors
+  where
+    constructors = map fst (dataConstructors p)
+
 
 -- Pretty printing
 parens :: String -> String
