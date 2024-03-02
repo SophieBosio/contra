@@ -26,7 +26,9 @@ type TypeSubstitution = [(Index, Type)]
 
 -- Export
 inferProgram :: Program a -> Program Type
-inferProgram program = addSignatures $ refine (resolveConstraints constraints) <$> annotatedProgram
+inferProgram program = flip addSignatures [] $
+                       refine (resolveConstraints constraints)
+                       <$> annotatedProgram
   where
     definitions prog = functions prog ++ properties prog
     constraints = annotationConstraints ++ signatureDefinitionAccord
@@ -71,29 +73,6 @@ instance HasSubstitution Constraint where
 
 emptyBindings :: Bindings
 emptyBindings = error . (++ " is unbound!")
-
--- adtDefinitions :: Program a -> Bindings
--- adtDefinitions p = createBindings defs
---   where
---     swap (a, b) = (b, a)
-    
---     adts ::  [([Constructor], T)]
---     adts = map swap (datatypes p)
-    
---     defs :: [(C, (T, [Type]))]
---     defs = concatMap fromConstructor adts
-    
--- --     fromConstructor :: ([(C, [Type])], T) -> [(C, (T, [Type]))]
--- --     fromConstructor (ctrs, adt) = [ (c, (adt, types)) | (c, types) <- ctrs ]
-
--- createBindings :: [(C, (T, [Type]))] -> Bindings
--- createBindings = undefined
--- -- createBindings defs = mapping
--- --   where
--- --     mapping c = case lookup c defs of
--- --       Just (t, ts) -> Many (ADT t, ts)
--- --       Nothing      -> error $ "Undefined constructor '" ++ show c ++ "'."
-
 
 
 -- Annotate program
@@ -301,19 +280,6 @@ refine s              (tau1 :->: tau2)       = refine s tau1 :->: refine s tau2
 refine _              (ADT name)             = ADT name
 
 
--- Find corresponding ADT and param types given a constructor name
-
-correspondingADT :: [(T, [(C, [Type])])] -> C -> Maybe (T, [Type])
-correspondingADT [] _ = Nothing
-correspondingADT ((tname, ctrs) : rest) c =
-  case lookup c ctrs >>= nonEmpty of
-    Just types -> Just (tname, types)
-    Nothing    -> correspondingADT rest c
-  where
-    nonEmpty [   ] = Nothing
-    nonEmpty types = Just types
-
-
 -- Utility functions
 indices :: Type -> [Index]
 indices (Variable' i) = return i
@@ -356,15 +322,23 @@ mustReturnBool p t =
       "Type error: Property '" ++ show p ++ "'must return Boolean."
 
 
-addSignatures :: Program Type -> Program Type
-addSignatures p@(Function f t rest) =
+addSignatures :: Program Type -> [Name] -> Program Type
+addSignatures p@(Function f t rest) sigs =
   case lookup f (signatures p) of
-    Just  _ -> Function f t (addSignatures rest)
-    Nothing -> Signature f (annotation t) $ Function f t $ addSignatures rest
-addSignatures p@(Property q t rest) =
+    Just  _ -> Function  f t (addSignatures rest (f : sigs))
+    Nothing -> if f `elem` sigs
+                then Function  f t (addSignatures rest sigs)
+                else Signature f (annotation t) $
+                     Function f t $
+                     addSignatures rest (f : sigs)
+addSignatures p@(Property q t rest)  sigs =
   case lookup q (signatures p) of
-    Just  _ -> Property q t (addSignatures rest)
-    Nothing -> Signature q (annotation t) $ Property q t $ addSignatures rest
-addSignatures (Signature x t rest) = Signature x t $ addSignatures rest
-addSignatures (Data      x t rest) = Data      x t $ addSignatures rest
-addSignatures End = End
+    Just  _ -> Property  q t (addSignatures rest (q : sigs))
+    Nothing -> if q `elem` sigs
+                then Property  q t (addSignatures rest sigs)
+                else Signature q (annotation t) $
+                     Property q t $
+                     addSignatures rest (q : sigs)
+addSignatures (Signature x t rest) sigs = Signature x t $ addSignatures rest (x : sigs)
+addSignatures (Data      x t rest) sigs = Data      x t $ addSignatures rest sigs
+addSignatures End _ = End

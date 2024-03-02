@@ -3,3 +3,8 @@ adt Single = Ctr | Dtr Integer .
 adt Recursive = C | D Recursive .
 
 adt RecursiveMulti = A | B Integer RecursiveMulti .
+
+adt List = Nil | Cons Integer List .
+
+myList :: List .
+myList = Cons { 1, Cons { 2, Cons { 3,  Nil } } } .
