@@ -5,7 +5,6 @@ module PropertyEngine where
 import Syntax
 import PartialEvaluator (partiallyEvaluate)
 
-import Control.Monad    (foldM_)
 import Control.Monad.Reader
 import Data.SBV
 
@@ -53,21 +52,23 @@ generateFormula property = runReader (translate property) property
 
 
 -- Constraint generation
-translate :: Term Type -> Formula SBool
-translate (Equal t0 t1 _) =
-  do t0' <- translate t0
-     t1' <- translate t1
-     return $ t0' .== t1'
-translate (Lt t0 t1 _) =
-  do t0' <- translate t0
-     t1' <- translate t1
-     return $ t0' .< t1'
-translate (Gt t0 t1 _) =
-  do t0' <- translate t0
-     t1' <- translate t1
-     return $ t0' .> t1'
+-- translate :: Term Type -> Formula (SBV (Term Type))
+-- translate (Equal t0 t1 _) =
+--   do t0' <- translate t0
+--      t1' <- translate t1
+--      return $ t0' .== t1'
+-- translate (Lt t0 t1 _) =
+--   do t0' <- translate t0
+--      t1' <- translate t1
+--      return $ t0' .< t1'
+-- translate (Gt t0 t1 _) =
+--   do t0' <- translate t0
+--      t1' <- translate t1
+--      return $ t0' .> t1'
 -- translate (Lambda x t0 a) =  
 -- translate (Application t1 t2 _) =
+translate :: Term Type -> Formula (SBool)
+translate = undefined
 
 
 -- Utility
