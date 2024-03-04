@@ -1,6 +1,6 @@
-module Unification where
+module Analysis.Unification where
 
-import Syntax
+import Core.Syntax
 
 import Control.Arrow (second)
 

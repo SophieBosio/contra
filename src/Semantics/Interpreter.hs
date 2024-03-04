@@ -1,7 +1,7 @@
-module Interpreter where
+module Semantics.Interpreter where
 
-import Syntax
-import Unification
+import Core.Syntax
+import Analysis.Unification
 
 import Control.Monad.Reader
 

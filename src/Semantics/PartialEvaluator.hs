@@ -1,8 +1,8 @@
-module PartialEvaluator where
+module Semantics.PartialEvaluator where
 
-import Syntax
-import Unification
-import Interpreter
+import Core.Syntax
+import Analysis.Unification
+import Semantics.Interpreter
   ( boolean, number,
     firstMatch,
     unificationError

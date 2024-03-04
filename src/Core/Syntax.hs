@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveFunctor #-}
 
-module Syntax where
+module Core.Syntax where
 
 import Data.List (intercalate)
 

@@ -1,13 +1,13 @@
 {-# LANGUAGE TypeOperators #-}
 
-module TypeInferrer where
+module Analysis.TypeInferrer where
 
-import Syntax
-import Unification
+import Core.Syntax
+import Analysis.Unification
   ( freeVariables
   , freeVariables'
   )
-import ERWS
+import Environment.ERWS
 
 import Control.Monad (zipWithM_)
 import Control.Arrow (second)

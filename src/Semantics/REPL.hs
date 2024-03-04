@@ -1,9 +1,9 @@
-module REPL where
+module Semantics.REPL where
 
-import Syntax
-import Parser
-import TypeInferrer
-import PartialEvaluator
+import Core.Syntax
+import Core.Parser
+import Analysis.TypeInferrer
+import Semantics.PartialEvaluator
 
 import System.IO (hFlush, stdout)
 

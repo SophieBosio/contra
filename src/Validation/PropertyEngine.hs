@@ -1,17 +1,22 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts, ScopedTypeVariables #-}
 
-module PropertyEngine where
+module Validation.PropertyEngine where
 
-import Syntax
-import PartialEvaluator (partiallyEvaluate)
+import Core.Syntax
+import Semantics.PartialEvaluator (partiallyEvaluate)
 
 import Control.Monad.Reader
 import Data.SBV
 
 
 -- Abbreviations
-type Input   = Term Type
-type Formula = Reader Input
+-- data SVar =
+--     Boolean SBool
+--   | Integer SInteger
+--   | Unit
+--   |
+
+type Formula = Reader (Term Type)
 
 
 -- Export
@@ -47,11 +52,16 @@ proveFormula f =
                print result -- TODO: Translate back into pretty terms
 
 generateFormula :: Term Type -> SBool
-generateFormula property = runReader (translate property) property
+generateFormula = undefined
+-- generateFormula property = runReader (translate property) property
   -- do cs <- constraints program property
 
 
 -- Constraint generation
+-- fresh :: Name -> Type -> SType
+-- fresh x Boolean' = do b <- sBool x
+--                       b
+
 -- translate :: Term Type -> Formula (SBV (Term Type))
 -- translate (Equal t0 t1 _) =
 --   do t0' <- translate t0
@@ -67,11 +77,20 @@ generateFormula property = runReader (translate property) property
 --      return $ t0' .> t1'
 -- translate (Lambda x t0 a) =  
 -- translate (Application t1 t2 _) =
-translate :: Term Type -> Formula (SBool)
+-- translate :: Term Type -> Symbolic ()
+translate :: Term Type -> Formula SBool
 translate = undefined
+
+-- translatePattern :: Pattern Type -> Formula SType
+-- translatePattern (Variable x tau) = fresh x tau
+
 
 
 -- Utility
+-- toSymbolic 
+
+
+-- Pretty printing
 putStrLnRed :: String -> IO ()
 putStrLnRed s = putStrLn $ "\ESC[91m\STX" ++ s ++ "\ESC[m\STX"
 

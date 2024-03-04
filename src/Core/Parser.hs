@@ -1,6 +1,6 @@
-module Parser where
+module Core.Parser where
 
-import Syntax hiding (parens)
+import Core.Syntax hiding (parens)
 
 import Text.Parsec
 import Text.Parsec.Pos (newPos)

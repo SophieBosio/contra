@@ -1,9 +1,9 @@
-module ERWS where
+module Environment.ERWS where
 
 -- The author of the monad in this file is Joachim Tilsted Kristensen,
 -- and all credit for this file should go to him.
 
-import Syntax
+import Core.Syntax
 
 import Data.Maybe
 import Control.Arrow

@@ -24,17 +24,16 @@ source-repository head
 
 library
   exposed-modules:
-      Constrainer
-      ERWS
-      Generators
-      Interpreter
-      Parser
-      PartialEvaluator
-      PropertyEngine
-      REPL
-      Syntax
-      TypeInferrer
-      Unification
+      Analysis.TypeInferrer
+      Analysis.Unification
+      Core.Parser
+      Core.Syntax
+      Environment.ERWS
+      Semantics.Interpreter
+      Semantics.PartialEvaluator
+      Semantics.REPL
+      Validation.Constrainer
+      Validation.PropertyEngine
   other-modules:
       Paths_contra
   autogen-modules:

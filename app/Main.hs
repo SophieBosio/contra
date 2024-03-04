@@ -2,16 +2,16 @@
 
 module Main (main) where
 
-import Syntax
-import Parser
+import Core.Syntax
+import Core.Parser
   ( parseProgram
   , report
   , Info
   )
-import TypeInferrer   (inferProgram)
-import Interpreter    (runMain)
-import REPL           (evalLoop)
-import PropertyEngine (check)
+import Analysis.TypeInferrer     (inferProgram)
+import Semantics.Interpreter     (runMain)
+import Semantics.REPL            (evalLoop)
+import Validation.PropertyEngine (check)
 
 import System.Environment (getArgs)
 import System.Exit        (die)

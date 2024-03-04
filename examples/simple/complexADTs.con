@@ -8,3 +8,5 @@ adt List = Nil | Cons Integer List .
 
 myList :: List .
 myList = Cons { 1, Cons { 2, Cons { 3,  Nil } } } .
+
+inferredList = Cons { 1, Cons { 2, Cons { 3,  Nil } } } .
