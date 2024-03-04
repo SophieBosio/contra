@@ -17,8 +17,6 @@ import Data.Maybe    (fromMaybe)
 data Constraint = Type :=: Type
   deriving Show
 
-type Mapping      a b = a -> b
-type MapsTo       a b = Mapping a b -> Mapping a b
 type Bindings         = Mapping Name Type
 type Annotation     a = ERWS a Bindings [Constraint] Index
 type TypeSubstitution = [(Index, Type)]

@@ -12,8 +12,6 @@ type Unknown = Term Type
 data Equality = Unknown :=: Unknown
   deriving Show
 
-type Mapping  a b = a -> b
-type MapsTo   a b = Mapping a b -> Mapping a b
 type Constraint   = Mapping Name Range
 type Realisations = [(Name, Term Type)]
 

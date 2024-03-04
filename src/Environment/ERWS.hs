@@ -10,6 +10,9 @@ import Control.Arrow
 import qualified Control.Monad.RWS as RWS
 
 
+type Mapping      a b = a -> b
+type MapsTo       a b = Mapping a b -> Mapping a b
+
 data Environment m a =
   Environment
     { function         :: F -> m (Term a)
