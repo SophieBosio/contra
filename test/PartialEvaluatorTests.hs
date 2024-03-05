@@ -1,9 +1,9 @@
 module PartialEvaluatorTests where
 
-import Syntax
-import Interpreter
-import PartialEvaluator
-import Parser
+import Core.Syntax
+import Core.Parser
+import Semantics.Interpreter
+import Semantics.PartialEvaluator
 
 import Test.Tasty
 import Test.Tasty.HUnit

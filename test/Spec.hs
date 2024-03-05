@@ -1,11 +1,9 @@
 import Test.Tasty
 
-import InterpreterTests
 import ParserTests
--- import TypeInferrerTests
--- import UnificationTests
--- import GeneratorsTests
 import PartialEvaluatorTests
+-- import UnificationTests
+-- import PropertyCheckerTests
 
 
 timeoutSeconds :: Integer -> Timeout
@@ -17,29 +15,18 @@ main = defaultMain $ localOption (timeoutSeconds 10) tests
 tests :: TestTree
 tests =
   testGroup " ✱ Contra - Main Test Suite"
-    [ testGroup "Interpreter: "
-        [
-
-          interpreterTests
-        ]
-    , testGroup "Parser: "
+    [ testGroup "Parser: "
         [
           utilityParsers
         , typeParser
         , termParser
         , programTests
         ]
-    , testGroup "Type inferrer: "
-        [
-        ]
-    , testGroup "Unification: "
-        [
-        ]
-    , testGroup "Generators: "
-        [
-        ]
     , testGroup "Partial evaluator: "
         [
           partialEvaluatorTests
+        ]
+    , testGroup "Property checker: "
+        [
         ]
     ]

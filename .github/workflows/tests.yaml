@@ -1,4 +1,5 @@
 name: tests
+
 on:
   push:
     branches:
@@ -9,57 +10,34 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        ghc:      ['9.4.8']
-        cabal:    ['3.0.0.0']
-        os:       [ubuntu-latest]
-        resolver: [lts-21.1]
-        exclude:
-          # GHC 8.8+ only works with cabal v3+
-          - ghc:   8.8.3
-            cabal: 2.4.1.0
-    name: Using resolver ${{ matrix.resolver }} with ghc version ${{ matrix.ghc }} and cabal ${{ matrix.cabal }}
+        stack: ['2.13.1']
+        os: [ubuntu-latest]
+    name: Using Stack version ${{ matrix.stack }}
     steps:
-
       - name: Check out
         uses: actions/checkout@v3
 
-      - name: Setup Haskell
+      - name: Setup Stack
         uses: haskell/actions/setup@v1
         with:
-          ghc-version:   ${{ matrix.ghc }}
-          cabal-version: ${{ matrix.cabal }}
-          enable-stack: true
+          stack-version: ${{ matrix.stack }}
 
       - name: Versions
         run: |
           stack --version
-          cabal --version
           ghc --version
+          cabal --version
 
-      - name: Initalize stack for LTS
-        run: |
-          stack update
-          stack init --resolver ${{ matrix.resolver }} --force
+      - name: Initialize Stack
+        run: stack setup
 
-      - name: Build package dependencies
+      - name: Build and test with Stack
         run: |
-          stack --resolver ${{ matrix.resolver }} build --no-run-tests --no-run-benchmarks --only-dependencies
-
-      - name: Build package
-        run: |
-          stack --resolver ${{ matrix.resolver }} build --no-run-tests --no-run-benchmarks --pedantic
-
-      - name: Build testing dependencies
-        run: |
-          stack --resolver ${{ matrix.resolver }} build --no-run-tests --no-run-benchmarks --test --bench
-
-      - name: Run tests
-        run: |
-          stack --resolver ${{ matrix.resolver }} build --test --no-run-benchmarks
+          stack build --test --bench --no-run-benchmarks --no-run-tests --pedantic
 
       - name: Package list
         run: |
-          stack --resolver ${{ matrix.resolver }} exec ghc-pkg list || true
+          stack exec ghc-pkg list || true

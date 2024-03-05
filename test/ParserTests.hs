@@ -1,7 +1,7 @@
 module ParserTests where
 
-import Syntax
-import Parser
+import Core.Syntax
+import Core.Parser
   ( Parser
   , report
   , parseString

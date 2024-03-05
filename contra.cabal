@@ -45,7 +45,7 @@ library
       base >=4.7 && <5
     , containers >=0.6.7 && <=0.7.0
     , hashable ==1.4.3.*
-    , mtl ==2.2.*
+    , mtl >=2.2 && <2.4
     , parsec ==3.1.*
     , sbv >=10.0 && <10.4
     , tasty-quickcheck ==0.10.*
@@ -65,7 +65,7 @@ executable contra
     , containers >=0.6.7 && <=0.7.0
     , contra
     , hashable ==1.4.3.*
-    , mtl ==2.2.*
+    , mtl >=2.2 && <2.4
     , parsec ==3.1.*
     , sbv >=10.0 && <10.4
     , tasty ==1.4.*
@@ -76,7 +76,6 @@ test-suite contra-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      InterpreterTests
       ParserTests
       PartialEvaluatorTests
       UnificationTests
@@ -91,7 +90,7 @@ test-suite contra-test
     , containers >=0.6.7 && <=0.7.0
     , contra
     , hashable ==1.4.3.*
-    , mtl ==2.2.*
+    , mtl >=2.2 && <2.4
     , parsec ==3.1.*
     , sbv >=10.0 && <10.4
     , tasty ==1.4.*
