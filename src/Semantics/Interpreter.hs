@@ -27,7 +27,7 @@ evaluate (TConstructor c ts a) =
      return $ strengthenIfPossible c ts' a
 evaluate (Let v@(Variable x _) t0 t1 _) =
   do notAtTopLevel v
-     evaluate t0 >>= evaluate . substitute x t1
+     evaluate t0 >>= evaluate . substitute v t1
 evaluate (Let p@(PConstructor _ ps _) t0 t1 _) =
   do mapM_ notAtTopLevel ps
      p'  <- evaluatePattern p
@@ -115,9 +115,9 @@ boolean (Pattern (Value (Boolean b _))) = return b
 boolean t = error $ "Expected a boolean value, but got a " ++ show t
 
 function :: Show a => Term a -> Runtime a (Term a -> Term a)
-function (Lambda v@(Variable x _) t _) =
+function (Lambda v@(Variable _ _) t _) =
   do notAtTopLevel v
-     return $ substitute x t
+     return $ substitute v t
 -- function (Lambda (PConstructor c ps _) t _) =
 --   TODO: Lambda with PConstructor
 function t = error $ "Expected a function, but got a " ++ show t

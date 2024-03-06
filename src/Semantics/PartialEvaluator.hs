@@ -49,7 +49,7 @@ partial ns (Let v@(Variable x b) t0 t1 a) =
   do notAtTopLevel v
      t0' <- partial ns t0
      if canonical t0'
-       then partial ns $ substitute x t1 t0'
+       then partial ns $ substitute v t1 t0'
        else do t1' <- partial ns t1
                return $ Let (Variable x b) t0' t1' a
 partial ns (Let p@(PConstructor _ ps _) t0 t1 _) =
@@ -219,9 +219,9 @@ subst _ _ t = t
 
 -- Utility
 function :: Show a => Term a -> PartialState a (Term a -> Term a)
-function (Lambda v@(Variable x _) t _) =
+function (Lambda v@(Variable _ _) t _) =
   do notAtTopLevel v
-     return $ substitute x t
+     return $ substitute v t
 -- function (Lambda (PConstructor c ps _) t _) =
   -- TODO: Lambda with PConstructor
 function t = error $ "expected a function, but got " ++ show t

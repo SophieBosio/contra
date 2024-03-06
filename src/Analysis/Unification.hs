@@ -7,13 +7,13 @@ import Control.Arrow (second)
 
 -- Abbreviations
 -- Meta is a placeholder for the Pattern/Term constructors
-type Transformation meta a = [(X, meta a)]
+type Transformation meta a = [(meta a, meta a)]
 
 data PatternMatch a =
     NoMatch
   | MatchBy (Transformation Pattern a)
 
-type Unifier a = Maybe [(X, a)]
+type Unifier a = Maybe [(a, a)]
 
 newtype Substitution meta a = Substitution { unifier :: Unifier (meta a) }
   
@@ -25,10 +25,10 @@ applyTransformation :: Show a => Transformation Pattern a -> Term a -> Term a
 applyTransformation xs t =
   foldr ((\(x, v) t' -> substitute x t' v) . second weakenToTerm) t xs
 
-substitute :: Show a => X -> Term a -> (Term a -> Term a)
-substitute x t v = -- computes t[v/x]
+substitute :: Show a => Pattern a -> Term a -> (Term a -> Term a)
+substitute p@(Variable x _) t v = -- computes t[v/p]
   case t of
-    Pattern (Variable  y  _) | x == y -> v
+    Pattern (Variable        y  _) | x == y -> v
     Pattern (PConstructor c ps a) ->
       Pattern (PConstructor c (map (manipulateWith subs) ps) a)
     TConstructor c ts a           -> TConstructor    c (map subs ts) a
@@ -46,7 +46,9 @@ substitute x t v = -- computes t[v/x]
     _                             -> t
     -- Rec  y t1    a | x /= y -> Rec y (subs t1)                 a
   where
-    subs = flip (substitute x) v
+    subs = flip (substitute p) v
+substitute (PConstructor p cs pa) t v = undefined
+-- TODO: Write substitute for PConstructor and Value
 
 
 -- Unification
@@ -59,10 +61,10 @@ unify (TConstructor c ts a) (TConstructor c' ts' a')
 unify _ _ = Substitution Nothing -- Only patterns can match patterns
 
 unify' :: Pattern a -> Pattern a -> Substitution Pattern a
-unify' (Value      v) (Value      w) = unify'' v w
-unify' (Variable x _) (Variable y _) | x == y = mempty
-unify' (Variable x _) p              | not $ p `contains` x = p `substitutes` x
-unify' p              (Variable x _) | not $ p `contains` x = p `substitutes` x
+unify' (Value        v) (Value        w) = unify'' v w
+unify' (Variable   x _) (Variable   y _) | x == y = mempty
+unify' v@(Variable x _) p                | not $ p `contains` x = p `substitutes` v
+unify' p                v@(Variable x _) | not $ p `contains` x = p `substitutes` v
 unify' (PConstructor c ps _) (PConstructor c' ps' _)
   | c == c' && length ps == length ps'
   = foldr (mappend . uncurry unify') mempty (zip ps ps')
@@ -86,7 +88,7 @@ instance Monoid (Substitution meta a) where
   mempty = Substitution $ return []
   mappend = (<>)
 
-substitutes :: Pattern a -> X -> Substitution Pattern a
+substitutes :: Pattern a -> Pattern a -> Substitution Pattern a
 substitutes p x = Substitution $ return $ x `mapsTo` p
 
 
@@ -121,5 +123,5 @@ contains (Variable        x _) y | x == y = True
 contains (PConstructor _ ps _) y = any (`contains` y) ps
 contains _                     _ = False
 
-mapsTo :: X -> Pattern a -> Transformation Pattern a
+mapsTo :: Pattern a -> Pattern a -> Transformation Pattern a
 mapsTo x p = return (x, p)
