@@ -33,10 +33,12 @@ substitute p@(Variable x _) t v = -- computes t[v/p]
       Pattern (PConstructor c (map (manipulateWith subs) ps) a)
     TConstructor c ts a           -> TConstructor    c (map subs ts) a
     Lambda v'@(Variable y _) t1 a  | x /= y
-                                  -> Lambda v' (subs t1)              a
+                                  -> Lambda v' (subs t1)             a
     Application  t1 t2 a          -> Application (subs t1) (subs t2) a
     Let v'@(Variable y _) t1 t2 a ->
       Let v' (subs t1) ((if x == y then id else subs) t2) a
+    Case  t0 ts  a                -> Case  (subs t0)
+                                           (map (second subs) ts)    a
     Plus  t0 t1  a                -> Plus  (subs t0) (subs t1)       a
     Minus t0 t1  a                -> Minus (subs t0) (subs t1)       a
     Lt    t0 t1  a                -> Lt    (subs t0) (subs t1)       a
