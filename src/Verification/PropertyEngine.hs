@@ -116,14 +116,8 @@ boolean t =
 
 
 -- Pretty printing
-redStr :: String -> String
-redStr s = "\ESC[31m\STX" ++ s ++ "\ESC[m\STX"
-
-greenStr :: String -> String
-greenStr s = "\ESC[32m\STX" ++ s ++ "\ESC[m\STX"
-
 putStrLnRed :: String -> IO ()
-putStrLnRed = putStrLn . redStr
+putStrLnRed s = putStrLn $ "\ESC[91m\STX" ++ s ++ "\ESC[m\STX"
 
 putStrLnGreen :: String -> IO ()
-putStrLnGreen = putStrLn . greenStr
+putStrLnGreen s = putStrLn $ "\ESC[92m\STX" ++ s ++ "\ESC[m\STX"

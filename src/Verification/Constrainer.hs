@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeOperators #-}
 
-module Validation.Constrainer where
+module Verification.Constrainer where
 
 import Core.Syntax
 import Environment.ERWS

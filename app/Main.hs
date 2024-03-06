@@ -8,7 +8,6 @@ import Core.Parser
   , report
   , Info
   )
-
 import Analysis.TypeInferrer       (inferProgram)
 import Semantics.Interpreter       (runMain)
 import Semantics.REPL              (evalLoop)

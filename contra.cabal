@@ -35,7 +35,6 @@ library
       Semantics.REPL
       Validation.Constrainer
       Validation.PropertyEngine
-      Verification.PropertyEngine
   other-modules:
       Paths_contra
   autogen-modules:
