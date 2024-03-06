@@ -33,7 +33,6 @@ library
       Semantics.Interpreter
       Semantics.PartialEvaluator
       Semantics.REPL
-      Validation.Constrainer
       Validation.PropertyEngine
   other-modules:
       Paths_contra
