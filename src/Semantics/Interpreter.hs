@@ -118,8 +118,8 @@ function :: Show a => Term a -> Runtime a (Term a -> Term a)
 function (Lambda v@(Variable _ _) t _) =
   do notAtTopLevel v
      return $ substitute v t
--- function (Lambda (PConstructor c ps _) t _) =
---   TODO: Lambda with PConstructor
+function (Lambda p@(PConstructor {}) t _) =
+  return $ substitute p t
 function t = error $ "Expected a function, but got a " ++ show t
 
 notAtTopLevel :: Pattern a -> Runtime a ()
