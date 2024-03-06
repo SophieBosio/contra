@@ -80,6 +80,7 @@ testPartialEvalPrograms =
                          ("Checking partial evaluation for term '" ++ show t' ++ "'") $
                          programTestOK (p', t', e'))
   [ (p1, t1, e1)
+  , (p2, t2, e2)
   ]
 
 
@@ -134,3 +135,15 @@ e1 =
       (Pattern (Variable "x" ()))
     ())
   ()
+
+p2 :: Program ()
+-- Check simpleAdd.con
+p2 = undefined
+
+t2 :: Term ()
+-- preconditionProp
+t2 = undefined
+
+e2 :: Term ()
+-- properly inlined, with all lambdas outside
+e2 = undefined
