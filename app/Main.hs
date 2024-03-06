@@ -8,10 +8,11 @@ import Core.Parser
   , report
   , Info
   )
-import Analysis.TypeInferrer     (inferProgram)
-import Semantics.Interpreter     (runMain)
-import Semantics.REPL            (evalLoop)
-import Validation.PropertyEngine (check)
+
+import Analysis.TypeInferrer       (inferProgram)
+import Semantics.Interpreter       (runMain)
+import Semantics.REPL              (evalLoop)
+import Verification.PropertyEngine (check, putStrLnRed, putStrLnGreen, redStr, greenStr)
 
 import System.Environment (getArgs)
 import System.Exit        (die)
@@ -61,14 +62,14 @@ parse :: String -> IO (Program Info)
 parse file =
   do result <- parseProgram file
      case result of
-       Left  problems -> die $ report problems
+       Left  problems -> putStrLnRed >> die $ redStr $ report problems
        Right program  -> return program
 
 typecheck :: Program Info -> IO (Program Type)
 typecheck = return . inferProgram
 
 repl :: Program Type -> IO ()
-repl = evalLoop
+repl p = putStrLnGreen "Contra REPL" >> evalLoop p
 
 execute :: Program Type -> IO ()
 execute program = print $ runMain program
@@ -94,3 +95,4 @@ useInfo =
        \ contra --type   <filename>.con - Type-check and print program\n\
        \ contra --load   <filename>.con - Load program into REPL\n\
        \ contra                         - Start blank interactive REPL session"
+

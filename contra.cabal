@@ -28,12 +28,14 @@ library
       Analysis.Unification
       Core.Parser
       Core.Syntax
+      Environment.ER
       Environment.ERWS
       Semantics.Interpreter
       Semantics.PartialEvaluator
       Semantics.REPL
       Validation.Constrainer
       Validation.PropertyEngine
+      Verification.PropertyEngine
   other-modules:
       Paths_contra
   autogen-modules:

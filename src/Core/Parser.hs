@@ -32,8 +32,8 @@ parseProgram path =
          (Left   err) -> Left $ return $ ParsingFailed err
          (Right code) -> let flatCode = flatten code in
            case reportErrors flatCode of
-             [ ] -> return flatCode
-             _   -> Left $ reportErrors flatCode
+             [ ]  -> return flatCode
+             errs -> Left errs
 
 parseString :: Parser a -> String -> Either ParseError a
 parseString p = runParser p () "<error>"
