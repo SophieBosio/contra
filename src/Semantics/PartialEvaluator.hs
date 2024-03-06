@@ -123,7 +123,7 @@ partial ns (Lt t1 t2 a) =
      t2' <- partial ns t2
      if canonical t1' && canonical t2'
        then do m <- number t1'
-               n <- number t1'
+               n <- number t2'
                return $ Pattern $ Value $ Boolean (m < n) a
        else return $ Lt t1' t2' a
 partial ns (Gt t1 t2 a) =
@@ -131,7 +131,7 @@ partial ns (Gt t1 t2 a) =
      t2' <- partial ns t2
      if canonical t1' && canonical t2'
        then do m <- number t1'
-               n <- number t1'
+               n <- number t2'
                return $ Pattern $ Value $ Boolean (m > n) a
        else return $ Gt t1' t2' a
 partial ns (Equal t1 t2 a) =
@@ -139,7 +139,7 @@ partial ns (Equal t1 t2 a) =
      t2' <- partial ns t2
      if canonical t1' && canonical t2'
        then do m <- number t1'
-               n <- number t1'
+               n <- number t2'
                return $ Pattern $ Value $ Boolean (m == n) a
        else return $ Equal t1' t2' a
 partial ns (Not t0 a) =
