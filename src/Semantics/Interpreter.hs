@@ -25,7 +25,7 @@ evaluate (Pattern p) = evaluatePattern p
 evaluate (TConstructor c ts a) =
   do ts' <- mapM evaluate ts
      return $ strengthenIfPossible c ts' a
-evaluate (Let v@(Variable x _) t0 t1 _) =
+evaluate (Let v@(Variable _ _) t0 t1 _) =
   do notAtTopLevel v
      evaluate t0 >>= evaluate . substitute v t1
 evaluate (Let p@(PConstructor _ ps _) t0 t1 _) =
