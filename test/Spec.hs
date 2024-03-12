@@ -2,7 +2,7 @@ import Test.Tasty
 
 import ParserTests
 import PartialEvaluatorTests
--- import UnificationTests
+import UnificationTests
 -- import PropertyCheckerTests
 
 
@@ -21,6 +21,10 @@ tests =
         , typeParser
         , termParser
         , programTests
+        ]
+    , testGroup "Unification: "
+        [
+          substitutionTests
         ]
     , testGroup "Partial evaluator: "
         [

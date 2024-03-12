@@ -80,7 +80,7 @@ testPartialEvalPrograms =
                          ("Checking partial evaluation for term '" ++ show t' ++ "'") $
                          programTestOK (p', t', e'))
   [ (p1, t1, e1)
-  , (p2, t2, e2)
+  -- , (p2, t2, e2)
   ]
 
 
@@ -136,6 +136,7 @@ e1 =
     ())
   ()
 
+-- TODO: Test proper inlining of nested function calls
 p2 :: Program ()
 -- Check simpleAdd.con
 p2 = undefined
