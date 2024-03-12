@@ -25,32 +25,14 @@ applyTransformation :: Show a => Transformation Pattern a -> Term a -> Term a
 applyTransformation xs t =
   foldr ((\(x, v) t' -> substitute x t' v) . second weakenToTerm) t xs
 
+-- 'substitute p t v' computes t[v/p]
+-- I.e., the term t with the term v instead of the pattern p
 substitute :: Show a => Pattern a -> Term a -> (Term a -> Term a)
-substitute p@(Variable x _) t v = -- computes t[v/p]
-  case t of
-    Pattern (Variable        y  _) | x == y -> v
-    Pattern (PConstructor c ps a) ->
-      Pattern (PConstructor c (map (manipulateWith subs) ps) a)
-    TConstructor c ts a           -> TConstructor    c (map subs ts) a
-    Lambda v'@(Variable y _) t1 a  | x /= y
-                                  -> Lambda v' (subs t1)             a
-    Application  t1 t2 a          -> Application (subs t1) (subs t2) a
-    Let v'@(Variable y _) t1 t2 a ->
-      Let v' (subs t1) ((if x == y then id else subs) t2) a
-    Case  t0 ts  a                -> Case  (subs t0)
-                                           (map (second subs) ts)    a
-    Plus  t0 t1  a                -> Plus  (subs t0) (subs t1)       a
-    Minus t0 t1  a                -> Minus (subs t0) (subs t1)       a
-    Lt    t0 t1  a                -> Lt    (subs t0) (subs t1)       a
-    Gt    t0 t1  a                -> Gt    (subs t0) (subs t1)       a
-    Equal t0 t1  a                -> Equal (subs t0) (subs t1)       a
-    Not   t0     a                -> Not   (subs t0)                 a
-    _                             -> t
-    -- Rec  y t1    a | x /= y -> Rec y (subs t1)                 a
-  where
-    subs = flip (substitute p) v
-substitute (PConstructor p cs pa) t v = undefined
--- TODO: Write substitute for PConstructor and Value
+substitute (Variable     x    _) t v = substituteName x t v
+substitute (PConstructor p cs _) t (TConstructor q ds _)
+  | p == q    = foldr (\(x, v) t' -> substitute x t' v) t (zip cs ds)
+  | otherwise = t
+substitute _ t _ = t
 
 
 -- Unification
@@ -92,6 +74,31 @@ instance Monoid (Substitution meta a) where
 
 substitutes :: Pattern a -> Pattern a -> Substitution Pattern a
 substitutes p x = Substitution $ return $ x `mapsTo` p
+
+substituteName :: Show a => X -> Term a -> (Term a -> Term a)
+substituteName x t v = -- computes t[v/x]
+  case t of
+    Pattern (Variable        y  _) | x == y -> v
+    Pattern (PConstructor c ps a) ->
+      Pattern (PConstructor c (map (manipulateWith subs) ps) a)
+    TConstructor c ts a           -> TConstructor    c (map subs ts) a
+    Lambda v'@(Variable y _) t1 a  | x /= y
+                                  -> Lambda v' (subs t1)             a
+    Application  t1 t2 a          -> Application (subs t1) (subs t2) a
+    Let v'@(Variable y _) t1 t2 a ->
+      Let v' (subs t1) ((if x == y then id else subs) t2) a
+    Case  t0 ts  a                -> Case  (subs t0)
+                                           (map (second subs) ts)    a
+    Plus  t0 t1  a                -> Plus  (subs t0) (subs t1)       a
+    Minus t0 t1  a                -> Minus (subs t0) (subs t1)       a
+    Lt    t0 t1  a                -> Lt    (subs t0) (subs t1)       a
+    Gt    t0 t1  a                -> Gt    (subs t0) (subs t1)       a
+    Equal t0 t1  a                -> Equal (subs t0) (subs t1)       a
+    Not   t0     a                -> Not   (subs t0)                 a
+    _                             -> t
+    -- Rec  y t1    a | x /= y -> Rec y (subs t1)                 a
+  where
+    subs = flip (substituteName x) v
 
 
 -- Free Variables
