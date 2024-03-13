@@ -33,7 +33,7 @@ library
       Semantics.Interpreter
       Semantics.PartialEvaluator
       Semantics.REPL
-      Validation.PropertyEngine
+      Validation.PropertyChecker
   other-modules:
       Paths_contra
   autogen-modules:

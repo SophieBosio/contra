@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts, ScopedTypeVariables, TypeOperators #-}
 
-module Validation.PropertyEngine where
+module Validation.PropertyChecker where
 
 import Core.Syntax
 import Semantics.PartialEvaluator (partiallyEvaluate)

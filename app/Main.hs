@@ -8,10 +8,10 @@ import Core.Parser
   , report
   , Info
   )
-import Analysis.TypeInferrer     (inferProgram)
-import Semantics.Interpreter     (runMain)
-import Semantics.REPL            (evalLoop)
-import Validation.PropertyEngine (check, putStrLnRed, putStrLnGreen, redStr)
+import Analysis.TypeInferrer      (inferProgram)
+import Semantics.Interpreter      (runMain)
+import Semantics.REPL             (evalLoop)
+import Validation.PropertyChecker (check, putStrLnRed, putStrLnGreen, redStr)
 
 import System.Environment (getArgs)
 import System.Exit        (die)
