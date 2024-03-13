@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleContexts, ScopedTypeVariables, TypeOperators #-}
 
 module Validation.PropertyEngine where
 
@@ -11,16 +11,16 @@ import Data.SBV
 
 
 -- Abbreviations
-type Bindings   = Mapping X SInteger
+type Bindings   = Mapping X SValue
 -- type Constraint = Reader Bindings
 -- type Model      = Symbolic
 type Formula  a = ReaderT Bindings Symbolic a
 -- type Correspondence = Mapping Type SType
 data SValue =
-    SB SBool
-  | SI SInteger
-  | SN SString
-  | SL (SList SValue)
+    SBoolean SBool
+  | SNumber  SInteger
+  | SName    SString
+  | SParams  [SValue]
 
 
 -- Export
@@ -37,8 +37,8 @@ checkProp prog (propName, prop) =
      -- Inline function definitions used in the property
      let (prop', residual) = partiallyEvaluate prog prop
      -- Generate formula from term
-     let f = runReaderT (generateFormula prop') liftInputVars
-     -- -- Prove formula
+     let f = runReaderT (generateFormula prop') emptyBindings
+     -- Prove formula
      proveFormula f
      -- Return residual program for memoisation
      return residual
@@ -53,28 +53,43 @@ proveFormula f =
        else do putStrLnRed " ✱ FAIL "
                putStrLn "\tCounterexample: "
                putStr "\t"
-               print result -- TODO: Translate back into pretty terms
+               print result
 
 generateFormula :: Term Type -> Formula SBool
 generateFormula = undefined
+-- generateFormula p =
+--   do inputVars <- liftInputVars p
+--      translate p
 -- generateFormula property = runReader (translate property) property
   -- do cs <- constraints program property
 
 
+-- Create symbolic input variables
+emptyBindings :: Bindings
+emptyBindings = error . (++ " is unbound!")
+
+liftInputVars :: Term Type -> Bindings
+liftInputVars (Lambda (Variable x tau) t _) = bind x tau $ liftInputVars t
+-- liftInputVars (Lambda (PConstructor c xs tau) t _) = 
+
+bind :: X -> Type -> X `MapsTo` SValue
+bind x tau look y = if x == y then fresh x tau else look y
+
+fresh :: X -> Type -> SValue
+fresh = undefined
+-- fresh x Unit' =
+--   do b <- sTrue x
+     
+-- fresh x Integer' =
+--   do sx <- sInteger x
+--      SNumeric sx
+-- fresh x Boolean' =
+--   do sx <- lift $ sBool x
+--      return $ SB sx
+-- -- fresh x (ADT t)
+
+
 -- Constraint generation
-liftInputVars :: Bindings
-liftInputVars = undefined
-
-fresh :: X -> Type -> Formula SValue
-fresh _ Unit' = return $ SB sTrue
-fresh x Integer' =
-  do sx <- lift $ sInteger x
-     return $ SI sx
-fresh x Boolean' =
-  do sx <- lift $ sBool x
-     return $ SB sx
--- fresh x (ADT t)
-
 translate :: Term Type -> Formula SInteger
 translate (Plus t0 t1 _) =
   do t0' <- numeric t0
@@ -99,6 +114,7 @@ translate (Equal t0 t1 _) =
 translate (Not t0 _) =
   do t0' <- boolean t0
      return $ oneIf t0'
+
 
 -- Translating values
 numeric :: Term Type -> Formula SInteger
