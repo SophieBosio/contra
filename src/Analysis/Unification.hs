@@ -37,31 +37,31 @@ substitute _ t _ = t
 
 -- Unification
 unify :: Show a => Term a -> Term a -> Substitution Pattern a
-unify (Pattern p) (Pattern q) = unify' p q
+unify (Pattern p) (Pattern q) = unifyPattern p q
 unify (TConstructor c ts a) (TConstructor c' ts' a')
   | all canonical ts && all canonical ts'
-  = unify' (PConstructor c  (map strengthenToPattern ts)  a)
+  = unifyPattern (PConstructor c  (map strengthenToPattern ts)  a)
            (PConstructor c' (map strengthenToPattern ts') a')
 unify _ _ = Substitution Nothing -- Only patterns can match patterns
 
-unify' :: Pattern a -> Pattern a -> Substitution Pattern a
-unify' (Value        v) (Value        w) = unify'' v w
-unify' (Variable   x _) (Variable   y _) | x == y = mempty
-unify' v@(Variable x _) p                | not $ p `contains` x = p `substitutes` v
-unify' p                v@(Variable x _) | not $ p `contains` x = p `substitutes` v
-unify' (PConstructor c ps _) (PConstructor c' ps' _)
+unifyPattern :: Pattern a -> Pattern a -> Substitution Pattern a
+unifyPattern (Value        v) (Value        w) = unifyValue v w
+unifyPattern (Variable   x _) (Variable   y _) | x == y = mempty
+unifyPattern v@(Variable x _) p                | not $ p `contains` x = p `substitutes` v
+unifyPattern p                v@(Variable x _) | not $ p `contains` x = p `substitutes` v
+unifyPattern (PConstructor c ps _) (PConstructor c' ps' _)
   | c == c' && length ps == length ps'
-  = foldr (mappend . uncurry unify') mempty (zip ps ps')
-unify' _             _                 = Substitution Nothing
+  = foldr (mappend . uncurry unifyPattern) mempty (zip ps ps')
+unifyPattern _             _                 = Substitution Nothing
 
-unify'' :: Value a -> Value a -> Substitution Pattern a
-unify'' (Unit       _) (Unit         _) = mempty
-unify'' (Number   n _) (Number     m _) | n == m = mempty
-unify'' (Boolean  b _) (Boolean    c _) | b == c = mempty
-unify'' (VConstructor c vs _) (VConstructor c' vs' _)
+unifyValue :: Value a -> Value a -> Substitution Pattern a
+unifyValue (Unit       _) (Unit         _) = mempty
+unifyValue (Number   n _) (Number     m _) | n == m = mempty
+unifyValue (Boolean  b _) (Boolean    c _) | b == c = mempty
+unifyValue (VConstructor c vs _) (VConstructor c' vs' _)
   | c == c' && length vs == length vs'
-  = foldr (mappend . uncurry unify'') mempty (zip vs vs')
-unify'' _             _                 = Substitution Nothing
+  = foldr (mappend . uncurry unifyValue) mempty (zip vs vs')
+unifyValue _             _                 = Substitution Nothing
 
 
 -- Substitution
