@@ -1,0 +1,7 @@
+var = 5 .
+
+caseStmt x = case x of
+  ; 3 -> True
+  ; 4 -> False .
+
+noMatch = caseStmt 5 .
