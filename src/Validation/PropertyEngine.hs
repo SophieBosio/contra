@@ -4,7 +4,7 @@ module Validation.PropertyEngine where
 
 import Core.Syntax
 import Semantics.PartialEvaluator (partiallyEvaluate)
-import Environment.ERWS
+import Environment.ERWS hiding (local)
 
 import Control.Monad.Reader
 import Data.SBV
@@ -17,10 +17,11 @@ type Bindings   = Mapping X SValue
 type Formula  a = ReaderT Bindings Symbolic a
 -- type Correspondence = Mapping Type SType
 data SValue =
-    SBoolean SBool
+    SUnit
+  | SBoolean SBool
   | SNumber  SInteger
   | SName    SString
-  | SParams  [SValue]
+  | SCtrArgs [SValue]
 
 
 -- Export
@@ -45,7 +46,7 @@ checkProp prog (propName, prop) =
 
 
 -- Main functions
-proveFormula :: Provable a => a -> IO ()
+proveFormula :: Symbolic SBool -> IO ()
 proveFormula f =
   do result <- prove f
      if not (modelExists result)
@@ -56,10 +57,10 @@ proveFormula f =
                print result
 
 generateFormula :: Term Type -> Formula SBool
-generateFormula = undefined
--- generateFormula p =
---   do inputVars <- liftInputVars p
---      translate p
+-- generateFormula = undefined
+generateFormula p =
+  do p' <- liftInputVars p
+     translateProp p'
 -- generateFormula property = runReader (translate property) property
   -- do cs <- constraints program property
 
@@ -68,14 +69,20 @@ generateFormula = undefined
 emptyBindings :: Bindings
 emptyBindings = error . (++ " is unbound!")
 
-liftInputVars :: Term Type -> Bindings
-liftInputVars (Lambda (Variable x tau) t _) = bind x tau $ liftInputVars t
--- liftInputVars (Lambda (PConstructor c xs tau) t _) = 
+liftInputVars :: Term Type -> Formula (Term Type)
+liftInputVars (Lambda (Variable x tau) t _) =
+  do sx <- fresh x tau
+     local (bind x sx) $ liftInputVars t
 
-bind :: X -> Type -> X `MapsTo` SValue
-bind x tau look y = if x == y then fresh x tau else look y
+-- liftInputVars :: Term Type -> Bindings
+-- liftInputVars (Lambda (Variable x tau) t _) = bind x tau $ liftInputVars t
+-- -- liftInputVars (Lambda (PConstructor c xs tau) t _) = 
 
-fresh :: X -> Type -> SValue
+bind :: X -> SValue -> X `MapsTo` SValue
+bind = undefined
+-- bind x tau look y = if x == y then fresh x tau else look y
+
+fresh :: X -> Type -> Formula SValue
 fresh = undefined
 -- fresh x Unit' =
 --   do b <- sTrue x
@@ -90,45 +97,65 @@ fresh = undefined
 
 
 -- Constraint generation
-translate :: Term Type -> Formula SInteger
+translateProp :: Term Type -> Formula SBool
+translateProp = undefined
+
+translate :: Term Type -> Formula SValue
+translate (Pattern    p) = translatePattern p
 translate (Plus t0 t1 _) =
-  do t0' <- numeric t0
-     t1' <- numeric t1
-     return $ t0' + t1'
+  do t0' <- translate t0 >>= numeric
+     t1' <- translate t1 >>= numeric
+     return $ SNumber $ t0' + t1'
 translate (Minus t0 t1 _) =
-  do t0' <- numeric t0
-     t1' <- numeric t1
-     return $ t0' - t1'
+  do t0' <- translate t0 >>= numeric
+     t1' <- translate t1 >>= numeric
+     return $ SNumber $ t0' - t1'
 translate (Lt t0 t1 _) =
-  do t0' <- numeric t0
-     t1' <- numeric t1
-     return $ oneIf $ t0' .< t1'
+  do t0' <- translate t0 >>= numeric
+     t1' <- translate t1 >>= numeric
+     return $ SBoolean $ t0' .< t1'
 translate (Gt t0 t1 _) =
-  do t0' <- numeric t0
-     t1' <- numeric t1
-     return $ oneIf $ t0' .> t1'
+  do t0' <- translate t0 >>= numeric
+     t1' <- translate t1 >>= numeric
+     return $ SBoolean $ t0' .> t1'
 translate (Equal t0 t1 _) =
-  do t0' <- numeric t0
-     t1' <- numeric t1
-     return $ oneIf $ t0' .== t1'
+  do t0' <- translate t0 >>= numeric
+     t1' <- translate t1 >>= numeric
+     return $ SBoolean $ t0' .== t1'
 translate (Not t0 _) =
-  do t0' <- boolean t0
-     return $ oneIf t0'
+  do t0' <- translate t0 >>= boolean
+     return $ SBoolean $ sNot t0'
+
+translatePattern :: Pattern Type -> Formula SValue
+translatePattern (Value v) = translateValue v
+-- translatePattern (Variable x a) =
+  -- do bindings <- ask
+-- translatePattern (PConstructor c ps a) =
+-- TODO: translatePattern
+
+translateValue :: Value a -> Formula SValue
+translateValue (Unit      _) = return SUnit
+translateValue (Number  n _) = return $ SNumber  $ literal n
+translateValue (Boolean b _) = return $ SBoolean $ literal b
+-- translateValue (VConstructor c vs a) = TODO: Constructor magic!
 
 
--- Translating values
-numeric :: Term Type -> Formula SInteger
-numeric (Pattern (Value (Number n _))) = return $ literal n
--- numeric (Pattern (Variable      x   _) = -- TODO: perform lookup
-numeric t = do translate t
+-- Utility
+truthy :: SValue -> SBool
+truthy (SBoolean b) = b
 
+sEqual :: SValue -> SValue -> SValue
+sEqual  SUnit         SUnit        = SBoolean sTrue
+sEqual (SBoolean b ) (SBoolean c ) = SBoolean (b .== c)
+sEqual (SNumber  n ) (SNumber  m ) = SBoolean (n .== m)
+sEqual (SName    x ) (SName    y ) = SBoolean (x .== y)
+sEqual (SCtrArgs xs) (SCtrArgs ys) = SBoolean $ sAnd $ map truthy $ zipWith sEqual xs ys
 
-boolean :: Term Type -> Formula SBool
-boolean (Pattern (Value (Boolean b _))) = return $ literal b
--- boolean (Pattern (Variable       x  _)) = -- TODO: perform lookup
-boolean t =
-  do t' <- translate t
-     return $ if t' == 1 then sTrue else sFalse
+numeric :: SValue -> Formula SInteger
+numeric = undefined
+
+boolean :: SValue -> Formula SBool
+boolean = undefined
 
 
 -- Pretty printing
