@@ -120,9 +120,10 @@ freeVariables (Equal       t0 t1 _) = freeVariables t0 ++ freeVariables t1
 freeVariables (Not            t0 _) = freeVariables t0
 
 freeVariables' :: Pattern a -> [Name]
-freeVariables' (Value             _) = mempty
-freeVariables' (Variable     x    _) = return x
-freeVariables' (PConstructor x ps _) =
+freeVariables' (Value              _) = mempty
+freeVariables' (Variable     x     _) = return x
+freeVariables' (Pair         p1 p2 _) = freeVariables' p1 <> freeVariables' p2
+freeVariables' (PConstructor x  ps _) =
   [ y | y <- foldr (\p acc -> acc <> freeVariables' p) mempty ps, x /= y ]
 
 

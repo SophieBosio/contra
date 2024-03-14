@@ -79,6 +79,12 @@ evaluatePattern (Variable x _) =
        [ ] -> error $ "Unbound variable" ++ x
        [t] -> evaluate t -- Disallow shadowing at top-level
        _   -> error $ "Ambiguous bindings for " ++ x
+evaluatePattern (Pair p1 p2 a) =
+  do t1 <- evaluatePattern p1
+     t2 <- evaluatePattern p2
+     let p1' = strengthenToPattern t1
+     let p2' = strengthenToPattern t2
+     return $ Pattern $ Pair p1' p2' a
 evaluatePattern (PConstructor c ps a) =
   do ts <- mapM evaluatePattern ps
      return $ strengthenIfPossible c ts a

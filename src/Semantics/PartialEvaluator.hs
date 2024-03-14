@@ -159,6 +159,12 @@ partialPattern ns (Variable x a) =
        [ ] -> return $ Pattern $ Variable x a
        [t] -> partial ns t
        _   -> error  $ "ambiguous bindings for " ++ show x
+partialPattern ns (Pair p1 p2 a) =
+  do t1 <- partialPattern ns p1
+     t2 <- partialPattern ns p2
+     let p1' = strengthenToPattern t1
+     let p2' = strengthenToPattern t2
+     return $ Pattern $ Pair p1' p2' a
 partialPattern ns (PConstructor c ps a) =
   do ts  <- mapM (partialPattern ns) ps
      return $ strengthenIfPossible c ts a

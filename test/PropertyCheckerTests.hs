@@ -6,7 +6,7 @@ import Validation.PropertyChecker
 
 import Test.Tasty
 import Test.Tasty.HUnit
-import Data.SBV
+import Data.SBV\
 
 
 -- Export: Test groups
@@ -95,3 +95,4 @@ simpleSatisfiableProps =
 
 simpleUnsatisfiableProps :: [TestTree]
 simpleUnsatisfiableProps = []
+

@@ -213,6 +213,14 @@ annotatePattern (Value      v) = annotateValue v
 annotatePattern (Variable x _) =
   do bindings <- ask
      return $ Pattern $ Variable x (bindings x)
+annotatePattern (Pair p1 p2 _) =
+  do t1 <- annotatePattern p1
+     t2 <- annotatePattern p2
+     let tau1 = annotation t1
+     let tau2 = annotation t2
+     let p1'  = strengthenToPattern t1
+     let p2'  = strengthenToPattern t2
+     return $ Pattern $ Pair p1' p2' (tau1 :*: tau2)
 annotatePattern (PConstructor c ps _) =
   do env <- environment
      adt <- datatype env c
@@ -246,6 +254,7 @@ solve (constraint : rest) =
     Integer'      :=: Integer'      -> solve rest
     Boolean'      :=: Boolean'      -> solve rest
     (t0 :->: t1)  :=: (t2 :->: t3)  -> solve $ (t0 :=: t2) : (t1 :=: t3) : rest
+    (t1 :*:  t2)  :=: (t3 :*:  t4)  -> solve $ (t1 :=: t3) : (t2 :=: t4) : rest
     (ADT     x1)  :=: (ADT     x2)  ->
       if   x1 /= x2
       then Nothing
@@ -269,7 +278,8 @@ refine (_     : rest) (Variable' j)          = refine rest (Variable' j)
 refine _              Unit'                  = Unit'
 refine _              Integer'               = Integer'
 refine _              Boolean'               = Boolean'
-refine s              (tau1 :->: tau2)       = refine s tau1 :->: refine s tau2
+refine s              (tau0 :->: tau1)       = refine s tau0 :->: refine s tau1
+refine s              (tau1 :*:  tau2)       = refine s tau1 :*:  refine s tau2
 refine _              (ADT name)             = ADT name
 
 
