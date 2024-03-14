@@ -78,6 +78,7 @@ test-suite contra-test
   other-modules:
       ParserTests
       PartialEvaluatorTests
+      PropertyCheckerTests
       UnificationTests
       Paths_contra
   autogen-modules:

@@ -3,7 +3,7 @@ import Test.Tasty
 import ParserTests
 import PartialEvaluatorTests
 import UnificationTests
--- import PropertyCheckerTests
+import PropertyCheckerTests
 
 
 timeoutSeconds :: Integer -> Timeout
@@ -32,5 +32,6 @@ tests =
         ]
     , testGroup "Property checker: "
         [
+          simple
         ]
     ]
