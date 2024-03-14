@@ -341,7 +341,7 @@ testParsePrograms =
          let ast = void <$> runParser program () file src
          assertEqual "" (return p) ast)
   [ ("examples/simple/basicStatements.con",
-     Data "MyADT" [(Constructor "YES" []), (Constructor "NO" [])] $
+     Data "MyADT" [Constructor "YES" [], Constructor "NO" []] $
      Signature "id" (ADT "MyADT" :->: ADT "MyADT") $
      Function "id" (Lambda (Variable "x" ()) (Pattern (Variable "x" ())) ()) $
      Signature "propId" (ADT "MyADT" :->: Boolean') $
