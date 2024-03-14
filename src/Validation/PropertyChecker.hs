@@ -30,16 +30,16 @@ check :: Program Type -> IO ()
 check program =
   -- For each property, collect the residual program
   -- and check next property with already specialised program
-  foldM_ checkProp program (properties program)
+  foldM_ checkProperty program (properties program)
 
 
-checkProp :: Program Type -> (P, Term Type) -> IO (Program Type)
-checkProp prog (propName, prop) =
+checkProperty :: Program Type -> (P, Term Type) -> IO (Program Type)
+checkProperty prog (propName, prop) =
   do putStr $ "Testing " ++ propName ++ " ❯ "
      -- Inline function definitions used in the property
      let (prop', residual) = partiallyEvaluate prog prop
-     -- Generate formula from term
-     let f = runReaderT (generateFormula prop') emptyBindings
+     -- Generate formula from property term
+     let f = generateFormula prop'
      -- Prove formula
      proveFormula f
      -- Return residual program for memoisation
@@ -57,16 +57,11 @@ proveFormula f =
                                putStr "\t"
                                print r
                                -- TODO: printCounterExample m
-       smtresult         -> do putStrLn " ⭕︎ Unexpected result: "
+       _                 -> do putStrLnYellow " ● Unexpected result: "
                                print r
 
-generateFormula :: Term Type -> Formula SBool
--- generateFormula = undefined
-generateFormula p =
-  do p' <- liftInputVars p
-     formula p'
--- generateFormula property = runReader (translate property) property
-  -- do cs <- constraints program property
+generateFormula :: Term Type -> Symbolic SBool
+generateFormula p = runReaderT (formula p) emptyBindings
 
 
 -- Create symbolic input variables
@@ -99,8 +94,12 @@ fresh x (Variable' _) =
 
 -- Constraint generation
 formula :: Term Type -> Formula SBool
-formula = undefined
--- formula (Case ) = ...
+formula p =
+  do p' <- liftInputVars p
+     realise (translate p')
+
+realise :: Formula SValue -> Formula SBool
+realise = undefined
 
 translate :: Term a -> Formula SValue
 translate (Pattern    p) = translatePattern p
@@ -156,6 +155,7 @@ sEqual (SBoolean b ) (SBoolean c ) = SBoolean (b .== c)
 sEqual (SNumber  n ) (SNumber  m ) = SBoolean (n .== m)
 sEqual (SName    x ) (SName    y ) = SBoolean (x .== y)
 sEqual (SCtrArgs xs) (SCtrArgs ys) = SBoolean $ sAnd $ map truthy $ zipWith sEqual xs ys
+sEqual _             _             = SBoolean sFalse
 
 
 numeric :: SValue -> Formula SInteger
@@ -172,11 +172,17 @@ printCounterExample = undefined
 redStr :: String -> String
 redStr s = "\ESC[31m\STX" ++ s ++ "\ESC[m\STX"
 
+yellowStr :: String -> String
+yellowStr s = "\ESC[33m\STX" ++ s ++ "\ESC[m\STX"
+
 greenStr :: String -> String
 greenStr s = "\ESC[32m\STX" ++ s ++ "\ESC[m\STX"
 
 putStrLnRed :: String -> IO ()
 putStrLnRed = putStrLn . redStr
+
+putStrLnYellow :: String -> IO ()
+putStrLnYellow = putStrLn . yellowStr
 
 putStrLnGreen :: String -> IO ()
 putStrLnGreen = putStrLn . greenStr

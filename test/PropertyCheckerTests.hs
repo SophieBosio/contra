@@ -6,6 +6,7 @@ import Validation.PropertyChecker
 
 import Test.Tasty
 import Test.Tasty.HUnit
+import Data.SBV
 
 
 -- Export: Test groups
@@ -14,11 +15,21 @@ simple = undefined
 
 
 -- Helpers
-satisfiable :: Program Type -> Term Type -> Assertion
-satisfiable prog prop = undefined
+satisfiable :: Term Type -> Assertion
+satisfiable prop =
+  do let f = generateFormula prop
+     (ThmResult result) <- prove f
+     case result of
+       Satisfiable _ _ -> return ()
+       _               -> assertFailure "Should be satisfiable."
 
-unsatisfiable :: Program Type -> Term Type -> Assertion
-unsatisfiable = undefined
+unsatisfiable :: Term Type -> Assertion
+unsatisfiable prop =
+  do let f = generateFormula prop
+     (ThmResult result) <- prove f
+     case result of
+       Unsatisfiable _ _ -> return ()
+       _                 -> assertFailure "Should be unsatisfiable."
 
 
 -- Tests
