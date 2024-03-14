@@ -4,7 +4,7 @@ module Validation.PropertyChecker where
 
 import Core.Syntax
 import Semantics.PartialEvaluator (partiallyEvaluate)
-import Environment.ERWS hiding (local)
+import Environment.ERWS hiding (local, ask)
 
 import Control.Monad.Reader
 import Data.SBV
@@ -22,6 +22,7 @@ data SValue =
   | SNumber  SInteger
   | SName    SString
   | SCtrArgs [SValue]
+  deriving Show
 
 
 -- Export
@@ -60,7 +61,7 @@ generateFormula :: Term Type -> Formula SBool
 -- generateFormula = undefined
 generateFormula p =
   do p' <- liftInputVars p
-     translateProp p'
+     formula p'
 -- generateFormula property = runReader (translate property) property
   -- do cs <- constraints program property
 
@@ -74,33 +75,31 @@ liftInputVars (Lambda (Variable x tau) t _) =
   do sx <- fresh x tau
      local (bind x sx) $ liftInputVars t
 
--- liftInputVars :: Term Type -> Bindings
--- liftInputVars (Lambda (Variable x tau) t _) = bind x tau $ liftInputVars t
--- -- liftInputVars (Lambda (PConstructor c xs tau) t _) = 
-
 bind :: X -> SValue -> X `MapsTo` SValue
 bind = undefined
 -- bind x tau look y = if x == y then fresh x tau else look y
 
 fresh :: X -> Type -> Formula SValue
-fresh = undefined
--- fresh x Unit' =
---   do b <- sTrue x
-     
--- fresh x Integer' =
---   do sx <- sInteger x
---      SNumeric sx
--- fresh x Boolean' =
---   do sx <- lift $ sBool x
---      return $ SB sx
--- -- fresh x (ADT t)
+fresh _ Unit'    = return SUnit
+fresh x Integer' =
+  do sx <- lift $ sInteger x
+     return $ SNumber sx
+fresh x Boolean' =
+  do sx <- lift $ sBool x
+     return $ SBoolean sx
+fresh x (Variable' _) =
+  do sx <- lift $ free x
+     return $ SNumber sx
+-- fresh x (t1 :->: t2) =
+-- fresh x (ADT x) =
 
 
 -- Constraint generation
-translateProp :: Term Type -> Formula SBool
-translateProp = undefined
+formula :: Term Type -> Formula SBool
+formula = undefined
+-- formula (Case ) = ...
 
-translate :: Term Type -> Formula SValue
+translate :: Term a -> Formula SValue
 translate (Pattern    p) = translatePattern p
 translate (Plus t0 t1 _) =
   do t0' <- translate t0 >>= numeric
@@ -126,10 +125,13 @@ translate (Not t0 _) =
   do t0' <- translate t0 >>= boolean
      return $ SBoolean $ sNot t0'
 
-translatePattern :: Pattern Type -> Formula SValue
+translatePattern :: Pattern a -> Formula SValue
 translatePattern (Value v) = translateValue v
--- translatePattern (Variable x a) =
-  -- do bindings <- ask
+-- All input variables are bound at this point,
+-- so if a variable is not in the bindings, that's an error
+translatePattern (Variable x _) =
+  do bindings <- ask
+     return $ bindings x
 -- translatePattern (PConstructor c ps a) =
 -- TODO: translatePattern
 
@@ -143,6 +145,7 @@ translateValue (Boolean b _) = return $ SBoolean $ literal b
 -- Utility
 truthy :: SValue -> SBool
 truthy (SBoolean b) = b
+truthy v = error $ "Expected a symbolic boolean value, but got " ++ show v
 
 sEqual :: SValue -> SValue -> SValue
 sEqual  SUnit         SUnit        = SBoolean sTrue
@@ -150,6 +153,7 @@ sEqual (SBoolean b ) (SBoolean c ) = SBoolean (b .== c)
 sEqual (SNumber  n ) (SNumber  m ) = SBoolean (n .== m)
 sEqual (SName    x ) (SName    y ) = SBoolean (x .== y)
 sEqual (SCtrArgs xs) (SCtrArgs ys) = SBoolean $ sAnd $ map truthy $ zipWith sEqual xs ys
+
 
 numeric :: SValue -> Formula SInteger
 numeric = undefined
