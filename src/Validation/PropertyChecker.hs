@@ -49,13 +49,16 @@ checkProp prog (propName, prop) =
 -- Main functions
 proveFormula :: Symbolic SBool -> IO ()
 proveFormula f =
-  do result <- prove f
-     if not (modelExists result)
-       then putStrLnGreen  " ✓ OK "
-       else do putStrLnRed " ✱ FAIL "
-               putStrLn "\tCounterexample: "
-               putStr "\t"
-               print result
+  do r@(ThmResult result) <- prove f
+     case result of
+       Unsatisfiable _ _ -> putStrLnGreen  " ✓ OK "
+       Satisfiable   _ m -> do putStrLnRed " ✱ FAIL "
+                               putStrLn "\tCounterexample: "
+                               putStr "\t"
+                               print r
+                               -- TODO: printCounterExample m
+       smtresult         -> do putStrLn " ⭕︎ Unexpected result: "
+                               print r
 
 generateFormula :: Term Type -> Formula SBool
 -- generateFormula = undefined
@@ -163,6 +166,9 @@ boolean = undefined
 
 
 -- Pretty printing
+-- printCounterExample :: SMTModel -> IO ()
+printCounterExample = undefined
+
 redStr :: String -> String
 redStr s = "\ESC[31m\STX" ++ s ++ "\ESC[m\STX"
 
