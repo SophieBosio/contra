@@ -95,4 +95,3 @@ simpleSatisfiableProps =
 
 simpleUnsatisfiableProps :: [TestTree]
 simpleUnsatisfiableProps = []
-
