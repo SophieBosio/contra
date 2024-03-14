@@ -27,6 +27,7 @@ data Action =
   | Execute       (Program Type)
   | PropertyCheck (Program Type)
   | TypeCheck     (Program Info)
+  | AST           (Program Type)
   | Version       VersionInfo
   | Fail          ErrorMessage
 
@@ -42,12 +43,14 @@ run command =
     (Execute       program) -> execute program
     (PropertyCheck program) -> checkProperties program
     (TypeCheck     program) -> typecheck program >>= print
+    (AST           program) -> ast program
     (Version       message) -> die message
     (Fail          message) -> die message
 
 action :: [String] -> IO Action
 action ["--check", file] = PropertyCheck <$> (parse file >>= typecheck)
 action ["--type",  file] = TypeCheck     <$>  parse file
+action ["--ast",   file] = AST           <$> (parse file >>= typecheck)
 action ["--load",  file] = REPL          <$> (parse file >>= typecheck)
 action ["--version"    ] = return $ Version  versionInfo
 action ["--help"       ] = return $ Fail     useInfo
@@ -66,6 +69,9 @@ parse file =
 
 typecheck :: Program Info -> IO (Program Type)
 typecheck = return . inferProgram
+
+ast :: Program Type -> IO ()
+ast p = print $ programAST p
 
 repl :: Program Type -> IO ()
 repl p = putStrLnGreen "Contra REPL" >> evalLoop p
