@@ -15,15 +15,15 @@ newtype ERSym e r a =
   ERSym { coERSym :: Reader.ReaderT (Environment (ERSym e r) e, r) Symbolic a }
 
 instance Monad (ERSym e r) where
-  return = pure
-  (>>=) = undefined
+  return  = pure
+  m >>= f = ERSym $ coERSym m >>= coERSym . f
 
 instance Applicative (ERSym e r) where
-  pure = undefined
-  (<*>) = undefined
+  pure      = ERSym . Reader.return
+  m1 <*> m2 = m1 >>= \f -> f <$> m2
 
 instance Functor (ERSym e r) where
-  fmap = undefined
+  fmap f = ERSym . fmap f . coERSym
 
 runFormula :: ERSym e r a -> Program e -> r -> Symbolic a
 runFormula formula p r = Reader.runReaderT (coERSym formula) (programEnvironment p, r)
@@ -41,3 +41,7 @@ local f = ERSym . Reader.local (second f) . coERSym
 ask :: ERSym e r r
 ask = ERSym $ Reader.asks snd
 
+
+-- Symbolic
+lift :: Symbolic a -> ERSym e r a
+lift = ERSym . Reader.lift

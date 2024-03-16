@@ -31,7 +31,6 @@ library
       Environment.Environment
       Environment.ERSym
       Environment.ERWS
-      Environment.Formula
       Semantics.Interpreter
       Semantics.PartialEvaluator
       Semantics.REPL

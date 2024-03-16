@@ -81,15 +81,15 @@ bind x tau look y = if x == y then tau else look y
 
 fresh :: X -> Type -> Formula SValue
 fresh _ Unit'    = return SUnit
--- fresh x Integer' =
---   do sx <- lift $ sInteger x
---      return $ SNumber sx
--- fresh x Boolean' =
---   do sx <- lift $ sBool x
---      return $ SBoolean sx
--- fresh x (Variable' _) =
---   do sx <- lift $ free x
---      return $ SNumber sx
+fresh x Integer' =
+  do sx <- lift $ sInteger x
+     return $ SNumber sx
+fresh x Boolean' =
+  do sx <- lift $ sBool x
+     return $ SBoolean sx
+fresh x (Variable' _) =
+  do sx <- lift $ free x
+     return $ SNumber sx
 -- fresh x (t1 :->: t2) =
 -- fresh x (ADT x) =
 
