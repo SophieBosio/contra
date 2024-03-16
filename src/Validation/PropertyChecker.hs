@@ -13,7 +13,8 @@ import Environment.Environment
 import Environment.ERSym
 
 -- import Control.Monad.Reader
-import Control.Monad (foldM_)
+import Control.Monad (foldM_, liftM2)
+import Control.Arrow ((***))
 import Data.SBV
 
 
@@ -105,9 +106,15 @@ formula p = liftInputVars p >> translate p
 translate :: Term a -> Formula SValue
 translate (Pattern    p) = translatePattern p
 -- translate (Lambda p t _) = _
+-- https://hackage.haskell.org/package/sbv-10.5/docs/Data-SBV.html#g:40
 -- translate (Application t1 t2 _) = _
 -- translate (Let p t1 t2 _) = _
--- translate (Case t0 ts _) = _
+translate (Case t0 ts _) =
+  do t0' <- translate t0
+     let translatePair = (translate . weakenToTerm) *** translate
+     let ts' = map translatePair ts
+     ts'' <- mapM (uncurry (liftM2 (,))) ts'
+     return $ branches t0' ts''
 translate (TConstructor c ts _) =
   do sts <- mapM translate ts
      return $ SCtr c sts
@@ -156,6 +163,36 @@ translateValue (VConstructor c vs a) =
      return $ SCtr c svs
 
 
+-- Translation helpers
+numeric :: SValue -> Formula SInteger
+numeric (SNumber n) = return n
+numeric sv          = error $ "Expected a numeric symval, but got " ++ show sv
+
+boolean :: SValue -> Formula SBool
+boolean (SBoolean b) = return b
+boolean sv           = error $ "Expected a boolean symval, but got " ++ show sv
+
+branches :: SValue -> [(SValue, SValue)] -> SValue
+branches v ((p, t) : rest) =
+  merge (symUnify v p) (substituteIn t v p) $ branches v rest
+
+
+-- SValue unification & substitution
+symUnify :: SValue -> SValue -> SBool
+symUnify = undefined
+
+substituteIn :: SValue -> SValue -> SValue -> SValue
+substituteIn = undefined
+
+merge :: SBool -> SValue -> SValue -> SValue
+merge b  SUnit        SUnit       = SUnit
+merge b (SNumber  x) (SNumber  y) = SNumber  $ ite b x y
+merge b (SBoolean x) (SBoolean y) = SBoolean $ ite b x y
+-- TODO: merge b (SCtr  x xs) (SCtr  y ys) = SCtr     $ ite b
+merge b x y = error $ "Type mismatch between symbolic values '"
+              ++ show x ++ "' and '" ++ show y ++ "'"
+
+
 -- Constraint realisation
 -- Going from 'SValue' to 'SBool'
 realise :: Symbolic SValue -> Symbolic SBool
@@ -176,17 +213,9 @@ sEqual (SCtr   x xs) (SCtr   y ys) = SBoolean $ sAnd $ fromBool (x == y)
 sEqual _             _             = SBoolean sFalse
 
 
-numeric :: SValue -> Formula SInteger
-numeric (SNumber n) = return n
-numeric sv          = error $ "Expected a numeric symval, but got " ++ show sv
-
-boolean :: SValue -> Formula SBool
-boolean (SBoolean b) = return b
-boolean sv           = error $ "Expected a boolean symval, but got " ++ show sv
-
-
 -- Pretty printing
 -- printCounterExample :: SMTModel -> IO ()
+-- https://hackage.haskell.org/package/sbv-10.5/docs/Data-SBV.html#g:58
 printCounterExample = undefined
 
 redStr :: String -> String
