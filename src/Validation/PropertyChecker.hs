@@ -67,12 +67,12 @@ generateFormula p =
 emptyBindings :: Bindings
 emptyBindings = error . (++ " is unbound!")
 
-liftInputVars :: Term Type -> Formula (Term Type)
+liftInputVars :: Term Type -> Formula ()
 liftInputVars (Lambda (Variable x tau) t _) =
   do sx <- fresh x tau
      local (bind x sx) $ liftInputVars t
 -- TODO: liftInputVars (Lambda (PConstructor c ps tau) t _) =
-liftInputVars t = return t
+liftInputVars t = return ()
 
 bind :: X -> SValue -> X `MapsTo` SValue
 bind x tau look y = if x == y then tau else look y
@@ -94,9 +94,7 @@ fresh x (Variable' _) =
 
 -- Constraint generation
 formula :: Term Type -> Formula SValue
-formula p =
-  do p' <- liftInputVars p
-     translate p'
+formula p = liftInputVars p >> translate p
 
 translate :: Term a -> Formula SValue
 translate (Pattern    p) = translatePattern p
