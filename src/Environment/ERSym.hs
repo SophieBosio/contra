@@ -43,5 +43,5 @@ ask = ERSym $ Reader.asks snd
 
 
 -- Symbolic
-lift :: Symbolic a -> ERSym e r a
-lift = ERSym . Reader.lift
+liftSymbolic :: Symbolic a -> ERSym e r a
+liftSymbolic = ERSym . Reader.lift
