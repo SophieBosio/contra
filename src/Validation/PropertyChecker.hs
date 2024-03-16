@@ -73,8 +73,10 @@ liftInputVars :: Term Type -> Formula ()
 liftInputVars (Lambda (Variable x tau) t _) =
   do sx <- fresh x tau
      local (bind x sx) $ liftInputVars t
--- TODO: liftInputVars (Lambda (PConstructor c ps tau) t _) =
-liftInputVars t = return ()
+liftInputVars (Lambda (PConstructor c ps tau) t _) =
+  do mapM_ (liftInputVars . weakenToTerm) ps
+     liftInputVars t
+liftInputVars _ = return ()
 
 bind :: X -> SValue -> X `MapsTo` SValue
 bind x tau look y = if x == y then tau else look y
@@ -91,7 +93,9 @@ fresh x (Variable' _) =
   do sx <- liftSymbolic $ free x
      return $ SNumber sx
 -- fresh x (t1 :->: t2) =
--- fresh x (ADT x) =
+-- fresh x (ADT t) =
+--   do env <- environment
+-- To generate a fresh ADT variable, you could maybe generate a list of possible constructors + their args
 
 
 -- Constraint generation

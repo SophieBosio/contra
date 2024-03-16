@@ -20,7 +20,7 @@ simple =
 -- Helpers
 satisfiable :: Term Type -> Assertion
 satisfiable prop =
-  do let f = generateFormula prop
+  do let f = generateFormula End prop
      (ThmResult result) <- prove f
      case result of
        Satisfiable _ _ -> return ()
@@ -28,7 +28,7 @@ satisfiable prop =
 
 unsatisfiable :: Term Type -> Assertion
 unsatisfiable prop =
-  do let f = generateFormula prop
+  do let f = generateFormula End prop
      (ThmResult result) <- prove f
      case result of
        Unsatisfiable _ _ -> return ()
