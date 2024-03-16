@@ -1,4 +1,9 @@
-{-# LANGUAGE FlexibleContexts, ScopedTypeVariables, TypeOperators #-}
+{-# LANGUAGE
+    FlexibleContexts,
+    ScopedTypeVariables,
+    TypeOperators,
+    LambdaCase
+#-}
 
 module Validation.PropertyChecker where
 
@@ -12,10 +17,7 @@ import Data.SBV
 
 -- Abbreviations
 type Bindings   = Mapping X SValue
--- type Constraint = Reader Bindings
--- type Model      = Symbolic
 type Formula  a = ReaderT Bindings Symbolic a
--- type Correspondence = Mapping Type SType
 data SValue =
     SUnit
   | SBoolean SBool
@@ -35,13 +37,9 @@ check program =
 checkProperty :: Program Type -> (P, Term Type) -> IO (Program Type)
 checkProperty prog (propName, prop) =
   do putStr $ "Testing " ++ propName ++ " ❯ "
-     -- Inline function definitions used in the property
      let (prop', residual) = partiallyEvaluate prog prop
-     -- Generate formula from property term
      let f = generateFormula prop'
-     -- Prove formula
      proveFormula f
-     -- Return residual program for memoisation
      return residual
 
 
