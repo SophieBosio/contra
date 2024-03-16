@@ -20,8 +20,7 @@ data SValue =
     SUnit
   | SBoolean SBool
   | SNumber  SInteger
-  | SName    SString
-  | SCtrArgs [SValue]
+  | SCtr     String [SValue]
   deriving Show
 
 
@@ -133,6 +132,7 @@ translate (Equal t0 t1 _) =
 translate (Not t0 _) =
   do t0' <- translate t0 >>= boolean
      return $ SBoolean $ sNot t0'
+-- translate (Rec x t0 a) -- future work
 
 translatePattern :: Pattern a -> Formula SValue
 translatePattern (Value v) = translateValue v
@@ -141,14 +141,23 @@ translatePattern (Value v) = translateValue v
 translatePattern (Variable x _) =
   do bindings <- ask
      return $ bindings x
--- translatePattern (PConstructor c ps a) =
--- TODO: translatePattern
+translatePattern (PConstructor c ps a) =
+  do sps <- mapM translatePattern ps
+     return $ SCtr c sps
 
 translateValue :: Value a -> Formula SValue
 translateValue (Unit      _) = return SUnit
 translateValue (Number  n _) = return $ SNumber  $ literal n
 translateValue (Boolean b _) = return $ SBoolean $ literal b
--- translateValue (VConstructor c vs a) = TODO: Constructor magic!
+translateValue (VConstructor c vs a) =
+  do svs <- mapM translateValue vs
+     return $ SCtr c svs
+
+
+-- Constraint realisation
+-- Going from 'SValue' to 'SBool'
+realise :: Symbolic SValue -> Symbolic SBool
+realise sv = undefined
 
 
 -- Utility
@@ -158,18 +167,20 @@ truthy v = error $ "Expected a symbolic boolean value, but got " ++ show v
 
 sEqual :: SValue -> SValue -> SValue
 sEqual  SUnit         SUnit        = SBoolean sTrue
-sEqual (SBoolean b ) (SBoolean c ) = SBoolean (b .== c)
-sEqual (SNumber  n ) (SNumber  m ) = SBoolean (n .== m)
-sEqual (SName    x ) (SName    y ) = SBoolean (x .== y)
-sEqual (SCtrArgs xs) (SCtrArgs ys) = SBoolean $ sAnd $ map truthy $ zipWith sEqual xs ys
+sEqual (SBoolean  b) (SBoolean  c) = SBoolean (b .== c)
+sEqual (SNumber   n) (SNumber   m) = SBoolean (n .== m)
+sEqual (SCtr   x xs) (SCtr   y ys) = SBoolean $ sAnd $ fromBool (x == y)
+                                     : map truthy (zipWith sEqual xs ys)
 sEqual _             _             = SBoolean sFalse
 
 
 numeric :: SValue -> Formula SInteger
-numeric = undefined
+numeric (SNumber n) = return n
+numeric sv          = error $ "Expected a numeric symval, but got " ++ show sv
 
 boolean :: SValue -> Formula SBool
-boolean = undefined
+boolean (SBoolean b) = return b
+boolean sv           = error $ "Expected a boolean symval, but got " ++ show sv
 
 
 -- Pretty printing
