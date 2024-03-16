@@ -3,10 +3,8 @@ module Environment.ERSym where
 import Core.Syntax
 import Environment.Environment
 
-import Data.Maybe
 import Control.Arrow
 import qualified Control.Monad.Reader as Reader
-import qualified Control.Monad.Reader.Class as RC
 import Data.SBV
 
 

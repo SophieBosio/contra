@@ -12,21 +12,20 @@ import Semantics.PartialEvaluator (partiallyEvaluate)
 import Environment.Environment
 import Environment.ERSym
 
--- import Control.Monad.Reader
 import Control.Monad (foldM_, liftM2)
 import Control.Arrow ((***))
 import Data.SBV
 
 
 -- Abbreviations
-type Bindings   = Mapping X SValue
-type Formula  a = ERSym Type Bindings a
-data SValue     =
+data SValue =
     SUnit
   | SBoolean SBool
   | SNumber  SInteger
   | SCtr     String [SValue]
   deriving Show
+type Bindings   = Mapping X SValue
+type Formula  a = ERSym Type Bindings a
 
 
 -- Export
@@ -62,8 +61,8 @@ proveFormula f =
 
 generateFormula :: Program Type -> Term Type -> Symbolic SBool
 generateFormula program p =
-  do let constraints = runFormula (formula p) program emptyBindings
-     realise constraints
+  let constraints = runFormula (formula p) program emptyBindings
+  in  realise constraints
 
 
 -- Create symbolic input variables
@@ -74,7 +73,7 @@ liftInputVars :: Term Type -> Formula ()
 liftInputVars (Lambda (Variable x tau) t _) =
   do sx <- fresh x tau
      local (bind x sx) $ liftInputVars t
-liftInputVars (Lambda (PConstructor c ps tau) t _) =
+liftInputVars (Lambda (PConstructor c ps _) t _) =
   do mapM_ (liftInputVars . weakenToTerm) ps
      liftInputVars t
 liftInputVars _ = return ()
@@ -150,7 +149,7 @@ translatePattern (Value v) = translateValue v
 translatePattern (Variable x _) =
   do bindings <- ask
      return $ bindings x
-translatePattern (PConstructor c ps a) =
+translatePattern (PConstructor c ps _) =
   do sps <- mapM translatePattern ps
      return $ SCtr c sps
 
@@ -158,7 +157,7 @@ translateValue :: Value a -> Formula SValue
 translateValue (Unit      _) = return SUnit
 translateValue (Number  n _) = return $ SNumber  $ literal n
 translateValue (Boolean b _) = return $ SBoolean $ literal b
-translateValue (VConstructor c vs a) =
+translateValue (VConstructor c vs _) =
   do svs <- mapM translateValue vs
      return $ SCtr c svs
 
