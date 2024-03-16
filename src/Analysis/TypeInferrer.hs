@@ -7,6 +7,7 @@ import Analysis.Unification
   ( freeVariables
   , freeVariables'
   )
+import Environment.Environment
 import Environment.ERWS
 
 import Control.Monad (zipWithM_)

@@ -9,16 +9,18 @@ module Validation.PropertyChecker where
 
 import Core.Syntax
 import Semantics.PartialEvaluator (partiallyEvaluate)
-import Environment.ERWS hiding (local, ask)
+import Environment.Environment
+import Environment.ERSym
 
-import Control.Monad.Reader
+-- import Control.Monad.Reader
+import Control.Monad (foldM_)
 import Data.SBV
 
 
 -- Abbreviations
 type Bindings   = Mapping X SValue
-type Formula  a = ReaderT Bindings Symbolic a
-data SValue =
+type Formula  a = ERSym Type Bindings a
+data SValue     =
     SUnit
   | SBoolean SBool
   | SNumber  SInteger
@@ -38,7 +40,7 @@ checkProperty :: Program Type -> (P, Term Type) -> IO (Program Type)
 checkProperty prog (propName, prop) =
   do putStr $ "Testing " ++ propName ++ " ❯ "
      let (prop', residual) = partiallyEvaluate prog prop
-     let f = generateFormula prop'
+     let f = generateFormula residual prop'
      proveFormula f
      return residual
 
@@ -57,9 +59,9 @@ proveFormula f =
        _                 -> do putStrLnYellow " ● Unexpected result: "
                                print r
 
-generateFormula :: Term Type -> Symbolic SBool
-generateFormula p =
-  do let constraints = runReaderT (formula p) emptyBindings
+generateFormula :: Program Type -> Term Type -> Symbolic SBool
+generateFormula program p =
+  do let constraints = runFormula (formula p) program emptyBindings
      realise constraints
 
 
@@ -79,15 +81,15 @@ bind x tau look y = if x == y then tau else look y
 
 fresh :: X -> Type -> Formula SValue
 fresh _ Unit'    = return SUnit
-fresh x Integer' =
-  do sx <- lift $ sInteger x
-     return $ SNumber sx
-fresh x Boolean' =
-  do sx <- lift $ sBool x
-     return $ SBoolean sx
-fresh x (Variable' _) =
-  do sx <- lift $ free x
-     return $ SNumber sx
+-- fresh x Integer' =
+--   do sx <- lift $ sInteger x
+--      return $ SNumber sx
+-- fresh x Boolean' =
+--   do sx <- lift $ sBool x
+--      return $ SBoolean sx
+-- fresh x (Variable' _) =
+--   do sx <- lift $ free x
+--      return $ SNumber sx
 -- fresh x (t1 :->: t2) =
 -- fresh x (ADT x) =
 

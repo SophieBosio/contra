@@ -28,8 +28,10 @@ library
       Analysis.Unification
       Core.Parser
       Core.Syntax
-      Environment.ER
+      Environment.Environment
+      Environment.ERSym
       Environment.ERWS
+      Environment.Formula
       Semantics.Interpreter
       Semantics.PartialEvaluator
       Semantics.REPL

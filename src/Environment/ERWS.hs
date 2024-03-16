@@ -1,36 +1,15 @@
 module Environment.ERWS where
 
--- The author of the monad in this file is Joachim Tilsted Kristensen,
--- and all credit for this file should go to him.
+-- Please note:
+-- The author of the monad in this file is Joachim Tilsted Kristensen.
+-- Sophie Bosio has only extended it and adapted it to her use case.
 
 import Core.Syntax
+import Environment.Environment
 
-import Data.Maybe
 import Control.Arrow
 import qualified Control.Monad.RWS as RWS
 
-
-type Mapping      a b = a -> b
-type MapsTo       a b = Mapping a b -> Mapping a b
-
-data Environment m a =
-  Environment
-    { function         :: F -> m (Term a)
-    , property         :: P -> m (Term a)
-    , datatype         :: C -> m T
-    , constructors     :: T -> m [Constructor]
-    , constructorTypes :: C -> m [Type]
-    }
-
-programEnvironment :: Monad m => Program a -> Environment m a
-programEnvironment p =
-  Environment
-    { function         = return . \f -> fromJust $ lookup f (functions        p)
-    , property         = return . \q -> fromJust $ lookup q (properties       p)
-    , datatype         = return . \c -> fromJust $ lookup c (constructorNames p)
-    , constructors     = return . \t -> fromJust $ lookup t (datatypes        p)
-    , constructorTypes = return . \c -> fromJust $ lookup c (constructorArgs  p)
-    }
 
 -- Environment Reader Writer State monad
 newtype ERWS e r w s a =
