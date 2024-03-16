@@ -61,7 +61,9 @@ proveFormula f =
                                print r
 
 generateFormula :: Term Type -> Symbolic SBool
-generateFormula p = runReaderT (formula p) emptyBindings
+generateFormula p =
+  do let constraints = runReaderT (formula p) emptyBindings
+     realise constraints
 
 
 -- Create symbolic input variables
@@ -72,10 +74,11 @@ liftInputVars :: Term Type -> Formula (Term Type)
 liftInputVars (Lambda (Variable x tau) t _) =
   do sx <- fresh x tau
      local (bind x sx) $ liftInputVars t
+-- TODO: liftInputVars (Lambda (PConstructor c ps tau) t _) =
+liftInputVars t = return t
 
 bind :: X -> SValue -> X `MapsTo` SValue
-bind = undefined
--- bind x tau look y = if x == y then fresh x tau else look y
+bind x tau look y = if x == y then tau else look y
 
 fresh :: X -> Type -> Formula SValue
 fresh _ Unit'    = return SUnit
@@ -93,16 +96,20 @@ fresh x (Variable' _) =
 
 
 -- Constraint generation
-formula :: Term Type -> Formula SBool
+formula :: Term Type -> Formula SValue
 formula p =
   do p' <- liftInputVars p
-     realise (translate p')
-
-realise :: Formula SValue -> Formula SBool
-realise = undefined
+     translate p'
 
 translate :: Term a -> Formula SValue
 translate (Pattern    p) = translatePattern p
+-- translate (Lambda p t _) = _
+-- translate (Application t1 t2 _) = _
+-- translate (Let p t1 t2 _) = _
+-- translate (Case t0 ts _) = _
+translate (TConstructor c ts _) =
+  do sts <- mapM translate ts
+     return $ SCtr c sts
 translate (Plus t0 t1 _) =
   do t0' <- translate t0 >>= numeric
      t1' <- translate t1 >>= numeric
