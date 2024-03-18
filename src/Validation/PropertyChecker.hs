@@ -172,28 +172,40 @@ boolean (SBoolean b) = return b
 boolean sv           = error $ "Expected a boolean symval, but got " ++ show sv
 
 branches :: SValue -> [(SValue, SValue)] -> SValue
+branches _ [] = error $ "Non-exhaustive patterns in case statement"
 branches v ((p, t) : rest) =
   merge (symUnify v p) (substituteIn t v p) $ branches v rest
 
 
 -- SValue unification & substitution
+-- TODO: symUnify
 symUnify :: SValue -> SValue -> SBool
 symUnify = undefined
 
+-- TODO: substituteIn
 substituteIn :: SValue -> SValue -> SValue -> SValue
 substituteIn = undefined
 
 merge :: SBool -> SValue -> SValue -> SValue
-merge b  SUnit        SUnit       = SUnit
+merge _  SUnit        SUnit       = SUnit
 merge b (SNumber  x) (SNumber  y) = SNumber  $ ite b x y
 merge b (SBoolean x) (SBoolean y) = SBoolean $ ite b x y
--- TODO: merge b (SCtr  x xs) (SCtr  y ys) = SCtr     $ ite b
-merge b x y = error $ "Type mismatch between symbolic values '"
+merge b (SCtr  x xs) (SCtr  y ys)
+  | x == y    = SCtr x $ mergeList b xs ys
+  | otherwise = error $ "Mismatching type constructors '"
+                ++ show x ++ "' and '" ++ show y ++ "'"
+merge _ x y = error $ "Type mismatch between symbolic values '"
               ++ show x ++ "' and '" ++ show y ++ "'"
 
+mergeList :: SBool -> [SValue] -> [SValue] -> [SValue]
+mergeList sb xs ys
+  | Just b <- unliteral sb = if b then xs else ys
+  | otherwise              = error $ "Unable to merge constructor arguments '"
+                             ++ show xs ++ "' with '" ++ show ys ++ "'"
 
 -- Constraint realisation
 -- Going from 'SValue' to 'SBool'
+-- TODO: realise constraints
 realise :: Symbolic SValue -> Symbolic SBool
 realise sv = undefined
 
