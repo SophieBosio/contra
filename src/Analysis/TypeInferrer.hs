@@ -75,12 +75,6 @@ emptyBindings = error . (++ " is unbound!")
 
 
 -- Annotate program
--- TODO: In thesis text, note Joachim's comment:
-         -- This forces that all recursive functions must have type
-         -- declarations. It also forces the ML style monomorphism
-         -- constraint on recursive things at top-level. This may be be more
-         -- restrictive than what we want, but on the other hand, it was
-         -- easy to implement {^_^}.
 annotateProgram :: Program a -> Annotation a (Program Type)
 annotateProgram (Signature x def rest) =
   do i <- get
