@@ -326,8 +326,6 @@ reserved = flip elem reservedKeywords
 
 
 -- Flatten function definitions into one big case statement
--- E.g., from 'reverse [] = ..., reverse (x:xs) = ...'
--- to 'reverse l = case l of [] -> ... (x:xs) -> ...'
 flatten :: Program Info -> Program Info
 flatten p = newDefs defs <> remaining
   where
