@@ -325,13 +325,14 @@ reserved :: Name -> Bool
 reserved = flip elem reservedKeywords
 
 
--- Flatten function definitions into one big case statement
+-- Flatten function definitions into a case statement with tuples
 flatten :: Program Info -> Program Info
 flatten p = newDefs defs <> remaining
   where
     dups      = duplicates (functions p)
     defs      = collectDuplicates dups
     remaining = foldr removeDefinition p dups
+    updated   = foldr updateSig remaining dups
 
 duplicates :: [(F, Term a)] -> [(F, Term a)]
 duplicates fs = filter (\(x, _) -> length (filter (== x) names) > 1) fs
@@ -341,20 +342,30 @@ collectDuplicates :: [(F, Term a)] -> [[(F, Term a)]]
 collectDuplicates defs = groupBy (\(f, _) (g, _) -> f == g)
                          (sortBy (\(f, _) (g, _) -> compare f g) defs)
 
-caseBranches :: [(F, Term a)] -> [(Pattern a, Term a)]
-caseBranches [                        ] = []
-caseBranches ((_, Lambda p t _) : rest) =
-  (p, t) : caseBranches rest
-caseBranches ((f, _) : _) = error $
-  "Different number of arguments to function definitions for '"
-  ++ show f ++ "'."
-
 newDefs :: [[(F, Term Info)]] -> Program Info
-newDefs [                     ] = End
-newDefs ([            ] : rest) = newDefs rest
-newDefs (d@((f, t) : _) : rest) =
-  Function f (Case (Pattern (Variable "*x" (annotation t)))
-              (caseBranches d) (annotation t)) $ newDefs rest
+newDefs [           ] = End
+newDefs ([ ]  : rest) = newDefs rest
+newDefs (defs : rest) =
+  let fname = fst (head defs) in
+  let terms = map snd defs
+  in  Function fname (rewriteDefs terms) $ newDefs rest
+
+-- Combine the different definitions of the function
+-- and rewrite them as a Case statement
+rewriteDefs :: [Term Info] -> Term Info
+rewriteDefs defs =
+  Lambda (Variable "*x" info1)
+    (Case (Pattern (Variable "*x" info1)) branches info2) info2
+  where
+    branches = foldr (\def cases -> cases ++ [tuples def]) [] defs
+    info1    = annotation $ head defs
+    info2    = annotation $ last defs
+
+tuples :: Term Info -> (Pattern Info, Term Info)
+tuples (Lambda p t@(Lambda{}) i) =
+  let (args, remaining) = tuples t
+  in  (Pair p args i, remaining)
+tuples (Lambda p t i) = (p, t)
 
 removeDefinition :: (F, Term a) -> Program a -> Program a
 removeDefinition (f', t') (Function f t rest)
@@ -367,6 +378,8 @@ removeDefinition def (Signature x t  rest) =
 removeDefinition def (Data      x ts rest) =
   Data      x ts (removeDefinition def rest)
 removeDefinition _ End = End
+
+updateSig = undefined
 
 
 -- Handling errors
