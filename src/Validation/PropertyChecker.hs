@@ -70,16 +70,6 @@ realise sv =
                     ++ show other
 
 
--- Realise 'SValue' as an 'SBool'
-realise :: Symbolic SValue -> Symbolic SBool
-realise sv =
-  sv >>= \case
-    (SBoolean b) -> return b
-    other        -> error $
-                    "Property should translate to a Boolean formula, but was a "
-                    ++ show other
-
-
 -- Create symbolic input variables
 emptyBindings :: Bindings
 emptyBindings = error . (++ " is unbound!")
