@@ -212,7 +212,6 @@ mergeList sb xs ys
   | otherwise              = error $ "Unable to merge constructor arguments '"
                              ++ show xs ++ "' with '" ++ show ys ++ "'"
 
-
 -- Symbolic equality
 truthy :: SValue -> SBool
 truthy (SBoolean b) = b
