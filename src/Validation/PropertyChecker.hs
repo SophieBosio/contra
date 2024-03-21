@@ -109,9 +109,11 @@ fresh x (Variable' _) =
 formula :: Term Type -> Formula SValue
 formula p = liftInputVars p >> translate p
 
-translate :: Term a -> Formula SValue
+translate :: Term Type -> Formula SValue
 translate (Pattern    p) = translatePattern p
--- translate (Lambda p t _) = _
+translate l@(Lambda _ t _) =
+  do liftInputVars l
+     translate t
 -- https://hackage.haskell.org/package/sbv-10.5/docs/Data-SBV.html#g:40
 -- translate (Application t1 t2 _) = _
 -- translate (Let p t1 t2 _) = _
