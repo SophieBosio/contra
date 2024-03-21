@@ -1,9 +1,4 @@
-{-# LANGUAGE
-    FlexibleContexts,
-    ScopedTypeVariables,
-    TypeOperators,
-    LambdaCase
-#-}
+{-# LANGUAGE FlexibleContexts, ScopedTypeVariables, TypeOperators, LambdaCase #-}
 
 module Validation.PropertyChecker where
 
@@ -63,6 +58,16 @@ generateFormula :: Program Type -> Term Type -> Symbolic SBool
 generateFormula program p =
   let constraints = runFormula (formula p) program emptyBindings
   in  realise constraints
+
+
+-- Realise 'SValue' as an 'SBool'
+realise :: Symbolic SValue -> Symbolic SBool
+realise sv =
+  sv >>= \case
+    (SBoolean b) -> return b
+    other        -> error $
+                    "Property should translate to a Boolean formula, but was a "
+                    ++ show other
 
 
 -- Create symbolic input variables
@@ -203,18 +208,8 @@ mergeList sb xs ys
   | otherwise              = error $ "Unable to merge constructor arguments '"
                              ++ show xs ++ "' with '" ++ show ys ++ "'"
 
--- Constraint realisation
--- Realise 'SValue' as an 'SBool'
--- TODO: realise constraints
-realise :: Symbolic SValue -> Symbolic SBool
-realise sv =
-  do v <- sv
-     case v of
-       (SBoolean b) -> return b
-       other        -> error "Property should translate to a Boolean formula, but was a "
 
-
--- Utility
+-- Symbolic equality
 truthy :: SValue -> SBool
 truthy (SBoolean b) = b
 truthy v = error $ "Expected a symbolic boolean value, but got " ++ show v
