@@ -56,8 +56,8 @@ proveFormula f =
 
 generateFormula :: Program Type -> Term Type -> Symbolic SBool
 generateFormula program p =
-  let constraints = runFormula (formula p) program emptyBindings
-  in  realise constraints
+  let sValueFormula = runFormula (formula p) program emptyBindings
+  in  realise sValueFormula
 
 
 -- Realise 'SValue' as an 'SBool'
