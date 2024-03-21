@@ -15,10 +15,11 @@ type Parser = Parsec Source ()
 type Info   = (SourcePos, SourcePos)
 
 data ParsingError =
-    MultipleSignatures    X
-  | MultipleADTs          X
-  | MultipleProperties   (X, Info)
-  | ParsingFailed        ParseError
+    MultipleSignatures           X
+  | MultipleADTs                 X
+  | MultipleProperties          (X, Info)
+  | DifferentNumbersOfArguments (X, Info)
+  | ParsingFailed               ParseError
   deriving Show
 
 
@@ -397,6 +398,11 @@ report ((MultipleProperties (n, i) : rest)) =
   in ("Multiple properties declared with name '" ++ n ++
       "'\n beginning at \n" ++ show start ++ "\n and ending at\n" ++ show end ++ "\n")
      ++ report rest
+report ((DifferentNumbersOfArguments (n, i)) : rest) =
+  let (start, end) = i
+  in  ("Function definitions for '" ++ n ++ "' have different numbers of arguments."
+       ++ "\n beginning at \n" ++ show start ++ "\n and ending at\n" ++ show end ++ "\n")
+      ++ report rest
 report ((ParsingFailed err) : rest) =
   ("Parsing failed: " ++ show err ++ "\n")
   ++ report rest
