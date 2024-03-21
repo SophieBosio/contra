@@ -134,9 +134,9 @@ translate (Gt t0 t1 _) =
      t1' <- translate t1 >>= numeric
      return $ SBoolean $ t0' .> t1'
 translate (Equal t0 t1 _) =
-  do t0' <- translate t0 >>= numeric
-     t1' <- translate t1 >>= numeric
-     return $ SBoolean $ t0' .== t1'
+  do t0' <- translate t0
+     t1' <- translate t1
+     return $ t0' `sEqual` t1'
 translate (Not t0 _) =
   do t0' <- translate t0 >>= boolean
      return $ SBoolean $ sNot t0'
@@ -172,7 +172,7 @@ boolean (SBoolean b) = return b
 boolean sv           = error $ "Expected a boolean symval, but got " ++ show sv
 
 branches :: SValue -> [(SValue, SValue)] -> SValue
-branches _ [] = error $ "Non-exhaustive patterns in case statement"
+branches _ [] = error "Non-exhaustive patterns in case statement"
 branches v ((p, t) : rest) =
   merge (symUnify v p) (substituteIn t v p) $ branches v rest
 
@@ -204,10 +204,14 @@ mergeList sb xs ys
                              ++ show xs ++ "' with '" ++ show ys ++ "'"
 
 -- Constraint realisation
--- Going from 'SValue' to 'SBool'
+-- Realise 'SValue' as an 'SBool'
 -- TODO: realise constraints
 realise :: Symbolic SValue -> Symbolic SBool
-realise sv = undefined
+realise sv =
+  do v <- sv
+     case v of
+       (SBoolean b) -> return b
+       other        -> error "Property should translate to a Boolean formula, but was a "
 
 
 -- Utility
