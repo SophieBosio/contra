@@ -10,17 +10,17 @@ import Control.Monad.Reader
 type Runtime a = Reader (Program a)
 
 -- Export
-runMain :: Show a => Program a -> Term a
+runMain :: (Show a, Eq a) => Program a -> Term a
 runMain p = runReader (evaluate (mainFunction p)) p
 
-normalise :: Show a => Program a -> (Term a -> Value a)
+normalise :: (Show a, Eq a) => Program a -> (Term a -> Value a)
 normalise p t =
   let result = runReader (evaluate t) p
   in  (strengthenToValue . strengthenToPattern) result
 
 
 -- Main functions
-evaluate :: Show a => Term a -> Runtime a (Term a)
+evaluate :: (Show a, Eq a) => Term a -> Runtime a (Term a)
 evaluate (Pattern p) = evaluatePattern p
 evaluate (TConstructor c ts a) =
   do ts' <- mapM evaluate ts
@@ -60,9 +60,9 @@ evaluate (Gt    t0 t1 a) =
      n <- evaluate t1 >>= number
      return $ Pattern $ Value $ Boolean (m > n) a
 evaluate (Equal t0 t1 a) =
-  do m <- evaluate t0 >>= number
-     n <- evaluate t1 >>= number
-     return $ Pattern $ Value $ Boolean (m == n) a
+  do x <- evaluate t0
+     y <- evaluate t1
+     return $ Pattern $ Value $ Boolean (x == y) a
 evaluate (Not t0 a) =
   do b <- evaluate t0 >>= boolean
      return $ Pattern $ Value $ Boolean (not b) a
@@ -71,7 +71,7 @@ evaluate t = error $ "Malformed term '" ++ show t ++ "'."
 --   do notAtTopLevel (x, a)
 --      evaluate $ substitute x t0 (Rec x t0 a)
 
-evaluatePattern :: Show a => Pattern a -> Runtime a (Term a)
+evaluatePattern :: (Show a, Eq a) => Pattern a -> Runtime a (Term a)
 evaluatePattern (Value v) = evaluateValue v
 evaluatePattern (Variable x _) =
   do program <- ask
@@ -83,7 +83,7 @@ evaluatePattern (PConstructor c ps a) =
   do ts <- mapM evaluatePattern ps
      return $ strengthenIfPossible c ts a
 
-evaluateValue :: Show a => Value a -> Runtime a (Term a)
+evaluateValue :: (Show a, Eq a) => Value a -> Runtime a (Term a)
 evaluateValue v = return $ Pattern $ Value v
 
 

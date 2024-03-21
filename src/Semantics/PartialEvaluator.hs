@@ -20,7 +20,7 @@ type PartialState a = StateT (Environment a) (Reader (Environment a))
 
 
 -- Export
-partiallyEvaluate :: Show a => Program a -> (Term a -> (Term a, Program a))
+partiallyEvaluate :: (Show a, Eq a) => Program a -> (Term a -> (Term a, Program a))
 partiallyEvaluate p t =
   let (specialised, residual) = runReader (runStateT (partial [] t) p) p
   in  (specialised, residual)
@@ -40,7 +40,7 @@ bind f t = do
 
 
 -- Main functions
-partial :: Show a => [Name] -> Term a -> PartialState a (Term a)
+partial :: (Show a, Eq a) => [Name] -> Term a -> PartialState a (Term a)
 partial ns (Pattern p) = partialPattern ns p
 partial ns (TConstructor c ts a) =
   do ts' <- mapM (partial ns) ts
@@ -138,9 +138,7 @@ partial ns (Equal t1 t2 a) =
   do t1' <- partial ns t1
      t2' <- partial ns t2
      if canonical t1' && canonical t2'
-       then do m <- number t1'
-               n <- number t2'
-               return $ Pattern $ Value $ Boolean (m == n) a
+       then return $ Pattern $ Value $ Boolean (t1' == t2') a
        else return $ Equal t1' t2' a
 partial ns (Not t0 a) =
   do t0' <- partial ns t0
@@ -153,7 +151,7 @@ partial _ t = error $ "Malformed term '" ++ show t ++ "'."
 --   do notAtTopLevel (x, a)
 --      partial $ substitute x t0 (Rec x t0 a)
 
-partialPattern :: Show a => [Name] -> Pattern a -> PartialState a (Term a)
+partialPattern :: (Show a, Eq a) => [Name] -> Pattern a -> PartialState a (Term a)
 partialPattern _ (Value v) = partialValue v
 partialPattern ns (Variable x a) =
   do program <- ask
@@ -165,7 +163,7 @@ partialPattern ns (PConstructor c ps a) =
   do ts  <- mapM (partialPattern ns) ps
      return $ strengthenIfPossible c ts a
 
-partialValue :: Show a => Value a -> PartialState a (Term a)
+partialValue :: (Show a, Eq a) => Value a -> PartialState a (Term a)
 partialValue v = return $ Pattern $ Value v
 
 
