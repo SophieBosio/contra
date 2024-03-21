@@ -17,7 +17,6 @@ type Info   = (SourcePos, SourcePos)
 data ParsingError =
     MultipleSignatures    X
   | MultipleADTs          X
-  | MultipleFunctions    (X, Info)
   | MultipleProperties   (X, Info)
   | ParsingFailed        ParseError
   deriving Show
@@ -30,9 +29,9 @@ parseProgram path =
      return $
        case runParser (whitespace >> program) () path src of
          (Left   err) -> Left $ return $ ParsingFailed err
-         (Right code) -> let flatCode = flatten code in
-           case reportErrors flatCode of
-             [ ]  -> return flatCode
+         (Right code) ->
+           case reportErrors code of
+             [ ]  -> return code
              errs -> Left errs
 
 parseString :: Parser a -> String -> Either ParseError a
@@ -374,12 +373,10 @@ reportErrors :: Program Info -> [ParsingError]
 reportErrors p =
      [ MultipleSignatures  n         | n <- sigs  \\ nub sigs  ]
   ++ [ MultipleADTs        n         | n <- adts  \\ nub adts  ]
-  ++ [ MultipleFunctions  (n, pos n) | n <- funcs \\ nub funcs ]
   ++ [ MultipleProperties (n, pos n) | n <- props \\ nub props ]
   where
     sigs  = fst <$> signatures p
     adts  = fst <$> datatypes  p
-    funcs = fst <$> functions  p
     props = fst <$> properties p
     pos n =
       maybe
@@ -395,11 +392,6 @@ report ((MultipleSignatures n) : rest) =
 report ((MultipleADTs n) : rest) =
   ("Multiple ADTs declared with name '" ++ n ++ "'\n")
   ++ report rest
-report ((MultipleFunctions (n, i) : rest)) =
-  let (start, end) = i
-  in ("Multiple functions declared with name '" ++ n ++
-      "'\n beginning at \n" ++ show start ++ "\n and ending at\n" ++ show end ++ "\n")
-     ++ report rest
 report ((MultipleProperties (n, i) : rest)) =
   let (start, end) = i
   in ("Multiple properties declared with name '" ++ n ++
