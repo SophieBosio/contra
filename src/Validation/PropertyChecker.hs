@@ -70,6 +70,16 @@ realise sv =
                     ++ show other
 
 
+-- Realise 'SValue' as an 'SBool'
+realise :: Symbolic SValue -> Symbolic SBool
+realise sv =
+  sv >>= \case
+    (SBoolean b) -> return b
+    other        -> error $
+                    "Property should translate to a Boolean formula, but was a "
+                    ++ show other
+
+
 -- Create symbolic input variables
 emptyBindings :: Bindings
 emptyBindings = error . (++ " is unbound!")
@@ -211,6 +221,7 @@ mergeList sb xs ys
   | Just b <- unliteral sb = if b then xs else ys
   | otherwise              = error $ "Unable to merge constructor arguments '"
                              ++ show xs ++ "' with '" ++ show ys ++ "'"
+
 
 -- Symbolic equality
 truthy :: SValue -> SBool
