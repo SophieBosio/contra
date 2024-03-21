@@ -46,7 +46,7 @@ proveFormula f =
   do r@(ThmResult result) <- prove f
      case result of
        Unsatisfiable _ _ -> putStrLnGreen  " ✓ OK "
-       Satisfiable   _ m -> do putStrLnRed " ✱ FAIL "
+       Satisfiable   _ _ -> do putStrLnRed " ✱ FAIL "
                                putStrLn "\tCounterexample: "
                                putStr "\t"
                                print r
@@ -78,11 +78,13 @@ liftInputVars :: Term Type -> Formula ()
 liftInputVars (Lambda (Variable x tau) t _) =
   do sx <- fresh x tau
      local (bind x sx) $ liftInputVars t
-liftInputVars (Lambda (PConstructor c ps _) t _) =
+liftInputVars (Lambda (PConstructor _ ps _) t _) =
   do mapM_ (liftInputVars . weakenToTerm) ps
      liftInputVars t
 liftInputVars _ = return ()
 
+
+-- Bindings
 bind :: X -> SValue -> X `MapsTo` SValue
 bind x tau look y = if x == y then tau else look y
 
@@ -226,7 +228,7 @@ sEqual _             _             = SBoolean sFalse
 -- Pretty printing
 -- printCounterExample :: SMTModel -> IO ()
 -- https://hackage.haskell.org/package/sbv-10.5/docs/Data-SBV.html#g:58
-printCounterExample = undefined
+-- TODO: printCounterExample = undefined
 
 redStr :: String -> String
 redStr s = "\ESC[31m\STX" ++ s ++ "\ESC[m\STX"
