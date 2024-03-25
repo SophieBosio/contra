@@ -205,16 +205,22 @@ replaceWithIn x x' (Pattern (PConstructor c ps a)) =
 replaceWithIn x x' (Pattern (List ps a)) =
   let ps' = map (manipulateWith (replaceWithIn x x')) ps
   in  Pattern $ List ps' a
-replaceWithIn x x' (Lambda (Variable y b) t0 a)
-  | x == y = Lambda (Variable x' b) (replaceWithIn x x' t0) a
-replaceWithIn x x' (Application t1 t2 a) = Application (replaceWithIn x x' t1) (replaceWithIn x x' t2) a
+replaceWithIn x x' (Lambda p t0 a) =
+  Lambda (manipulateWith (replaceWithIn x x') p) (replaceWithIn x x' t0) a
+replaceWithIn x x' (Application t1 t2 a) =
+  Application (replaceWithIn x x' t1) (replaceWithIn x x' t2) a
 replaceWithIn _ _  t@(Let            {}) = t -- local scope takes precedence
 replaceWithIn _ _  t@(Case           {}) = t -- local scope takes precedence
-replaceWithIn x x' (Plus        t0 t1 a) = Plus  (replaceWithIn x x' t0) (replaceWithIn x x' t1) a
-replaceWithIn x x' (Minus       t0 t1 a) = Minus (replaceWithIn x x' t0) (replaceWithIn x x' t1) a
-replaceWithIn x x' (Lt          t0 t1 a) = Lt    (replaceWithIn x x' t0) (replaceWithIn x x' t1) a
-replaceWithIn x x' (Gt          t0 t1 a) = Gt    (replaceWithIn x x' t0) (replaceWithIn x x' t1) a
-replaceWithIn x x' (Equal       t0 t1 a) = Equal (replaceWithIn x x' t0) (replaceWithIn x x' t1) a
+replaceWithIn x x' (Plus        t0 t1 a) = Plus  (replaceWithIn x x' t0)
+                                                 (replaceWithIn x x' t1) a
+replaceWithIn x x' (Minus       t0 t1 a) = Minus (replaceWithIn x x' t0)
+                                                 (replaceWithIn x x' t1) a
+replaceWithIn x x' (Lt          t0 t1 a) = Lt    (replaceWithIn x x' t0)
+                                                 (replaceWithIn x x' t1) a
+replaceWithIn x x' (Gt          t0 t1 a) = Gt    (replaceWithIn x x' t0)
+                                                 (replaceWithIn x x' t1) a
+replaceWithIn x x' (Equal       t0 t1 a) = Equal (replaceWithIn x x' t0)
+                                                 (replaceWithIn x x' t1) a
 replaceWithIn x x' (Not         t0    a) = Not   (replaceWithIn x x' t0) a
 replaceWithIn x x' (TConstructor c ts a) =
   let ts' = map (replaceWithIn x x') ts
