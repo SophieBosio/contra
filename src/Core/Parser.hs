@@ -18,7 +18,6 @@ data ParsingError =
     MultipleSignatures           X
   | MultipleADTs                 X
   | MultipleProperties          (X, Info)
-  | DifferentNumbersOfArguments (X, Info)
   | ParsingFailed               ParseError
   deriving Show
 
@@ -32,7 +31,7 @@ parseProgram path =
          (Left   err) -> Left $ return $ ParsingFailed err
          (Right code) ->
            case reportErrors code of
-             [ ]  -> return code
+             [ ]  -> return (flatten code)
              errs -> Left errs
 
 parseString :: Parser a -> String -> Either ParseError a
@@ -332,7 +331,6 @@ flatten p = newDefs defs <> remaining
     dups      = duplicates (functions p)
     defs      = collectDuplicates dups
     remaining = foldr removeDefinition p dups
-    updated   = foldr updateSig remaining dups
 
 duplicates :: [(F, Term a)] -> [(F, Term a)]
 duplicates fs = filter (\(x, _) -> length (filter (== x) names) > 1) fs
@@ -348,24 +346,7 @@ newDefs ([ ]  : rest) = newDefs rest
 newDefs (defs : rest) =
   let fname = fst (head defs) in
   let terms = map snd defs
-  in  Function fname (rewriteDefs terms) $ newDefs rest
-
--- Combine the different definitions of the function
--- and rewrite them as a Case statement
-rewriteDefs :: [Term Info] -> Term Info
-rewriteDefs defs =
-  Lambda (Variable "*x" info1)
-    (Case (Pattern (Variable "*x" info1)) branches info2) info2
-  where
-    branches = foldr (\def cases -> cases ++ [tuples def]) [] defs
-    info1    = annotation $ head defs
-    info2    = annotation $ last defs
-
-tuples :: Term Info -> (Pattern Info, Term Info)
-tuples (Lambda p t@(Lambda{}) i) =
-  let (args, remaining) = tuples t
-  in  (Pair p args i, remaining)
-tuples (Lambda p t i) = (p, t)
+  in  Function fname (rewriteDefs fname terms) $ newDefs rest
 
 removeDefinition :: (F, Term a) -> Program a -> Program a
 removeDefinition (f', t') (Function f t rest)
@@ -379,7 +360,57 @@ removeDefinition def (Data      x ts rest) =
   Data      x ts (removeDefinition def rest)
 removeDefinition _ End = End
 
-updateSig = undefined
+-- Combine the different definitions of the function
+-- and rewrite them as a Case statement
+rewriteDefs :: F -> [Term Info] -> Term Info
+rewriteDefs fname defs =
+  lambdas (Case (Pattern inputs) branches i) i
+  where
+    branches = foldr (\def cases -> cases ++ [tuples def]) [] defs
+    inputs   = generateInputPatterns fname (map fst branches)
+    lambdas  = generateLambdas inputs
+    i        = annotation $ head defs
+
+tuples :: Term Info -> (Pattern Info, Term Info)
+tuples t =
+  let (args, body) = splitLambda t
+  in  (List args (annotation t), body)
+
+splitLambda :: Term Info -> ([Pattern Info], Term Info)
+splitLambda (Lambda p t@(Lambda{}) _) =
+  let (args, remaining) = splitLambda t
+  in  (p : args, remaining)
+splitLambda (Lambda p t _) = ([p], t)
+splitLambda t              = ([ ], t)
+
+generateInputPatterns :: F -> [Pattern Info] -> Pattern Info
+generateInputPatterns fname ps =
+  if sameNoOfArguments ps
+     then List (genVars ps) (annotation $ head ps)
+     else error $ "Different number of arguments in function definition for '"
+          ++ show fname ++ "'"
+
+sameNoOfArguments :: [Pattern Info] -> Bool
+sameNoOfArguments ((List p _):ps) =
+  all countArgs ps
+  where
+    countArgs (List q _) = length p == length q
+    countArgs _          = False
+sameNoOfArguments _ = True
+
+genVars :: [Pattern Info] -> [Pattern Info]
+genVars [    ] = [ ]
+genVars (p:ps) = gen p : genVars ps
+  where
+    gen (Variable        x a) = Variable ("*" ++ x) a
+    gen (PConstructor c cs a) = PConstructor c (map gen cs) a
+    gen (List           cs a) = List (map gen cs) a
+    gen (Value             v) = Value v
+
+generateLambdas :: Pattern Info -> (Term Info -> Info -> Term Info)
+generateLambdas (List (p:ps) i1) cases i2 =
+  Lambda p (generateLambdas (List ps i1) cases i2) i2
+generateLambdas t cases i = Lambda t cases i
 
 
 -- Handling errors
@@ -411,11 +442,6 @@ report ((MultipleProperties (n, i) : rest)) =
   in ("Multiple properties declared with name '" ++ n ++
       "'\n beginning at \n" ++ show start ++ "\n and ending at\n" ++ show end ++ "\n")
      ++ report rest
-report ((DifferentNumbersOfArguments (n, i)) : rest) =
-  let (start, end) = i
-  in  ("Function definitions for '" ++ n ++ "' have different numbers of arguments."
-       ++ "\n beginning at \n" ++ show start ++ "\n and ending at\n" ++ show end ++ "\n")
-      ++ report rest
 report ((ParsingFailed err) : rest) =
   ("Parsing failed: " ++ show err ++ "\n")
   ++ report rest

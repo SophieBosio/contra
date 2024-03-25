@@ -41,8 +41,8 @@ data Type =
   | Boolean'
   | Variable' Index
   | Type :->: Type
-  | Type :*: Type
   | ADT  T
+  | Args [Type] -- Only used internally
 
 data Constructor = Constructor C [Type]
 
@@ -66,9 +66,9 @@ data Term a =
 
 data Pattern a =
     Value               (Value a)
-  | Variable     X              a
-  | Pair         (P1 a) (P2 a)  a
-  | PConstructor C  [Pattern a] a
+  | Variable     X             a
+  | List           [Pattern a] a
+  | PConstructor C [Pattern a] a
   deriving (Functor)
 
 data Value a =
@@ -92,7 +92,7 @@ instance Canonical (Term a) where
 instance Canonical (Pattern a) where
   canonical (Value             v) = canonical v
   canonical (Variable        _ _) = False
-  canonical (Pair        p1 p2 _) = canonical p1 && canonical p2
+  canonical (List           ps _) = all canonical ps
   canonical (PConstructor _ ps _) = all canonical ps
 
 instance Canonical (Value a) where
@@ -169,7 +169,7 @@ instance Annotated Term where
 instance Annotated Pattern where
   annotations (Value              v) = annotations v
   annotations (Variable        _  a) = return a
-  annotations (Pair         _  _  a) = return a
+  annotations (List            ps a) = a : concatMap annotations ps
   annotations (PConstructor _  ps a) = a : concatMap annotations ps
   annotation  p                      = head $ annotations p
 
@@ -186,15 +186,15 @@ instance Eq Type where
   (==) = equivalent
 
 equivalent :: Type -> Type -> Bool
-equivalent (Variable' _) _   = True
-equivalent _   (Variable' _) = True
-equivalent Unit'    Unit'    = True
-equivalent Integer' Integer' = True
-equivalent Boolean' Boolean' = True
+equivalent (Variable' _) _             = True
+equivalent _            (Variable' _)  = True
+equivalent Unit'        Unit'          = True
+equivalent Integer'     Integer'       = True
+equivalent Boolean'     Boolean'       = True
 equivalent (t0 :->: t1) (t0' :->: t1') = t0 == t0' && t1 == t1'
-equivalent (t1 :*:  t2) (t1' :*:  t2') = t1 == t1' && t2 == t2'
-equivalent (ADT  t) (ADT  s) = t == s
-equivalent _ _ = False
+equivalent (ADT      t) (ADT        s) = t == s
+equivalent (Args    ts) (Args      ss) = and $ zipWith (==) ts ss 
+equivalent _            _              = False
 
 instance Eq Constructor where
   Constructor c [] == Constructor d [] = c == d
@@ -224,14 +224,13 @@ instance (Eq a) => Eq (Term a) where
   -- (Rec    x t0 a) == (Rec     y t0' b) = x == y &&  a == b   && t0 == t0'
 
 instance (Eq a) => Eq (Pattern a) where
-  (Value              v) == (Value              w) = v  == w
-  (Variable         x a) == (Variable         y b) = x  == y  && a == b
-  (Pair         p1 p2 a) == (Pair         q1 q2 b) = p1 == q1 &&
-                                                     p2 == q2 &&
-                                                     a  == b
-  (PConstructor c  ps a) == (PConstructor d  rs b) = a  == b  &&
-                                                     c  == d  &&
-                                                     and (zipWith (==) ps rs)
+  (Value             v) == (Value             w) = v == w
+  (Variable        x a) == (Variable        y b) = x == y && a == b
+  (List           ps a) == (List           rs b) = a == b &&
+                                                   and (zipWith (==) ps rs)
+  (PConstructor c ps a) == (PConstructor d rs b) = a == b &&
+                                                   c == d &&
+                                                   and (zipWith (==) ps rs)
   _ == _ = False
 
 instance (Eq a) => Eq (Value a) where
@@ -351,9 +350,9 @@ instance Show Type where
   show Integer'      = "Integer"
   show Boolean'      = "Boolean"
   show (Variable' i) = "V" ++ show i
-  show (t0 :->: t1)  = show t0 ++ " -> " ++ show t1
-  show (t1 :*:  t2)  = "(" ++ show t1 ++ ", " ++ show t2 ++ ")"
-  show (ADT t)       = t
+  show (t0  :->: t1) = show t0 ++ " -> " ++ show t1
+  show (ADT       t) = t
+  show (Args     ts) = "[" ++ intercalate ", " (map show ts) ++ "]"
 
 instance Show Constructor where
   show (Constructor c []) = show c
@@ -378,10 +377,10 @@ instance Show (Term a) where
   -- show (Rec          x  t0    _) = "rec " ++ x ++ " . " ++ show t0
 
 instance Show (Pattern a) where
-  show (Value              v) = show v
-  show (Variable     x     _) = show x
-  show (Pair         p1 p2 _) = "(" ++ show p1 ++ ", " ++ show p2 ++ ")"
-  show (PConstructor c ps  _) = c ++
+  show (Value             v) = show v
+  show (Variable     x    _) = show x
+  show (List           ps _) = "[" ++ intercalate ", " (map show ps) ++ "]"
+  show (PConstructor c ps _) = c  ++
     " {" ++ unwords (map show ps) ++ "}"
 
 instance Show (Value a) where
@@ -444,15 +443,15 @@ termAST (Not          t0    tau) = "(Not " ++ termAST t0
                                    ++ " " ++ typeAST tau ++ ")"
 
 patternAST :: Pattern Type -> String
-patternAST (Value                v) = "(Value " ++ valueAST v ++ ")"
-patternAST (Variable         x tau) = "(Variable " ++ show x
-                                      ++ " " ++ typeAST tau ++ ")"
-patternAST (Pair         p1 p2 tau) = "(Pair " ++ show p1
-                                      ++ " " ++ show p2
-                                      ++ " " ++ typeAST tau ++ ")"
-patternAST (PConstructor  c ps tau) = "(PConstructor " ++ show c ++ " ["
-                                      ++ intercalate ", " (map patternAST ps)
-                                      ++ "] " ++ typeAST tau ++ ")"
+patternAST (Value               v) = "(Value " ++ valueAST v ++ ")"
+patternAST (Variable        x tau) = "(Variable " ++ show x
+                                     ++ " " ++ typeAST tau ++ ")"
+patternAST (List           ps tau) = "(List "
+                                     ++ intercalate ", " (map patternAST ps)
+                                     ++ " " ++ typeAST tau ++ ")"
+patternAST (PConstructor c ps tau) = "(PConstructor " ++ show c ++ " ["
+                                     ++ intercalate ", " (map patternAST ps)
+                                     ++ "] " ++ typeAST tau ++ ")"
                                      
 
 valueAST :: Value Type -> String
@@ -480,5 +479,5 @@ typeAST Integer'      = "Integer'"
 typeAST Boolean'      = "Boolean'"
 typeAST (Variable' i) = "(Variable' " ++ show i ++ ")"
 typeAST (t0 :->:  t1) = "(" ++ typeAST t0 ++ " :->: " ++ typeAST t1 ++ ")"
-typeAST (t1 :*:   t2) = "(" ++ typeAST t1 ++ " :*: " ++ typeAST t2 ++ ")"
 typeAST (ADT       t) = "ADT " ++ t
+typeAST (Args     ts) = "Args [" ++ intercalate ", " (map show ts) ++ "]"

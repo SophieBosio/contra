@@ -49,8 +49,9 @@ unifyPattern (Value        v) (Value        w) = unifyValue v w
 unifyPattern (Variable   x _) (Variable   y _) | x == y = mempty
 unifyPattern v@(Variable x _) p                | not $ p `contains` x = p `substitutes` v
 unifyPattern p                v@(Variable x _) | not $ p `contains` x = p `substitutes` v
-unifyPattern (Pair p1 p2 _) (Pair p1' p2' _) =
-  unifyPattern p1 p1' <> unifyPattern p2 p2'
+unifyPattern (List      ps _) (List     ps' _) =
+  let us = zipWith unifyPattern ps ps'
+  in  foldr (flip (<>)) mempty us
 unifyPattern (PConstructor c ps _) (PConstructor c' ps' _)
   | c == c' && length ps == length ps'
   = foldr (mappend . uncurry unifyPattern) mempty (zip ps ps')
@@ -71,7 +72,7 @@ instance Semigroup (Substitution meta a) where
   s <> s' = Substitution $ unifier s <> unifier s'
 
 instance Monoid (Substitution meta a) where
-  mempty = Substitution $ return []
+  mempty  = Substitution $ return []
   mappend = (<>)
 
 substitutes :: Pattern a -> Pattern a -> Substitution Pattern a
@@ -80,27 +81,26 @@ substitutes p x = Substitution $ return $ x `mapsTo` p
 substituteName :: Show a => X -> Term a -> (Term a -> Term a)
 substituteName x t v = -- computes t[v/x]
   case t of
-    Pattern (Variable        y  _) | x == y -> v
-    Pattern (Pair         p1 p2 a) -> Pattern $ Pair
-                                      (manipulateWith subs p1)
-                                      (manipulateWith subs p2) a
-    Pattern (PConstructor  c ps a) ->
+    Pattern (Variable        y _) | x == y -> v
+    Pattern (List           ps a) -> Pattern $ List
+                                     (map (manipulateWith subs) ps)  a
+    Pattern (PConstructor c ps a) ->
       Pattern (PConstructor c (map (manipulateWith subs) ps) a)
-    TConstructor c ts a            -> TConstructor    c (map subs ts) a
-    Lambda v'@(Variable y _) t1 a  | x /= y
-                                   -> Lambda v' (subs t1)             a
-    Application  t1 t2 a           -> Application (subs t1) (subs t2) a
-    Let v'@(Variable y _) t1 t2 a  ->
+    TConstructor c ts a           -> TConstructor    c (map subs ts) a
+    Lambda v'@(Variable y _) t1 a | x /= y
+                                  -> Lambda v' (subs t1)             a
+    Application  t1 t2 a          -> Application (subs t1) (subs t2) a
+    Let v'@(Variable y _) t1 t2 a ->
       Let v' (subs t1) ((if x == y then id else subs) t2) a
-    Case  t0 ts  a                 -> Case  (subs t0)
-                                            (map (second subs) ts)    a
-    Plus  t0 t1  a                 -> Plus  (subs t0) (subs t1)       a
-    Minus t0 t1  a                 -> Minus (subs t0) (subs t1)       a
-    Lt    t0 t1  a                 -> Lt    (subs t0) (subs t1)       a
-    Gt    t0 t1  a                 -> Gt    (subs t0) (subs t1)       a
-    Equal t0 t1  a                 -> Equal (subs t0) (subs t1)       a
+    Case  t0 ts  a                -> Case  (subs t0)
+                                           (map (second subs) ts)    a
+    Plus  t0 t1  a                -> Plus  (subs t0) (subs t1)       a
+    Minus t0 t1  a                -> Minus (subs t0) (subs t1)       a
+    Lt    t0 t1  a                -> Lt    (subs t0) (subs t1)       a
+    Gt    t0 t1  a                -> Gt    (subs t0) (subs t1)       a
+    Equal t0 t1  a                -> Equal (subs t0) (subs t1)       a
     Not   t0     a                -> Not   (subs t0)                 a
-    _                              -> t
+    _                             -> t
     -- Rec  y t1    a | x /= y  -> Rec y (subs t1)                 a
   where
     subs = flip (substituteName x) v
@@ -110,10 +110,14 @@ substituteName x t v = -- computes t[v/x]
 freeVariables :: Term a -> [Name]
 freeVariables (Pattern           p) = freeVariables' p
 freeVariables (TConstructor _ ts _) = concatMap freeVariables ts
-freeVariables (Lambda       x t0 _) = freeVariables' x ++ freeVariables t0
+freeVariables (Lambda       x t0 _) =
+  let bound = freeVariables' x
+  in  [ y | y <- freeVariables t0, y `notElem` bound ]
 freeVariables (Application t1 t2 _) = freeVariables t1 ++ freeVariables t2
-freeVariables (Let       x t1 t2 _) = freeVariables' x ++ freeVariables t1
-                                                       ++ freeVariables t2
+freeVariables (Let       x t1 t2 _) =
+  let bound = freeVariables' x
+  in     freeVariables t1
+      <> [ y | y <- freeVariables t2, y `notElem` bound ]
 freeVariables (Case        t0 bs _) = freeVariables t0 ++
                                       concatMap (freeVariables' . fst) bs ++
                                       concatMap (freeVariables  . snd) bs
@@ -125,17 +129,18 @@ freeVariables (Equal       t0 t1 _) = freeVariables t0 ++ freeVariables t1
 freeVariables (Not            t0 _) = freeVariables t0
 
 freeVariables' :: Pattern a -> [Name]
-freeVariables' (Value              _) = mempty
-freeVariables' (Variable     x     _) = return x
-freeVariables' (Pair         p1 p2 _) = freeVariables' p1 <> freeVariables' p2
-freeVariables' (PConstructor x  ps _) =
+freeVariables' (Value             _) = mempty
+freeVariables' (Variable     x    _) = return x
+freeVariables' (List           ps _) =
+  foldr (\p acc -> acc <> freeVariables' p) mempty ps
+freeVariables' (PConstructor x ps _) =
   [ y | y <- foldr (\p acc -> acc <> freeVariables' p) mempty ps, x /= y ]
 
 
 -- Utility functions
 contains :: Pattern a -> X -> Bool
 contains (Variable         x _) y | x == y = True
-contains (Pair         p1 p2 _) y = p1 `contains` y || p2 `contains` y
+contains (List            ps _) y = any (`contains` y) ps
 contains (PConstructor _  ps _) y = any (`contains` y) ps
 contains _                     _ = False
 
