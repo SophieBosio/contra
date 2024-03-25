@@ -1,0 +1,6 @@
+f :: Integer -> Integer -> Integer -> Integer .
+f 5 y z = (5 + x) + z .
+f x 4 z = (x - 4) - z .
+f x y 3 = (x + y) - 3 .
+f x y z = (x + x) + (y + z) .
+

@@ -110,48 +110,65 @@ annotate (TConstructor c ts _) =
      cs  <- constructorTypes env c
      zipWithM_ hasType ts' cs
      return $ strengthenIfPossible c ts' (ADT adt)
-annotate (Lambda (Variable x _) t0 _) =
+annotate (Lambda p t0 _) =
   do tau <- fresh
-     t0' <- local (bind x tau) $ annotate t0
-     return $ Lambda (Variable x tau) t0' (tau :->: annotation t0')
-annotate (Lambda p@(PConstructor {}) t0 _) =
-  do tau1 <- fresh
-     tau2 <- fresh
-     t'   <- annotatePattern p
-     t' `hasType` tau1
+     t'  <- annotatePattern p
+     t' `hasType` tau
      let p' = strengthenToPattern t'
      fvs  <- mapM (\x -> (,) x <$> fresh) $ freeVariables t0
      t0'  <- local (liftFreeVariables fvs) $ annotate t0
-     t0' `hasType` tau2
-     return $ Lambda p' t0' (tau1 :->: tau2)
-annotate (Lambda (Value v) t0 _) =
-  do t'  <- annotateValue v
-     let v' = (strengthenToValue . strengthenToPattern) t'
-     t0' <- annotate t0
-     let tau1 = annotation v'
-     let tau2 = annotation t0'
-     return $ Lambda (Value v') t0' (tau1 :->: tau2)
-annotate (Let (Variable x _) t1 t2 _) =
-  do t1' <- annotate t1
-     let tau = annotation t1'
-     t2' <- local (bind x tau) $ annotate t2
-     return $ Let (Variable x tau) t1' t2' (annotation t2')
-annotate (Let p@(PConstructor {}) t1 t2 _) =
+     return $ Lambda p' t0' (tau :->: annotation t0')
+-- annotate (Lambda (Variable x _) t0 _) =
+--   do tau <- fresh
+--      t0' <- local (bind x tau) $ annotate t0
+--      return $ Lambda (Variable x tau) t0' (tau :->: annotation t0')
+-- annotate (Lambda p@(PConstructor {}) t0 _) =
+--   do tau1 <- fresh
+--      tau2 <- fresh
+--      t'   <- annotatePattern p
+--      t' `hasType` tau1
+--      let p' = strengthenToPattern t'
+--      fvs  <- mapM (\x -> (,) x <$> fresh) $ freeVariables t0
+--      t0'  <- local (liftFreeVariables fvs) $ annotate t0
+--      t0' `hasType` tau2
+--      return $ Lambda p' t0' (tau1 :->: tau2)
+-- annotate (Lambda (Value v) t0 _) =
+--   do t'  <- annotateValue v
+--      let v' = (strengthenToValue . strengthenToPattern) t'
+--      t0' <- annotate t0
+--      let tau1 = annotation v'
+--      let tau2 = annotation t0'
+--      return $ Lambda (Value v') t0' (tau1 :->: tau2)
+annotate (Let p t1 t2 _) =
   do t'  <- annotatePattern p
      t1' <- annotate t1
+     t2' <- annotate t2
      t' `hasSameTypeAs` t1'
      let p' = strengthenToPattern t'
-     fvs <- mapM (\x -> (,) x <$> fresh) $ freeVariables t2
-     t2' <- local (liftFreeVariables fvs) $ annotate t2
-     return $ Let p' t1' t2' (annotation t2')
-annotate (Let (Value v) t1 t2 _) =
-  do t'  <- annotateValue v
-     let v'  = (strengthenToValue . strengthenToPattern) t'
-     let tau = annotation v'
-     t1' <- annotate t1
-     t1' `hasType` tau
-     t2' <- annotate t2
-     return $ Let (Value v') t1' t2' (annotation t2')
+     fvs <- mapM (\x -> (,) x <$> fresh) $ freeVariables t2'
+     t2'' <- local (liftFreeVariables fvs) $ annotate t2
+     return $ Let p' t1' t2'' (annotation t2'')
+-- annotate (Let (Variable x _) t1 t2 _) =
+--   do t1' <- annotate t1
+--      let tau = annotation t1'
+--      t2' <- local (bind x tau) $ annotate t2
+--      return $ Let (Variable x tau) t1' t2' (annotation t2')
+-- annotate (Let p@(PConstructor {}) t1 t2 _) =
+--   do t'  <- annotatePattern p
+--      t1' <- annotate t1
+--      t' `hasSameTypeAs` t1'
+--      let p' = strengthenToPattern t'
+--      fvs <- mapM (\x -> (,) x <$> fresh) $ freeVariables t2
+--      t2' <- local (liftFreeVariables fvs) $ annotate t2
+--      return $ Let p' t1' t2' (annotation t2')
+-- annotate (Let (Value v) t1 t2 _) =
+--   do t'  <- annotateValue v
+--      let v'  = (strengthenToValue . strengthenToPattern) t'
+--      let tau = annotation v'
+--      t1' <- annotate t1
+--      t1' `hasType` tau
+--      t2' <- annotate t2
+--      return $ Let (Value v') t1' t2' (annotation t2')
 annotate (Application t1 t2 _) =
   do tau <- fresh
      t1' <- annotate t1
@@ -266,7 +283,7 @@ solve (constraint : rest) =
       then (if Variable' i /= t0 then Nothing else solve rest)
       else do c <- solve (substitution t0 i <$> rest)
               return $ (i, t0) : c
-    _                               -> error $ show constraint
+    _                               -> error $ "Type constraint error: " ++ show constraint
 
 refine :: TypeSubstitution -> (Type -> Type)
 refine [            ] t                      = t
