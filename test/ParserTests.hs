@@ -305,13 +305,13 @@ testParseTermsOK =
                                               (Pattern (Value (Number 5  ())))
                                         ())
            ] ())
-  , ("Ctr", TConstructor "Ctr" [] ())
-  , ("Ctr {5}", TConstructor "Ctr" [Pattern (Value (Number 5 ()))] ())
-  , ("Ctr {True}", TConstructor "Ctr" [Pattern (Value (Boolean True ()))] ())
-  , ("Ctr {x}", TConstructor "Ctr" [Pattern (Variable "x" ())] ())
-  , ("Ctr {x, False}", TConstructor "Ctr"
-      [ Pattern (Variable "x" ())
-      , Pattern (Value (Boolean False ()))
+  , ("Ctr", Pattern $ Value $ VConstructor "Ctr" [] ())
+  , ("Ctr {5}", Pattern $ Value $ VConstructor "Ctr" [Number 5 ()] ())
+  , ("Ctr {True}", Pattern $ Value $ VConstructor "Ctr" [Boolean True ()] ())
+  , ("Ctr {x}", Pattern $ PConstructor "Ctr" [Variable "x" ()] ())
+  , ("Ctr {x, False}", Pattern $ PConstructor "Ctr"
+      [ Variable "x" ()
+      , Value (Boolean False ())
       ] ())
   , ("Ctr {x, (5 + 3), True}"
     , TConstructor "Ctr"

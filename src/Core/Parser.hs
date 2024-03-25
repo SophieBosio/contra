@@ -123,6 +123,7 @@ value = choice $
     , number       <&> Number
     , boolean      <&> Boolean
     ]
+  ++ [ try valueConstructor ]
 
 
 -- Patterns
@@ -130,6 +131,7 @@ pattern' :: Parser (Pattern Info)
 pattern' = choice
   [ parens pattern'
   , Value <$> value
+  , try patternConstructor
   , info $ identifier <&> Variable
   ]
 
@@ -188,7 +190,6 @@ caseBranch =
      body <- term
      return (alt, body)
 
-
 desugaredIf :: Parser (Term Info)
 desugaredIf =
   do _     <- keyword "if"
@@ -204,13 +205,25 @@ desugaredIf =
 termConstructor :: Parser (Term Info)
 termConstructor = info $
   do ctr <- constructorName
-     ts  <- option [] constructorList
+     ts  <- option [] (constructorList term)
      return $ TConstructor ctr ts
 
-constructorList :: Parser [Term Info]
-constructorList =
+patternConstructor :: Parser (Pattern Info)
+patternConstructor = info $
+  do ctr <- constructorName
+     ps  <- option [] (constructorList pattern')
+     return $ PConstructor ctr ps
+
+valueConstructor :: Parser (Value Info)
+valueConstructor = info $
+  do ctr <- constructorName
+     vs  <- option [] (constructorList value)
+     return $ VConstructor ctr vs
+
+constructorList :: Parser a -> Parser [a]
+constructorList p =
   do _  <- symbol "{"
-     ts <- term `sepBy` symbol ","
+     ts <- p `sepBy` symbol ","
      _  <- symbol "}"
      return ts
 
