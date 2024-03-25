@@ -177,7 +177,7 @@ alpha ns x t
   | x `elem` ns = let x' = show $ hash (show x ++ show t)
                   in  if x' `elem` ns
                          then alpha ns x' t
-                         else (ns ++ [ x'], x', subst x x' t)
+                         else (ns ++ [ x'], x', replaceWithIn x x' t)
   | otherwise   = (ns, x, t)
 
 alphaAll :: Show a => [Name] -> [Name] -> [Term a] -> Term a
@@ -197,27 +197,29 @@ alphaAll ns fvs ts t0 =
                                   in (ns' ++ ns'', t'')) (ns_, t) fvs_
     removeDups = toList . fromList
 
-subst :: Show a => X -> X -> Term a -> Term a
--- TODO: Complete subst
-subst x x' (Pattern (Variable y a)) | x == y = Pattern (Variable x' a)
-subst x x' (Pattern (PConstructor c ps a)) =
-  let ps' = map (manipulateWith (subst x x')) ps
-  in  Pattern (PConstructor c ps' a)
-subst x x' (Lambda (Variable y b) t0 a)
-  | x == y = Lambda (Variable x' b) (subst x x' t0) a
-subst x x' (Application t1 t2 a) = Application (subst x x' t1) (subst x x' t2) a
-subst _ _  t@(Let            {}) = t -- local scope takes precedence
-subst _ _  t@(Case           {}) = t -- local scope takes precedence
-subst x x' (Plus        t0 t1 a) = Plus  (subst x x' t0) (subst x x' t1) a
-subst x x' (Minus       t0 t1 a) = Minus (subst x x' t0) (subst x x' t1) a
-subst x x' (Lt          t0 t1 a) = Lt    (subst x x' t0) (subst x x' t1) a
-subst x x' (Gt          t0 t1 a) = Gt    (subst x x' t0) (subst x x' t1) a
-subst x x' (Equal       t0 t1 a) = Equal (subst x x' t0) (subst x x' t1) a
-subst x x' (Not         t0    a) = Not   (subst x x' t0) a
-subst x x' (TConstructor c ts a) =
-  let ts' = map (subst x x') ts
+replaceWithIn :: Show a => X -> X -> Term a -> Term a
+replaceWithIn x x' (Pattern (Variable y a)) | x == y = Pattern (Variable x' a)
+replaceWithIn x x' (Pattern (PConstructor c ps a)) =
+  let ps' = map (manipulateWith (replaceWithIn x x')) ps
+  in  Pattern $ PConstructor c ps' a
+replaceWithIn x x' (Pattern (List ps a)) =
+  let ps' = map (manipulateWith (replaceWithIn x x')) ps
+  in  Pattern $ List ps' a
+replaceWithIn x x' (Lambda (Variable y b) t0 a)
+  | x == y = Lambda (Variable x' b) (replaceWithIn x x' t0) a
+replaceWithIn x x' (Application t1 t2 a) = Application (replaceWithIn x x' t1) (replaceWithIn x x' t2) a
+replaceWithIn _ _  t@(Let            {}) = t -- local scope takes precedence
+replaceWithIn _ _  t@(Case           {}) = t -- local scope takes precedence
+replaceWithIn x x' (Plus        t0 t1 a) = Plus  (replaceWithIn x x' t0) (replaceWithIn x x' t1) a
+replaceWithIn x x' (Minus       t0 t1 a) = Minus (replaceWithIn x x' t0) (replaceWithIn x x' t1) a
+replaceWithIn x x' (Lt          t0 t1 a) = Lt    (replaceWithIn x x' t0) (replaceWithIn x x' t1) a
+replaceWithIn x x' (Gt          t0 t1 a) = Gt    (replaceWithIn x x' t0) (replaceWithIn x x' t1) a
+replaceWithIn x x' (Equal       t0 t1 a) = Equal (replaceWithIn x x' t0) (replaceWithIn x x' t1) a
+replaceWithIn x x' (Not         t0    a) = Not   (replaceWithIn x x' t0) a
+replaceWithIn x x' (TConstructor c ts a) =
+  let ts' = map (replaceWithIn x x') ts
   in  TConstructor c ts' a
-subst _ _ t = t
+replaceWithIn _ _ t = t
 
 
 -- Utility
