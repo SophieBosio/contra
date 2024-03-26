@@ -65,6 +65,7 @@ class HasSubstitution a where
 instance HasSubstitution Type where
   substitution t i (Variable' j) | i == j = t
   substitution t i (t0 :->:  t1) = substitution t i t0 :->: substitution t i t1
+  substitution t i (Args     ts) = Args $ map (substitution t i) ts
   substitution _ _ t             = t
 
 instance HasSubstitution Constraint where
@@ -115,7 +116,7 @@ annotate (Lambda p t0 _) =
      t'  <- annotatePattern p
      t' `hasType` tau
      let p' = strengthenToPattern t'
-     fvs  <- mapM (\x -> (,) x <$> fresh) $ freeVariables t0
+     fvs  <- mapM (\x -> (,) x <$> fresh) $ freeVariables t'
      t0'  <- local (liftFreeVariables fvs) $ annotate t0
      return $ Lambda p' t0' (tau :->: annotation t0')
 -- annotate (Lambda (Variable x _) t0 _) =
@@ -301,11 +302,12 @@ refine s              (Args ts)              = Args $ map (refine s) ts
 indices :: Type -> [Index]
 indices (Variable' i) = return i
 indices (t0  :->: t1) = indices t0 ++ indices t1
+indices (Args     ts) = concatMap indices ts
 indices _             = mempty
 
 liftFreeVariables :: [(Name, Type)] -> (Bindings -> Bindings)
-liftFreeVariables [             ] e = e
-liftFreeVariables ((x, t) : rest) e = bind x t $ liftFreeVariables rest e
+liftFreeVariables [             ] bs = bs
+liftFreeVariables ((x, t) : rest) bs = bind x t $ liftFreeVariables rest bs
 
 alpha :: Index -> (Type -> (Index, Type))
 alpha i t =
@@ -317,6 +319,7 @@ alpha i t =
     increment :: Type -> Type
     increment (Variable'    j) = Variable' (i + j)
     increment (tau1 :->: tau2) = increment tau1 :->: increment tau2
+    increment (Args        ts) = Args $ map increment ts
     increment t'               = t'
 
 alphaADT :: Index -> [Constructor] -> (Index, [Constructor])
