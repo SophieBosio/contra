@@ -98,6 +98,7 @@ useInfo =
        \ contra          <filename>.con - Execute 'main' function in program\n\
        \ contra --check  <filename>.con - Check all properties in program\n\
        \ contra --type   <filename>.con - Type-check and print program\n\
+       \ contra --ast    <filename>.con - Type-check and print abstract syntax-tree\n\
        \ contra --load   <filename>.con - Load program into REPL\n\
        \ contra                         - Start blank interactive REPL session"
 

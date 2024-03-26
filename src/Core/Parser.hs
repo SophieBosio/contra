@@ -398,6 +398,10 @@ sameNoOfArguments ((List p _):ps) =
     countArgs _          = False
 sameNoOfArguments _ = True
 
+-- TODO: This isn't right for constructors
+-- For 'f (Ctr x y) = ...',
+-- I don't want the user to pass in 'x' and 'y',
+-- Instead, I want the user to pass in the whole (Ctr x y)
 genVars :: [Pattern Info] -> [Pattern Info]
 genVars [    ] = [ ]
 genVars (p:ps) = gen p : genVars ps

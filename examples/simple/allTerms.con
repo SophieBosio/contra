@@ -1,0 +1,38 @@
+-- This file contains a trivial example of each basic term
+
+
+constant :: Integer .
+constant = 5 .
+
+plus :: Integer -> Integer -> Integer .
+plus x y = x + y .
+
+-- and, with pattern matching
+
+application :: Integer -> Integer .
+application x = plus x (plus x x) .
+
+letIn :: Integer -> Integer .
+letIn x = let y = x in x + 5 .
+
+caseOf :: Integer -> Boolean .
+caseOf x = case x of
+  ; 1 -> True
+  ; 2 -> True
+  ; 3 -> True
+  ; x -> False .
+
+caseOfNum :: Integer -> Integer .
+caseOfNum x = case x of
+  ; 5 -> 5
+  ; y -> y + y .
+
+adt Example = C Integer | D Boolean Boolean .
+
+-- caseOfADT :: Example -> Integer .
+-- caseOfADT x = case x of
+--   ; (C {y})    -> False .
+--   ; (D {y, z}) -> and y z
+--   ; x          -> False .
+
+
