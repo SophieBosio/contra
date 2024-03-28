@@ -325,7 +325,7 @@ reserved = flip elem reservedKeywords
 
 
 -- Flatten function definitions into a case statement with tuples
-flatten :: Program Info -> Program Info
+flatten :: Program a -> Program a
 flatten p = newDefs defs <> remaining
   where
     dups      = duplicates (functions p)
@@ -340,7 +340,7 @@ collectDuplicates :: [(F, Term a)] -> [[(F, Term a)]]
 collectDuplicates defs = groupBy (\(f, _) (g, _) -> f == g)
                          (sortBy (\(f, _) (g, _) -> compare f g) defs)
 
-newDefs :: [[(F, Term Info)]] -> Program Info
+newDefs :: [[(F, Term a)]] -> Program a
 newDefs [           ] = End
 newDefs ([ ]  : rest) = newDefs rest
 newDefs (defs : rest) =
@@ -362,7 +362,7 @@ removeDefinition _ End = End
 
 -- Combine the different definitions of the function
 -- and rewrite them as a Case statement
-rewriteDefs :: F -> [Term Info] -> Term Info
+rewriteDefs :: F -> [Term a] -> Term a
 rewriteDefs fname defs =
   lambdas (Case (Pattern inputs) branches i) i
   where
@@ -371,26 +371,26 @@ rewriteDefs fname defs =
     lambdas  = generateLambdas inputs
     i        = annotation $ head defs
 
-tuples :: Term Info -> (Pattern Info, Term Info)
+tuples :: Term a -> (Pattern a, Term a)
 tuples t =
   let (args, body) = splitLambda t
   in  (List args (annotation t), body)
 
-splitLambda :: Term Info -> ([Pattern Info], Term Info)
+splitLambda :: Term a -> ([Pattern a], Term a)
 splitLambda (Lambda p t@(Lambda{}) _) =
   let (args, remaining) = splitLambda t
   in  (p : args, remaining)
 splitLambda (Lambda p t _) = ([p], t)
 splitLambda t              = ([ ], t)
 
-generateInputPatterns :: F -> [Pattern Info] -> Pattern Info
+generateInputPatterns :: F -> [Pattern a] -> Pattern a
 generateInputPatterns fname ps =
   if sameNoOfArguments ps
      then List (genVars ps) (annotation $ head ps)
      else error $ "Different number of arguments in function definition for '"
           ++ show fname ++ "'"
 
-sameNoOfArguments :: [Pattern Info] -> Bool
+sameNoOfArguments :: [Pattern a] -> Bool
 sameNoOfArguments ((List p _):ps) =
   all countArgs ps
   where
@@ -402,7 +402,7 @@ sameNoOfArguments _ = True
 -- For 'f (Ctr x y) = ...',
 -- I don't want the user to pass in 'x' and 'y',
 -- Instead, I want the user to pass in the whole (Ctr x y)
-genVars :: [Pattern Info] -> [Pattern Info]
+genVars :: [Pattern a] -> [Pattern a]
 genVars [    ] = [ ]
 genVars (p:ps) = gen p : genVars ps
   where
@@ -411,7 +411,7 @@ genVars (p:ps) = gen p : genVars ps
     gen (List           cs a) = List (map gen cs) a
     gen (Value             v) = Value v
 
-generateLambdas :: Pattern Info -> (Term Info -> Info -> Term Info)
+generateLambdas :: Pattern a -> (Term a -> a -> Term a)
 generateLambdas (List (p:ps) i1) cases i2 =
   Lambda p (generateLambdas (List ps i1) cases i2) i2
 generateLambdas t cases i = Lambda t cases i
