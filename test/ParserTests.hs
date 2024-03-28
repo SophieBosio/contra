@@ -15,6 +15,7 @@ import Core.Parser
   , term
   , program
   , reservedKeywords
+  , flatten
   )
 
 import Test.Tasty
@@ -55,6 +56,7 @@ programTests =
   testGroup "Program parser tests: " $
        testParsePrograms
     ++ testParseErrorsPrograms
+    ++ testFlattenProgram
   
 
 -- Abbreviations
@@ -449,6 +451,180 @@ testParsePrograms =
          , (Value (Boolean False ()), Pattern (Value (Boolean True ())))
          ]
         ())
+      ())
+     End)
+  ]
+
+testFlattenProgram :: [TestTree]
+testFlattenProgram =
+  -- Unflattened
+  map (\(file, p) -> testCase ("Parsing unflattened program '" ++ file ++ "'") $
+      do src <- readFile file
+         let ast = void <$> runParser program () file src
+         assertEqual "" (return p) ast)
+  [ ("examples/simple/multipleFunctionDefinitions.con",
+     Signature "f" (Integer' :->: (Integer' :->: (Integer' :->: Integer'))) $
+     Function "f"
+      (Lambda (Value (Number 5 ()))
+       (Lambda (Variable "y" ())
+        (Lambda (Variable "z" ())
+          (Plus
+            (Plus
+              (Pattern (Value (Number 5 ())))
+              (Pattern (Variable "y" ()))
+             ())
+            (Pattern (Variable "z" ()))
+           ())
+         ())
+        ())
+       ()) $
+     Function "f"
+      (Lambda (Variable "x" ())
+       (Lambda (Value (Number 4 ()))
+        (Lambda (Variable "z" ())
+          (Minus
+            (Minus
+              (Pattern (Variable "x" ()))
+              (Pattern (Value (Number 4 ())))
+             ())
+            (Pattern (Variable "z" ()))
+           ())
+         ())
+        ())
+       ()) $
+     Function "f"
+      (Lambda (Variable "x" ())
+       (Lambda (Variable "y" ())
+       (Lambda (Value (Number 3 ()))
+          (Minus
+            (Plus
+              (Pattern (Variable "x" ()))
+              (Pattern (Variable "y" ()))
+             ())
+            (Pattern (Value (Number 3 ())))
+           ())
+         ())
+        ())
+       ()) $
+     Function "f"
+      (Lambda (Variable "x" ())
+       (Lambda (Variable "y" ())
+        (Lambda (Variable "z" ())
+          (Plus
+            (Plus
+              (Pattern (Variable "x" ()))
+              (Pattern (Variable "x" ()))
+             ())
+            (Plus
+              (Pattern (Variable "y" ()))
+              (Pattern (Variable "z" ()))
+             ())
+           ())
+         ())
+        ())
+       ()) $
+     Signature "and" (Boolean' :->: (Boolean' :->: Boolean')) $
+     Function "and"
+      (Lambda (Value (Boolean True ()))
+       (Lambda (Value (Boolean True ()))
+         (Pattern (Value (Boolean True ())))
+        ())
+       ()) $
+     Function "and"
+      (Lambda (Value (Boolean True ()))
+       (Lambda (Value (Boolean False ()))
+         (Pattern (Value (Boolean False ())))
+        ())
+       ()) $
+     Function "and"
+      (Lambda (Value (Boolean False ()))
+       (Lambda (Value (Boolean True ()))
+         (Pattern (Value (Boolean False ())))
+        ())
+       ()) $
+     Function "and"
+      (Lambda (Value (Boolean False ()))
+       (Lambda (Value (Boolean False ()))
+         (Pattern (Value (Boolean False ())))
+        ())
+       ())
+     End)
+  ]
+  ++
+  -- Flattened
+  (map (\(file, p) -> testCase ("Parsing flattened program '" ++ file ++ "'") $
+       do src <- readFile file
+          let ast = void <$> runParser program () file src
+          let flat = flatten <$> ast
+          assertEqual "" (return p) flat))
+  [ ("examples/simple/multipleFunctionDefinitions.con",
+     Signature "f" (Integer' :->: (Integer' :->: (Integer' :->: Integer'))) $
+     Function "f"
+      (Lambda (Variable "*x" ())
+       (Lambda (Variable "*y" ())
+        (Lambda (Variable "*z" ())
+          (Case (Pattern (List [ Variable "*x" ()
+                               , Variable "*y" ()
+                               , Variable "*z" ()
+                               ] ()))
+            [ (List [Value (Number 5 ()), Variable "y" (), Variable "z" ()] (),
+              (Plus
+               (Plus
+                (Pattern (Value (Number 5 ())))
+                (Pattern (Variable "y" ()))
+                ())
+               (Pattern (Variable "z" ()))
+               ()))
+            , (List [Variable "x" (), Value (Number 5 ()), Variable "z" ()] (),
+              (Minus
+               (Minus
+                (Pattern (Variable "x" ()))
+                (Pattern (Value (Number 4 ())))
+                ())
+               (Pattern (Variable "z" ()))
+               ()))
+            , (List [Variable "x" (), Variable "y" (), Value (Number 3 ())] (),
+              (Minus
+               (Plus
+                (Pattern (Variable "x" ()))
+                (Pattern (Variable "y" ()))
+                ())
+               (Pattern (Value (Number 3 ())))
+               ()))
+            , (List [Variable "x" (), Variable "y" (), Variable "z" ()] (),
+              (Plus
+               (Plus
+                (Pattern (Variable "x" ()))
+                (Pattern (Variable "x" ()))
+                ())
+               (Plus
+                (Pattern (Variable "y" ()))
+                (Pattern (Variable "z" ()))
+                ())
+               ()))
+            ]
+          ())
+         ())
+        ())
+       ()) $
+     Signature "and" (Boolean' :->: (Boolean' :->: Boolean')) $
+     Function "and"
+      (Lambda (Variable "*x" ())
+       (Lambda (Variable "*y" ())
+        (Case (Pattern (List [ Variable "*x" ()
+                             , Variable "*y" ()
+                             ] ()))
+         [ (List [Value (Boolean True ()), Value (Boolean True ())] (),
+           Pattern (Value (Boolean True ())))
+         , (List [Value (Boolean True ()), Value (Boolean False ())] (),
+           Pattern (Value (Boolean False ())))
+         , (List [Value (Boolean False ()), Value (Boolean True ())] (),
+           Pattern (Value (Boolean False ())))
+         , (List [Value (Boolean False ()), Value (Boolean False ())] (),
+           Pattern (Value (Boolean False ())))
+         ]
+        ())
+       ())
       ())
      End)
   ]
