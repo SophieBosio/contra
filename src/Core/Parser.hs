@@ -326,7 +326,7 @@ reserved = flip elem reservedKeywords
 
 -- Flatten function definitions into a case statement with tuples
 flatten :: Program a -> Program a
-flatten p = newDefs defs <> remaining
+flatten p = remaining <> newDefs defs
   where
     dups      = duplicates (functions p)
     defs      = collectDuplicates dups
@@ -366,52 +366,51 @@ rewriteDefs :: F -> [Term a] -> Term a
 rewriteDefs fname defs =
   lambdas (Case (Pattern inputs) branches i) i
   where
-    branches = foldr (\def cases -> cases ++ [tuples def]) [] defs
-    inputs   = generateInputPatterns fname (map fst branches)
+    splits   = map splitLambda defs
+    branches = map (\(alts, body) -> (List alts (annotation body), body)) splits
+    inputs   = generateInputPatterns fname (map fst splits)
     lambdas  = generateLambdas inputs
     i        = annotation $ head defs
 
-tuples :: Term a -> (Pattern a, Term a)
-tuples t =
-  let (args, body) = splitLambda t
-  in  (List args (annotation t), body)
-
 splitLambda :: Term a -> ([Pattern a], Term a)
 splitLambda (Lambda p t@(Lambda{}) _) =
-  let (args, remaining) = splitLambda t
-  in  (p : args, remaining)
+  let (alts, remaining) = splitLambda t
+  in  (p : alts, remaining)
 splitLambda (Lambda p t _) = ([p], t)
 splitLambda t              = ([ ], t)
 
-generateInputPatterns :: F -> [Pattern a] -> Pattern a
-generateInputPatterns fname ps =
-  if sameNoOfArguments ps
+generateInputPatterns :: F -> [[Pattern a]] -> Pattern a
+generateInputPatterns fname pps =
+  if sameNoOfArguments pps
      then List (genVars ps) (annotation $ head ps)
-     else error $ "Different number of arguments in function definition for '"
+     else error $ "Different number of arguments in function definitions for '"
           ++ show fname ++ "'"
-
-sameNoOfArguments :: [Pattern a] -> Bool
-sameNoOfArguments ((List p _):ps) =
-  all countArgs ps
   where
-    countArgs (List q _) = length p == length q
-    countArgs _          = False
+    ps = head pps
+
+sameNoOfArguments :: [[Pattern a]] -> Bool
+sameNoOfArguments (ps:pps) =
+  all sameNo pps
+  where
+    sameNo qs = length ps == length qs
 sameNoOfArguments _ = True
 
--- TODO: This isn't right for constructors
--- For 'f (Ctr x y) = ...',
--- I don't want the user to pass in 'x' and 'y',
--- Instead, I want the user to pass in the whole (Ctr x y)
-genVars :: [Pattern a] -> [Pattern a]
-genVars [    ] = [ ]
-genVars (p:ps) = gen p : genVars ps
+genVarNames :: [X]
+genVarNames = concat $ concatMap (\x -> replicate x (generateName x)) [1..]
   where
-    gen (Variable        x a) = Variable ("*" ++ x) a
-    gen (PConstructor c cs a) = PConstructor c (map gen cs) a
-    gen (List           cs a) = List (map gen cs) a
-    gen (Value             v) = Value v
+    generateName :: Int -> [String]
+    generateName x = map (replicate x) ['a'..'z']
+
+genVars :: [Pattern a] -> [Pattern a]
+genVars [] = []
+genVars ps =
+  let names = map ("*" ++) $ take (length ps) genVarNames in
+  let i     = annotation (head ps)
+  in  map (`Variable` i) names
 
 generateLambdas :: Pattern a -> (Term a -> a -> Term a)
+generateLambdas (List [p]     _) cases i2 =
+  Lambda p cases i2
 generateLambdas (List (p:ps) i1) cases i2 =
   Lambda p (generateLambdas (List ps i1) cases i2) i2
 generateLambdas t cases i = Lambda t cases i
