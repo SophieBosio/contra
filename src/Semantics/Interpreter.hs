@@ -25,23 +25,20 @@ evaluate (Pattern p) = evaluatePattern p
 evaluate (TConstructor c ts a) =
   do ts' <- mapM evaluate ts
      return $ strengthenIfPossible c ts' a
-evaluate (Let v@(Variable _ _) t0 t1 _) =
-  do notAtTopLevel v
-     evaluate t0 >>= evaluate . substitute v t1
-evaluate (Let p@(PConstructor _ ps _) t0 t1 _) =
-  do mapM_ notAtTopLevel ps
-     p'  <- evaluatePattern p
+evaluate (Let p t0 t1 _) =
+  do notAtTopLevel p
      t0' <- evaluate t0
-     case patternMatch p' t0' of
+     case patternMatch p t0' of
        MatchBy u -> evaluate (applyTransformation u t1)
-       NoMatch   -> unificationError p t0
+       NoMatch   -> error $ "Couldn't unify '" ++ show p ++
+                            "' against '" ++ show t0 ++ "'."
 evaluate (Application t1 t2 _) =
   do f <- evaluate t1 >>= function
      x <- evaluate t2
      evaluate (f x)
 evaluate (Case t0 ts _) =
   do v      <- evaluate t0
-     (u, t) <- firstMatch v ts
+     (u, t) <- firstMatch (strengthenToPattern v) ts
      evaluate $ applyTransformation u t
 evaluate (Plus t1 t2 a) =
   do m <- evaluate t1 >>= number
@@ -76,7 +73,7 @@ evaluatePattern (Value v) = evaluateValue v
 evaluatePattern (Variable x _) =
   do program <- ask
      case map snd $ filter ((== x) . fst) (functions program ++ properties program) of
-       [ ] -> error $ "Unbound variable" ++ x
+       [ ] -> error $ "Unbound variable " ++ x
        [t] -> evaluate t -- Disallow shadowing at top-level
        _   -> error $ "Ambiguous bindings for " ++ x
 evaluatePattern (List ps a) =
@@ -92,7 +89,7 @@ evaluateValue v = return $ Pattern $ Value v
 
 
 -- Substitution & Pattern matching
-firstMatch :: Show a => (Monad m) => Term a -> [(Pattern a, Term a)]
+firstMatch :: Show a => (Monad m) => Pattern a -> [(Pattern a, Term a)]
            -> m (Transformation Pattern a, Term a)
 firstMatch v [] = error $ "No match for " ++ show v ++ " in case statement"
 firstMatch v ((p, t) : rest) =
@@ -132,7 +129,9 @@ notAtTopLevel (Variable x _) =
      when (x `elem` (fst <$> functions program)) $
        error $ "The name '" ++ x ++
                "' shadows the top level declaration of '" ++ x ++ "'."
-notAtTopLevel _ = return ()
+notAtTopLevel (PConstructor _ ps _) = mapM_ notAtTopLevel ps
+notAtTopLevel (List           ps _) = mapM_ notAtTopLevel ps
+notAtTopLevel _                     = return ()
 
 unificationError :: Pattern a -> Term a -> b
 unificationError p t =
