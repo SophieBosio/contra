@@ -114,39 +114,15 @@ annotate (TConstructor c ts _) =
      return $ strengthenIfPossible c ts' (ADT adt)
 annotate (Lambda p t0 _) =
   do tau <- fresh
-     (p', liftedInput) <- liftInput (p, tau)
-     fvs <- mapM (\x -> (,) x <$> fresh) $ freeVariables t0
-     t0' <- local (liftFreeVariables fvs . liftedInput) $ annotate t0
+     (p', bs) <- liftInput (p, tau)
+     t0' <- local bs $ annotate t0
      return $ Lambda p' t0' (tau :->: annotation t0')
--- annotate (Lambda (Variable x _) t0 _) =
---   do tau <- fresh
---      t0' <- local (bind x tau) $ annotate t0
---      return $ Lambda (Variable x tau) t0' (tau :->: annotation t0')
--- annotate (Lambda p@(PConstructor {}) t0 _) =
---   do tau1 <- fresh
---      tau2 <- fresh
---      t'   <- annotatePattern p
---      t' `hasType` tau1
---      let p' = strengthenToPattern t'
---      fvs  <- mapM (\x -> (,) x <$> fresh) $ freeVariables t0
---      t0'  <- local (liftFreeVariables fvs) $ annotate t0
---      t0' `hasType` tau2
---      return $ Lambda p' t0' (tau1 :->: tau2)
--- annotate (Lambda (Value v) t0 _) =
---   do t'  <- annotateValue v
---      let v' = (strengthenToValue . strengthenToPattern) t'
---      t0' <- annotate t0
---      let tau1 = annotation v'
---      let tau2 = annotation t0'
---      return $ Lambda (Value v') t0' (tau1 :->: tau2)
 annotate (Let p t1 t2 _) =
-  do t'  <- annotatePattern p
-     t1' <- annotate t1
-     t2' <- annotate t2
-     t' `hasSameTypeAs` t1'
-     let p' = strengthenToPattern t'
-     fvs <- mapM (\x -> (,) x <$> fresh) $ freeVariables t2'
-     t2'' <- local (liftFreeVariables fvs) $ annotate t2
+  do t1'  <- annotate t1
+     t2'  <- annotate t2
+     (p', bs) <- liftInput (p, annotation t1')
+     fvs  <- mapM (\x -> (,) x <$> fresh) $ freeVariables t2'
+     t2'' <- local (bs . liftFreeVariables fvs) $ annotate t2
      return $ Let p' t1' t2'' (annotation t2'')
 -- annotate (Let (Variable x _) t1 t2 _) =
 --   do t1' <- annotate t1
@@ -170,23 +146,24 @@ annotate (Let p t1 t2 _) =
 --      t2' <- annotate t2
 --      return $ Let (Value v') t1' t2' (annotation t2')
 annotate (Application t1 t2 _) =
-  do tau <- fresh
-     t1' <- annotate t1
-     t2' <- annotate t2
-     t1' `hasType` (annotation t2' :->: tau)
-     return $ Application t1' t2' tau
-annotate (Case t0 ts _) =
   do tau1 <- fresh
      tau2 <- fresh
+     t1'  <- annotate t1
+     t2'  <- annotate t2
+     t1' `hasType` (tau1 :->: tau2)
+     t2' `hasType` tau1
+     return $ Application t1' t2' tau2
+annotate (Case t0 ts _) =
+  do tau0 <- fresh
+     tau1 <- fresh
      t0'  <- annotate t0
-     t0' `hasType` tau1
-     fvs  <- mapM (\x -> (,) x <$> fresh) $ concatMap (freeVariables' . fst) ts
-     ps'  <- local (liftFreeVariables fvs) $ mapM (annotate . weakenToTerm . fst) ts
-     ps'' <- mapM (return . strengthenToPattern) ps'
-     bs'  <- local (liftFreeVariables fvs) $ mapM (annotate . snd) ts
-     mapM_ (`hasType` tau1) ps'
-     mapM_ (`hasType` tau2) bs'
-     return $ Case t0' (zip ps'' bs') tau2
+     t0' `hasType` tau0
+     ts'  <- mapM (\(alt, body) -> do (alt', bs) <- liftInput (alt, tau0)
+                                      body'      <- local bs $ annotate body
+                                      body' `hasType` tau1
+                                      return (alt', body')
+                  ) ts
+     return $ Case t0' ts' tau1
 annotate (Plus t0 t1 _) =
   do t0' <- annotate t0
      t1' <- annotate t1
@@ -306,20 +283,23 @@ indices _             = mempty
 
 liftInput :: (Pattern a, Type) -> Annotation a (Pattern Type, Bindings -> Bindings)
 liftInput (Variable x _, tau) = return (Variable x tau, bind x tau)
-liftInput (Value v, _) =
+liftInput (Value v, tau) =
   do t' <- annotateValue v
+     t' `hasType` tau
      let p' = strengthenToPattern t'
      return (p', id)
-liftInput (PConstructor c ps _, _) =
+liftInput (PConstructor c ps _, tau) =
   do env <- environment
      adt <- datatype env c
      cs  <- constructorTypes env c
+     tell [tau :=: ADT adt]
      (ps', bs) <- foldrM liftSub ([], id) (zip ps cs)
-     return (PConstructor c ps' (ADT adt), bs)
-liftInput (List ps _, _) =
+     return (PConstructor c ps' tau, bs)
+liftInput (List ps _, tau) =
   do xs <- replicateM (length ps) fresh
      (ps', bs) <- foldrM liftSub ([], id) (zip ps xs)
-     return (List ps' (Args xs), bs)
+     tell [tau :=: Args xs]
+     return (List ps' tau, bs)
 
 liftSub :: (Pattern a, Type) -> ([Pattern Type], Bindings -> Bindings)
         -> Annotation a ([Pattern Type], Bindings -> Bindings)
