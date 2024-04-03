@@ -18,7 +18,7 @@ type Unifier a = Maybe [(a, a)]
 newtype Substitution meta a = Substitution { unifier :: Unifier (meta a) }
   
 -- Exports
-patternMatch :: Show a => Term a -> Term a -> PatternMatch a
+patternMatch :: Show a => Pattern a -> Term a -> PatternMatch a
 patternMatch p q = maybe NoMatch MatchBy (unifier $ unify p q)
 
 applyTransformation :: Show a => Transformation Pattern a -> Term a -> Term a
@@ -36,17 +36,18 @@ substitute _ t _ = t
 
 
 -- Unification
-unify :: Show a => Term a -> Term a -> Substitution Pattern a
-unify (Pattern p) (Pattern q) = unifyPattern p q
-unify (TConstructor c ts a) (TConstructor c' ts' a')
-  | all canonical ts && all canonical ts'
-  = unifyPattern (PConstructor c  (map strengthenToPattern ts)  a)
-           (PConstructor c' (map strengthenToPattern ts') a')
+unify :: Show a => Pattern a -> Term a -> Substitution Pattern a
+unify p (Pattern q) = unifyPattern p q
+unify p (TConstructor c ts a)
+  | all canonical ts
+  = unifyPattern p (PConstructor c  (map strengthenToPattern ts)  a)
 unify _ _ = Substitution Nothing -- Only patterns can match patterns
 
 unifyPattern :: Pattern a -> Pattern a -> Substitution Pattern a
 unifyPattern (Value        v) (Value        w) = unifyValue v w
-unifyPattern (Variable   x _) (Variable   y _) | x == y = mempty
+unifyPattern v@(Variable x _) w@(Variable y _)
+  | x == y    = mempty
+  | otherwise = v `substitutes` w
 unifyPattern v@(Variable x _) p                | not $ p `contains` x = p `substitutes` v
 unifyPattern p                v@(Variable x _) | not $ p `contains` x = p `substitutes` v
 unifyPattern (List      ps _) (List     ps' _) =
