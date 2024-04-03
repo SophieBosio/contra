@@ -3,10 +3,6 @@
 module Analysis.TypeInferrer where
 
 import Core.Syntax
-import Analysis.Unification
-  ( freeVariables
-  , freeVariables'
-  )
 import Environment.Environment
 import Environment.ERWS
 
