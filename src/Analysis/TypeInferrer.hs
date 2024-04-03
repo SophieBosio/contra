@@ -10,9 +10,10 @@ import Analysis.Unification
 import Environment.Environment
 import Environment.ERWS
 
-import Control.Monad (zipWithM_)
+import Control.Monad (zipWithM_, replicateM)
 import Control.Arrow (second)
 import Data.Maybe    (fromMaybe)
+import Data.Foldable (foldrM)
 
 -- Abbreviations
 data Constraint = Type :=: Type
@@ -113,11 +114,9 @@ annotate (TConstructor c ts _) =
      return $ strengthenIfPossible c ts' (ADT adt)
 annotate (Lambda p t0 _) =
   do tau <- fresh
-     t'  <- annotatePattern p
-     t' `hasType` tau
-     let p' = strengthenToPattern t'
-     fvs  <- mapM (\x -> (,) x <$> fresh) $ freeVariables t'
-     t0'  <- local (liftFreeVariables fvs) $ annotate t0
+     (p', liftedInput) <- liftInput (p, tau)
+     fvs <- mapM (\x -> (,) x <$> fresh) $ freeVariables t0
+     t0' <- local (liftFreeVariables fvs . liftedInput) $ annotate t0
      return $ Lambda p' t0' (tau :->: annotation t0')
 -- annotate (Lambda (Variable x _) t0 _) =
 --   do tau <- fresh
@@ -304,6 +303,30 @@ indices (Variable' i) = return i
 indices (t0  :->: t1) = indices t0 ++ indices t1
 indices (Args     ts) = concatMap indices ts
 indices _             = mempty
+
+liftInput :: (Pattern a, Type) -> Annotation a (Pattern Type, Bindings -> Bindings)
+liftInput (Variable x _, tau) = return (Variable x tau, bind x tau)
+liftInput (Value v, _) =
+  do t' <- annotateValue v
+     let p' = strengthenToPattern t'
+     return (p', id)
+liftInput (PConstructor c ps _, _) =
+  do env <- environment
+     adt <- datatype env c
+     cs  <- constructorTypes env c
+     (ps', bs) <- foldrM liftSub ([], id) (zip ps cs)
+     return (PConstructor c ps' (ADT adt), bs)
+liftInput (List ps _, _) =
+  do xs <- replicateM (length ps) fresh
+     (ps', bs) <- foldrM liftSub ([], id) (zip ps xs)
+     return (List ps' (Args xs), bs)
+
+liftSub :: (Pattern a, Type) -> ([Pattern Type], Bindings -> Bindings)
+        -> Annotation a ([Pattern Type], Bindings -> Bindings)
+liftSub (p, tau) (ps, bs) =
+  do (p', b) <- liftInput (p, tau)
+     return (ps ++ [p'], bs . b)
+
 
 liftFreeVariables :: [(Name, Type)] -> (Bindings -> Bindings)
 liftFreeVariables [             ] bs = bs
