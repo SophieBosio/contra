@@ -114,33 +114,11 @@ annotate (Lambda p t0 _) =
      t0' <- local bs $ annotate t0
      return $ Lambda p' t0' (tau :->: annotation t0')
 annotate (Let p t1 t2 _) =
-  do t1'  <- annotate t1
-     t2'  <- annotate t2
-     (p', bs) <- liftInput (p, annotation t1')
-     fvs  <- mapM (\x -> (,) x <$> fresh) $ freeVariables t2'
-     t2'' <- local (bs . liftFreeVariables fvs) $ annotate t2
-     return $ Let p' t1' t2'' (annotation t2'')
--- annotate (Let (Variable x _) t1 t2 _) =
---   do t1' <- annotate t1
---      let tau = annotation t1'
---      t2' <- local (bind x tau) $ annotate t2
---      return $ Let (Variable x tau) t1' t2' (annotation t2')
--- annotate (Let p@(PConstructor {}) t1 t2 _) =
---   do t'  <- annotatePattern p
---      t1' <- annotate t1
---      t' `hasSameTypeAs` t1'
---      let p' = strengthenToPattern t'
---      fvs <- mapM (\x -> (,) x <$> fresh) $ freeVariables t2
---      t2' <- local (liftFreeVariables fvs) $ annotate t2
---      return $ Let p' t1' t2' (annotation t2')
--- annotate (Let (Value v) t1 t2 _) =
---   do t'  <- annotateValue v
---      let v'  = (strengthenToValue . strengthenToPattern) t'
---      let tau = annotation v'
---      t1' <- annotate t1
---      t1' `hasType` tau
---      t2' <- annotate t2
---      return $ Let (Value v') t1' t2' (annotation t2')
+  do t1' <- annotate t1
+     let tau = annotation t1'
+     (p', bs) <- liftInput (p, tau)
+     t2' <- local bs $ annotate t2
+     return $ Let p' t1' t2' (annotation t2')
 annotate (Application t1 t2 _) =
   do tau1 <- fresh
      tau2 <- fresh
