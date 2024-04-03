@@ -27,12 +27,24 @@ caseOfNum x = case x of
   ; 5 -> 5
   ; y -> y + y .
 
+and :: Boolean -> Boolean -> Boolean .
+and True  True  = True  .
+and True  False = False .
+and False True  = False .
+and False False = False .
+
 adt Example = C Integer | D Boolean Boolean .
 
--- caseOfADT :: Example -> Integer .
--- caseOfADT x = case x of
---   ; (C {y})    -> False .
---   ; (D {y, z}) -> and y z
---   ; x          -> False .
+-- caseOfADT :: Example -> Integer . -- TODO: Detect conflicts between signatures and implementation
+caseOfADT x = case x of
+  ; (C {y})    -> False
+  ; (D {y, z}) -> and y z
+  ; u          -> False .
 
+-- patternMatchADT :: Example -> Integer .
+-- patternMatchADT (C {5}) = 5 .
+-- patternMatchADT (C {x}) = x + x .
+-- patternMatchADT (D {x}) = 1 .
 
+-- letInADT :: Example -> Integer .
+-- letInADT ()
