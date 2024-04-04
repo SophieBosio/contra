@@ -36,10 +36,9 @@ firstMatch :: Show a => (Monad m) => Pattern a -> [(Pattern a, Term a)]
            -> m (Transformation Pattern a, Term a)
 firstMatch v [] = error $ "No match for " ++ show v ++ " in case statement"
 firstMatch v ((p, t) : rest) =
-  case patternMatch v (weakenToTerm p) of
+  case patternMatch v (Pattern p) of
        NoMatch   -> firstMatch v rest
        MatchBy u -> return (u, t)
-
 
 -- 'substitute p t s' computes t[s/p]
 -- I.e., the term t with the term s instead of the pattern p
@@ -87,6 +86,18 @@ unifyPattern (PConstructor c ps _) (PConstructor c' ps' _)
   = case validateUnifiers (zipWith unifyPattern ps ps') of
       Just us -> us
       Nothing -> Substitution Nothing
+unifyPattern (Value (VConstructor c vs _)) (PConstructor c' ps _)
+  | c == c' && length vs == length ps
+  = let ps' = map weakenToPattern vs
+    in  case validateUnifiers (zipWith unifyPattern ps ps') of
+          Just us -> us
+          Nothing -> Substitution Nothing
+unifyPattern (PConstructor c ps _) (Value (VConstructor c' vs _))
+  | c == c' && length vs == length ps
+  = let ps' = map weakenToPattern vs
+    in  case validateUnifiers (zipWith unifyPattern ps ps') of
+          Just us -> us
+          Nothing -> Substitution Nothing
 unifyPattern _             _                 = Substitution Nothing
 
 unifyValue :: Value a -> Value a -> Substitution Pattern a
