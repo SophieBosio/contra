@@ -12,6 +12,7 @@ type Transformation meta a = [(meta a, meta a)]
 data PatternMatch a =
     NoMatch
   | MatchBy (Transformation Pattern a)
+  deriving (Show)
 
 type Unifier a = Maybe [(a, a)]
 
