@@ -41,12 +41,24 @@ firstMatch v ((p, t) : rest) =
        MatchBy u -> return (u, t)
 
 
--- 'substitute p t v' computes t[v/p]
--- I.e., the term t with the term v instead of the pattern p
+-- 'substitute p t s' computes t[s/p]
+-- I.e., the term t with the term s instead of the pattern p
 substitute :: Show a => Pattern a -> Term a -> (Term a -> Term a)
-substitute (Variable     x    _) t v = substituteName x t v
+substitute (Variable     x    _) t s = substituteName x t s
+substitute (PConstructor p cs _) t (Pattern (Value (VConstructor q ds _)))
+  | p == q    = foldr (\(x, s) t' -> substitute x t' s) t
+                (zip cs (map (weakenToTerm . weakenToPattern) ds))
+  | otherwise = t
+substitute (PConstructor p cs _) t (Pattern (PConstructor q ds _))
+  | p == q    = foldr (\(x, s) t' -> substitute x t' s) t
+                (zip cs (map weakenToTerm ds))
+  | otherwise = t
 substitute (PConstructor p cs _) t (TConstructor q ds _)
-  | p == q    = foldr (\(x, v) t' -> substitute x t' v) t (zip cs ds)
+  | p == q    = foldr (\(x, s) t' -> substitute x t' s) t (zip cs ds)
+  | otherwise = t
+substitute (List ps _) t (Pattern (List qs _))
+  | length ps == length qs = foldr (\(p, q) t' -> substitute p t' (Pattern q)) t
+                             (zip ps qs)
   | otherwise = t
 substitute _ t _ = t
 
