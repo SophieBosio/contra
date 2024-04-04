@@ -72,7 +72,9 @@ unifyPattern (List      ps _) (List     ps' _) =
     Nothing -> Substitution Nothing
 unifyPattern (PConstructor c ps _) (PConstructor c' ps' _)
   | c == c' && length ps == length ps'
-  = foldr (mappend . uncurry unifyPattern) mempty (zip ps ps')
+  = case validateUnifiers (zipWith unifyPattern ps ps') of
+      Just us -> us
+      Nothing -> Substitution Nothing
 unifyPattern _             _                 = Substitution Nothing
 
 unifyValue :: Value a -> Value a -> Substitution Pattern a
@@ -81,7 +83,9 @@ unifyValue (Number   n _) (Number     m _) | n == m = mempty
 unifyValue (Boolean  b _) (Boolean    c _) | b == c = mempty
 unifyValue (VConstructor c vs _) (VConstructor c' vs' _)
   | c == c' && length vs == length vs'
-  = foldr (mappend . uncurry unifyValue) mempty (zip vs vs')
+  = case validateUnifiers (zipWith unifyValue vs vs') of
+      Just us -> us
+      Nothing -> Substitution Nothing
 unifyValue _             _                 = Substitution Nothing
 
 
@@ -125,8 +129,8 @@ substituteName x t v = -- computes t[v/x]
 
 validateUnifiers :: [Substitution meta a] -> Maybe (Substitution meta a)
 validateUnifiers us
-  | any isNothing (map unifier us) = Nothing
-  | otherwise                      = Just $ foldr (flip (<>)) mempty us
+  | any (isNothing . unifier) us = Nothing
+  | otherwise                    = Just $ foldr (flip (<>)) mempty us
 
 
 -- Free Variables
