@@ -26,6 +26,15 @@ applyTransformation :: Show a => Transformation Pattern a -> Term a -> Term a
 applyTransformation xs t =
   foldr ((\(x, v) t' -> substitute x t' v) . second weakenToTerm) t xs
 
+firstMatch :: Show a => (Monad m) => Pattern a -> [(Pattern a, Term a)]
+           -> m (Transformation Pattern a, Term a)
+firstMatch v [] = error $ "No match for " ++ show v ++ " in case statement"
+firstMatch v ((p, t) : rest) =
+  case patternMatch v (weakenToTerm p) of
+       NoMatch   -> firstMatch v rest
+       MatchBy u -> return (u, t)
+
+
 -- 'substitute p t v' computes t[v/p]
 -- I.e., the term t with the term v instead of the pattern p
 substitute :: Show a => Pattern a -> Term a -> (Term a -> Term a)

@@ -88,16 +88,6 @@ evaluateValue :: (Show a, Eq a) => Value a -> Runtime a (Term a)
 evaluateValue v = return $ Pattern $ Value v
 
 
--- Substitution & Pattern matching
-firstMatch :: Show a => (Monad m) => Pattern a -> [(Pattern a, Term a)]
-           -> m (Transformation Pattern a, Term a)
-firstMatch v [] = error $ "No match for " ++ show v ++ " in case statement"
-firstMatch v ((p, t) : rest) =
-  case patternMatch v (weakenToTerm p) of
-       NoMatch   -> firstMatch v rest
-       MatchBy u -> return (u, t)
-
-
 -- Utility functions
 mainFunction :: Show a => Program a -> Term a
 mainFunction (Function "main" t _) = t
