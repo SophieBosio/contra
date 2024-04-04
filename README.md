@@ -66,11 +66,56 @@ reading John Hughes' paper [Experiences With QuickCheck: Testing the
 Hard Stuff and Staying
 Sane](https://link.springer.com/chapter/10.1007/978-3-319-30936-1_9).
 
+### Checking Properties
+
 Write a program with some properties, then, with Contra installed,
 check all the properties with:
 
 ```shell
 contra --check <program-name>.con
+```
+
+### Running Programs
+
+Like a normal programming language, you can also execute Contra programs. By default, Contra looks for a function called `main` and executes it if it exists.
+
+```shell
+contra <program-name>.con
+```
+
+This prototype also comes with a rudimentary REPL. Start a blank interactive session by typing just `contra` or load a program's functions into the REPL with `--load <program-name>.con`.
+
+```shell
+# blank REPL session
+contra
+
+# load program into REPL
+contra --load <program-name>.con
+```
+
+
+### Other
+
+You can ask Contra to parse and type-check a program and print out the representation that Contra uses under the hood. You can also ask to see the corresponding abstract syntax tree (AST).
+
+```shell
+# parse, type-check and print program
+contra --type <program-name>.con
+
+# parse, type-check and print AST
+contra --ast  <program-name>.con
+```
+
+See version info.
+
+```shell
+contra --version
+```
+
+And ask to see all available options.
+
+```shell
+contra --help
 ```
 
 ## About
