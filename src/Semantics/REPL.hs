@@ -12,7 +12,7 @@ import System.IO (hFlush, stdout)
 evalLoop :: Program Type -> IO ()
 evalLoop p =
   do input <- readLine
-     if input == "exit"
+     if input == ":q"
         then return ()
         else do parsed <- parseLine input
                 typed  <- typeCheck parsed

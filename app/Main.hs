@@ -100,5 +100,6 @@ useInfo =
        \ contra --type   <filename>.con - Type-check and print program\n\
        \ contra --ast    <filename>.con - Type-check and print abstract syntax-tree\n\
        \ contra --load   <filename>.con - Load program into REPL\n\
-       \ contra                         - Start blank interactive REPL session"
+       \ contra                         - Start blank interactive REPL session\n\
+  \Exit REPL with ':q'"
 
