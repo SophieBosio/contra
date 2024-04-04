@@ -3,6 +3,7 @@ module Analysis.Unification where
 import Core.Syntax
 
 import Control.Arrow (second)
+import Data.Maybe    (isNothing)
 
 
 -- Abbreviations
@@ -17,7 +18,12 @@ data PatternMatch a =
 type Unifier a = Maybe [(a, a)]
 
 newtype Substitution meta a = Substitution { unifier :: Unifier (meta a) }
-  
+  deriving Show
+
+mapsTo :: Pattern a -> Pattern a -> Transformation Pattern a
+mapsTo x p = return (x, p)
+
+
 -- Exports
 patternMatch :: Show a => Pattern a -> Term a -> PatternMatch a
 patternMatch p q = maybe NoMatch MatchBy (unifier $ unify p q)
@@ -61,8 +67,9 @@ unifyPattern v@(Variable x _) w@(Variable y _)
 unifyPattern v@(Variable x _) p                | not $ p `contains` x = p `substitutes` v
 unifyPattern p                v@(Variable x _) | not $ p `contains` x = p `substitutes` v
 unifyPattern (List      ps _) (List     ps' _) =
-  let us = zipWith unifyPattern ps ps'
-  in  foldr (flip (<>)) mempty us
+  case validateUnifiers (zipWith unifyPattern ps ps') of
+    Just us -> us
+    Nothing -> Substitution Nothing
 unifyPattern (PConstructor c ps _) (PConstructor c' ps' _)
   | c == c' && length ps == length ps'
   = foldr (mappend . uncurry unifyPattern) mempty (zip ps ps')
@@ -116,6 +123,11 @@ substituteName x t v = -- computes t[v/x]
   where
     subs = flip (substituteName x) v
 
+validateUnifiers :: [Substitution meta a] -> Maybe (Substitution meta a)
+validateUnifiers us
+  | any isNothing (map unifier us) = Nothing
+  | otherwise                      = Just $ foldr (flip (<>)) mempty us
+
 
 -- Free Variables
 freeVariables :: Term a -> [Name]
@@ -154,6 +166,3 @@ contains (Variable         x _) y | x == y = True
 contains (List            ps _) y = any (`contains` y) ps
 contains (PConstructor _  ps _) y = any (`contains` y) ps
 contains _                     _ = False
-
-mapsTo :: Pattern a -> Pattern a -> Transformation Pattern a
-mapsTo x p = return (x, p)
