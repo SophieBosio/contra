@@ -446,9 +446,9 @@ patternAST :: Pattern Type -> String
 patternAST (Value               v) = "(Value " ++ valueAST v ++ ")"
 patternAST (Variable        x tau) = "(Variable " ++ show x
                                      ++ " " ++ typeAST tau ++ ")"
-patternAST (List           ps tau) = "(List "
+patternAST (List           ps tau) = "(List ["
                                      ++ intercalate ", " (map patternAST ps)
-                                     ++ " " ++ typeAST tau ++ ")"
+                                     ++ "] " ++ typeAST tau ++ ")"
 patternAST (PConstructor c ps tau) = "(PConstructor " ++ show c ++ " ["
                                      ++ intercalate ", " (map patternAST ps)
                                      ++ "] " ++ typeAST tau ++ ")"
@@ -464,7 +464,7 @@ valueAST (VConstructor c vs tau) = "(VConstructor " ++ show c ++ " ["
 
 branchASTs :: [(Pattern Type, Body Type)] -> [String]
 branchASTs = foldr (\(p, b) s ->
-                      s ++ ["(" ++ patternAST p ++ ", " ++ termAST b ++ ")"]) []
+                      ("(" ++ patternAST p ++ ", " ++ termAST b ++ ")") : s) []
 
 constructorASTs :: [Constructor] -> [String]
 constructorASTs = foldr (\(Constructor c ts) s ->
@@ -479,5 +479,5 @@ typeAST Integer'      = "Integer'"
 typeAST Boolean'      = "Boolean'"
 typeAST (Variable' i) = "(Variable' " ++ show i ++ ")"
 typeAST (t0 :->:  t1) = "(" ++ typeAST t0 ++ " :->: " ++ typeAST t1 ++ ")"
-typeAST (ADT       t) = "ADT " ++ t
-typeAST (Args     ts) = "Args [" ++ intercalate ", " (map show ts) ++ "]"
+typeAST (ADT       t) = "(ADT " ++ t ++ ")"
+typeAST (Args     ts) = "(Args [" ++ intercalate ", " (map typeAST ts) ++ "])"
