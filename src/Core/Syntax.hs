@@ -19,6 +19,8 @@ type T0   a = Term    a
 type T1   a = Term    a
 type T2   a = Term    a
 type P0   a = Pattern a
+type P1   a = Pattern a
+type P2   a = Pattern a
 
 type Alt  a = Pattern a  -- Case alternative
 type Body a = Term    a  -- Case alternative body
@@ -40,6 +42,7 @@ data Type =
   | Variable' Index
   | Type :->: Type
   | ADT  T
+  | Args [Type] -- Only used internally
 
 data Constructor = Constructor C [Type]
 
@@ -63,8 +66,9 @@ data Term a =
 
 data Pattern a =
     Value               (Value a)
-  | Variable     X              a
-  | PConstructor C  [Pattern a] a
+  | Variable     X             a
+  | List           [Pattern a] a
+  | PConstructor C [Pattern a] a
   deriving (Functor)
 
 data Value a =
@@ -88,6 +92,7 @@ instance Canonical (Term a) where
 instance Canonical (Pattern a) where
   canonical (Value             v) = canonical v
   canonical (Variable        _ _) = False
+  canonical (List           ps _) = all canonical ps
   canonical (PConstructor _ ps _) = all canonical ps
 
 instance Canonical (Value a) where
@@ -164,6 +169,7 @@ instance Annotated Term where
 instance Annotated Pattern where
   annotations (Value              v) = annotations v
   annotations (Variable        _  a) = return a
+  annotations (List            ps a) = a : concatMap annotations ps
   annotations (PConstructor _  ps a) = a : concatMap annotations ps
   annotation  p                      = head $ annotations p
 
@@ -180,14 +186,15 @@ instance Eq Type where
   (==) = equivalent
 
 equivalent :: Type -> Type -> Bool
-equivalent (Variable' _) _   = True
-equivalent _   (Variable' _) = True
-equivalent Unit'    Unit'    = True
-equivalent Integer' Integer' = True
-equivalent Boolean' Boolean' = True
+equivalent (Variable' _) _             = True
+equivalent _            (Variable' _)  = True
+equivalent Unit'        Unit'          = True
+equivalent Integer'     Integer'       = True
+equivalent Boolean'     Boolean'       = True
 equivalent (t0 :->: t1) (t0' :->: t1') = t0 == t0' && t1 == t1'
-equivalent (ADT  t) (ADT  s) = t == s
-equivalent _ _ = False
+equivalent (ADT      t) (ADT        s) = t == s
+equivalent (Args    ts) (Args      ss) = and $ zipWith (==) ts ss 
+equivalent _            _              = False
 
 instance Eq Constructor where
   Constructor c [] == Constructor d [] = c == d
@@ -217,8 +224,10 @@ instance (Eq a) => Eq (Term a) where
   -- (Rec    x t0 a) == (Rec     y t0' b) = x == y &&  a == b   && t0 == t0'
 
 instance (Eq a) => Eq (Pattern a) where
-  (Value      v) == (Value      w) = v == w
-  (Variable x a) == (Variable y b) = x == y && a == b
+  (Value             v) == (Value             w) = v == w
+  (Variable        x a) == (Variable        y b) = x == y && a == b
+  (List           ps a) == (List           rs b) = a == b &&
+                                                   and (zipWith (==) ps rs)
   (PConstructor c ps a) == (PConstructor d rs b) = a == b &&
                                                    c == d &&
                                                    and (zipWith (==) ps rs)
@@ -341,8 +350,9 @@ instance Show Type where
   show Integer'      = "Integer"
   show Boolean'      = "Boolean"
   show (Variable' i) = "V" ++ show i
-  show (t0 :->: t1)  = show t0 ++ " -> " ++ show t1
-  show (ADT t)       = t
+  show (t0  :->: t1) = show t0 ++ " -> " ++ show t1
+  show (ADT       t) = t
+  show (Args     ts) = "[" ++ intercalate ", " (map show ts) ++ "]"
 
 instance Show Constructor where
   show (Constructor c []) = show c
@@ -369,7 +379,8 @@ instance Show (Term a) where
 instance Show (Pattern a) where
   show (Value             v) = show v
   show (Variable     x    _) = show x
-  show (PConstructor c ps _) = c ++
+  show (List           ps _) = "[" ++ intercalate ", " (map show ps) ++ "]"
+  show (PConstructor c ps _) = c  ++
     " {" ++ unwords (map show ps) ++ "}"
 
 instance Show (Value a) where
@@ -381,6 +392,8 @@ instance Show (Value a) where
 
 
 -- "Direct" AST printing
+-- This is mostly here to ask the parser to write the AST for us,
+-- so we can write normal programs instead of ASTs by hand to use in our tests
 programAST :: Program Type -> String
 programAST (Signature x t rest) = "(Signature " ++ show x ++ " " ++ typeAST t
                                   ++ " " ++ programAST rest ++ ")"
@@ -433,6 +446,9 @@ patternAST :: Pattern Type -> String
 patternAST (Value               v) = "(Value " ++ valueAST v ++ ")"
 patternAST (Variable        x tau) = "(Variable " ++ show x
                                      ++ " " ++ typeAST tau ++ ")"
+patternAST (List           ps tau) = "(List "
+                                     ++ intercalate ", " (map patternAST ps)
+                                     ++ " " ++ typeAST tau ++ ")"
 patternAST (PConstructor c ps tau) = "(PConstructor " ++ show c ++ " ["
                                      ++ intercalate ", " (map patternAST ps)
                                      ++ "] " ++ typeAST tau ++ ")"
@@ -462,5 +478,6 @@ typeAST Unit'         = "Unit'"
 typeAST Integer'      = "Integer'"
 typeAST Boolean'      = "Boolean'"
 typeAST (Variable' i) = "(Variable' " ++ show i ++ ")"
-typeAST (t1 :->:  t2) = "(" ++ typeAST t1 ++ " :->: " ++ typeAST t2 ++ ")"
+typeAST (t0 :->:  t1) = "(" ++ typeAST t0 ++ " :->: " ++ typeAST t1 ++ ")"
 typeAST (ADT       t) = "ADT " ++ t
+typeAST (Args     ts) = "Args [" ++ intercalate ", " (map show ts) ++ "]"

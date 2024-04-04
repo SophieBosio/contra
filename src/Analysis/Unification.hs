@@ -12,13 +12,14 @@ type Transformation meta a = [(meta a, meta a)]
 data PatternMatch a =
     NoMatch
   | MatchBy (Transformation Pattern a)
+  deriving (Show)
 
 type Unifier a = Maybe [(a, a)]
 
 newtype Substitution meta a = Substitution { unifier :: Unifier (meta a) }
   
 -- Exports
-patternMatch :: Show a => Term a -> Term a -> PatternMatch a
+patternMatch :: Show a => Pattern a -> Term a -> PatternMatch a
 patternMatch p q = maybe NoMatch MatchBy (unifier $ unify p q)
 
 applyTransformation :: Show a => Transformation Pattern a -> Term a -> Term a
@@ -36,19 +37,23 @@ substitute _ t _ = t
 
 
 -- Unification
-unify :: Show a => Term a -> Term a -> Substitution Pattern a
-unify (Pattern p) (Pattern q) = unifyPattern p q
-unify (TConstructor c ts a) (TConstructor c' ts' a')
-  | all canonical ts && all canonical ts'
-  = unifyPattern (PConstructor c  (map strengthenToPattern ts)  a)
-           (PConstructor c' (map strengthenToPattern ts') a')
+unify :: Show a => Pattern a -> Term a -> Substitution Pattern a
+unify p (Pattern q) = unifyPattern p q
+unify p (TConstructor c ts a)
+  | all canonical ts
+  = unifyPattern p (PConstructor c  (map strengthenToPattern ts)  a)
 unify _ _ = Substitution Nothing -- Only patterns can match patterns
 
 unifyPattern :: Pattern a -> Pattern a -> Substitution Pattern a
 unifyPattern (Value        v) (Value        w) = unifyValue v w
-unifyPattern (Variable   x _) (Variable   y _) | x == y = mempty
+unifyPattern v@(Variable x _) w@(Variable y _)
+  | x == y    = mempty
+  | otherwise = v `substitutes` w
 unifyPattern v@(Variable x _) p                | not $ p `contains` x = p `substitutes` v
 unifyPattern p                v@(Variable x _) | not $ p `contains` x = p `substitutes` v
+unifyPattern (List      ps _) (List     ps' _) =
+  let us = zipWith unifyPattern ps ps'
+  in  foldr (flip (<>)) mempty us
 unifyPattern (PConstructor c ps _) (PConstructor c' ps' _)
   | c == c' && length ps == length ps'
   = foldr (mappend . uncurry unifyPattern) mempty (zip ps ps')
@@ -69,7 +74,7 @@ instance Semigroup (Substitution meta a) where
   s <> s' = Substitution $ unifier s <> unifier s'
 
 instance Monoid (Substitution meta a) where
-  mempty = Substitution $ return []
+  mempty  = Substitution $ return []
   mappend = (<>)
 
 substitutes :: Pattern a -> Pattern a -> Substitution Pattern a
@@ -78,11 +83,13 @@ substitutes p x = Substitution $ return $ x `mapsTo` p
 substituteName :: Show a => X -> Term a -> (Term a -> Term a)
 substituteName x t v = -- computes t[v/x]
   case t of
-    Pattern (Variable        y  _) | x == y -> v
+    Pattern (Variable        y _) | x == y -> v
+    Pattern (List           ps a) -> Pattern $ List
+                                     (map (manipulateWith subs) ps)  a
     Pattern (PConstructor c ps a) ->
       Pattern (PConstructor c (map (manipulateWith subs) ps) a)
     TConstructor c ts a           -> TConstructor    c (map subs ts) a
-    Lambda v'@(Variable y _) t1 a  | x /= y
+    Lambda v'@(Variable y _) t1 a | x /= y
                                   -> Lambda v' (subs t1)             a
     Application  t1 t2 a          -> Application (subs t1) (subs t2) a
     Let v'@(Variable y _) t1 t2 a ->
@@ -96,7 +103,7 @@ substituteName x t v = -- computes t[v/x]
     Equal t0 t1  a                -> Equal (subs t0) (subs t1)       a
     Not   t0     a                -> Not   (subs t0)                 a
     _                             -> t
-    -- Rec  y t1    a | x /= y -> Rec y (subs t1)                 a
+    -- Rec  y t1    a | x /= y  -> Rec y (subs t1)                 a
   where
     subs = flip (substituteName x) v
 
@@ -105,10 +112,14 @@ substituteName x t v = -- computes t[v/x]
 freeVariables :: Term a -> [Name]
 freeVariables (Pattern           p) = freeVariables' p
 freeVariables (TConstructor _ ts _) = concatMap freeVariables ts
-freeVariables (Lambda       x t0 _) = freeVariables' x ++ freeVariables t0
+freeVariables (Lambda       x t0 _) =
+  let bound = freeVariables' x
+  in  [ y | y <- freeVariables t0, y `notElem` bound ]
 freeVariables (Application t1 t2 _) = freeVariables t1 ++ freeVariables t2
-freeVariables (Let       x t1 t2 _) = freeVariables' x ++ freeVariables t1
-                                                       ++ freeVariables t2
+freeVariables (Let       x t1 t2 _) =
+  let bound = freeVariables' x
+  in     freeVariables t1
+      <> [ y | y <- freeVariables t2, y `notElem` bound ]
 freeVariables (Case        t0 bs _) = freeVariables t0 ++
                                       concatMap (freeVariables' . fst) bs ++
                                       concatMap (freeVariables  . snd) bs
@@ -122,14 +133,17 @@ freeVariables (Not            t0 _) = freeVariables t0
 freeVariables' :: Pattern a -> [Name]
 freeVariables' (Value             _) = mempty
 freeVariables' (Variable     x    _) = return x
+freeVariables' (List           ps _) =
+  foldr (\p acc -> acc <> freeVariables' p) mempty ps
 freeVariables' (PConstructor x ps _) =
   [ y | y <- foldr (\p acc -> acc <> freeVariables' p) mempty ps, x /= y ]
 
 
 -- Utility functions
 contains :: Pattern a -> X -> Bool
-contains (Variable        x _) y | x == y = True
-contains (PConstructor _ ps _) y = any (`contains` y) ps
+contains (Variable         x _) y | x == y = True
+contains (List            ps _) y = any (`contains` y) ps
+contains (PConstructor _  ps _) y = any (`contains` y) ps
 contains _                     _ = False
 
 mapsTo :: Pattern a -> Pattern a -> Transformation Pattern a

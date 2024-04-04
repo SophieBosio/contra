@@ -1,0 +1,55 @@
+-- This file contains a trivial example of each basic term
+
+
+constant :: Integer .
+constant = 5 .
+
+plus :: Integer -> Integer -> Integer .
+plus x y = x + y .
+
+-- and, with pattern matching
+
+application :: Integer -> Integer .
+application x = plus x (plus x x) .
+
+letIn :: Integer -> Integer .
+letIn x = let y = x in x + 5 .
+
+caseOf :: Integer -> Boolean .
+caseOf x = case x of
+  ; 1 -> True
+  ; 2 -> True
+  ; 3 -> True
+  ; x -> False .
+
+caseOfNum :: Integer -> Integer .
+caseOfNum x = case x of
+  ; 5 -> 5
+  ; y -> y + y .
+
+and :: Boolean -> Boolean -> Boolean .
+and True  True  = True  .
+and True  False = False .
+and False True  = False .
+and False False = False .
+
+or False False = False .
+or x     y     = True  .
+
+adt Example = C Integer | D Boolean Boolean .
+
+-- caseOfADT :: Example -> Integer . -- TODO: Detect conflicts between signatures and implementation
+caseOfADT x = case x of
+  ; (C {y})    -> False
+  ; (D {y, z}) -> and y z
+  ; u          -> False .
+
+-- patternMatchADT :: Example -> Integer .
+patternMatchADT (C {5}) = 5 .
+patternMatchADT (C {x}) = x + x .
+patternMatchADT (D {x}) = 1 .
+
+letInADT :: Example .
+letInADT x = let y = x in (C {y}) .
+
+main = letInADT .

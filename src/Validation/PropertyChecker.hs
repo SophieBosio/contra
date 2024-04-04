@@ -1,9 +1,4 @@
-{-# LANGUAGE
-    FlexibleContexts,
-    ScopedTypeVariables,
-    TypeOperators,
-    LambdaCase
-#-}
+{-# LANGUAGE FlexibleContexts, ScopedTypeVariables, TypeOperators, LambdaCase #-}
 
 module Validation.PropertyChecker where
 
@@ -51,7 +46,7 @@ proveFormula f =
   do r@(ThmResult result) <- prove f
      case result of
        Unsatisfiable _ _ -> putStrLnGreen  " ✓ OK "
-       Satisfiable   _ m -> do putStrLnRed " ✱ FAIL "
+       Satisfiable   _ _ -> do putStrLnRed " ✱ FAIL "
                                putStrLn "\tCounterexample: "
                                putStr "\t"
                                print r
@@ -61,8 +56,18 @@ proveFormula f =
 
 generateFormula :: Program Type -> Term Type -> Symbolic SBool
 generateFormula program p =
-  let constraints = runFormula (formula p) program emptyBindings
-  in  realise constraints
+  let sValueFormula = runFormula (formula p) program emptyBindings
+  in  realise sValueFormula
+
+
+-- Realise 'SValue' as an 'SBool'
+realise :: Symbolic SValue -> Symbolic SBool
+realise sv =
+  sv >>= \case
+    (SBoolean b) -> return b
+    other        -> error $
+                    "Property should translate to a Boolean formula, but was a "
+                    ++ show other
 
 
 -- Create symbolic input variables
@@ -73,11 +78,13 @@ liftInputVars :: Term Type -> Formula ()
 liftInputVars (Lambda (Variable x tau) t _) =
   do sx <- fresh x tau
      local (bind x sx) $ liftInputVars t
-liftInputVars (Lambda (PConstructor c ps _) t _) =
+liftInputVars (Lambda (PConstructor _ ps _) t _) =
   do mapM_ (liftInputVars . weakenToTerm) ps
      liftInputVars t
 liftInputVars _ = return ()
 
+
+-- Bindings
 bind :: X -> SValue -> X `MapsTo` SValue
 bind x tau look y = if x == y then tau else look y
 
@@ -102,9 +109,11 @@ fresh x (Variable' _) =
 formula :: Term Type -> Formula SValue
 formula p = liftInputVars p >> translate p
 
-translate :: Term a -> Formula SValue
+translate :: Term Type -> Formula SValue
 translate (Pattern    p) = translatePattern p
--- translate (Lambda p t _) = _
+translate l@(Lambda _ t _) =
+  do liftInputVars l
+     translate t
 -- https://hackage.haskell.org/package/sbv-10.5/docs/Data-SBV.html#g:40
 -- translate (Application t1 t2 _) = _
 -- translate (Let p t1 t2 _) = _
@@ -134,9 +143,9 @@ translate (Gt t0 t1 _) =
      t1' <- translate t1 >>= numeric
      return $ SBoolean $ t0' .> t1'
 translate (Equal t0 t1 _) =
-  do t0' <- translate t0 >>= numeric
-     t1' <- translate t1 >>= numeric
-     return $ SBoolean $ t0' .== t1'
+  do t0' <- translate t0
+     t1' <- translate t1
+     return $ t0' `sEqual` t1'
 translate (Not t0 _) =
   do t0' <- translate t0 >>= boolean
      return $ SBoolean $ sNot t0'
@@ -172,7 +181,7 @@ boolean (SBoolean b) = return b
 boolean sv           = error $ "Expected a boolean symval, but got " ++ show sv
 
 branches :: SValue -> [(SValue, SValue)] -> SValue
-branches _ [] = error $ "Non-exhaustive patterns in case statement"
+branches _ [] = error "Non-exhaustive patterns in case statement"
 branches v ((p, t) : rest) =
   merge (symUnify v p) (substituteIn t v p) $ branches v rest
 
@@ -203,14 +212,8 @@ mergeList sb xs ys
   | otherwise              = error $ "Unable to merge constructor arguments '"
                              ++ show xs ++ "' with '" ++ show ys ++ "'"
 
--- Constraint realisation
--- Going from 'SValue' to 'SBool'
--- TODO: realise constraints
-realise :: Symbolic SValue -> Symbolic SBool
-realise sv = undefined
 
-
--- Utility
+-- Symbolic equality
 truthy :: SValue -> SBool
 truthy (SBoolean b) = b
 truthy v = error $ "Expected a symbolic boolean value, but got " ++ show v
@@ -227,7 +230,7 @@ sEqual _             _             = SBoolean sFalse
 -- Pretty printing
 -- printCounterExample :: SMTModel -> IO ()
 -- https://hackage.haskell.org/package/sbv-10.5/docs/Data-SBV.html#g:58
-printCounterExample = undefined
+-- TODO: printCounterExample = undefined
 
 redStr :: String -> String
 redStr s = "\ESC[31m\STX" ++ s ++ "\ESC[m\STX"

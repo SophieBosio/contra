@@ -15,11 +15,10 @@ type Parser = Parsec Source ()
 type Info   = (SourcePos, SourcePos)
 
 data ParsingError =
-    MultipleSignatures    X
-  | MultipleADTs          X
-  | MultipleFunctions    (X, Info)
-  | MultipleProperties   (X, Info)
-  | ParsingFailed        ParseError
+    MultipleSignatures           X
+  | MultipleADTs                 X
+  | MultipleProperties          (X, Info)
+  | ParsingFailed               ParseError
   deriving Show
 
 
@@ -30,9 +29,9 @@ parseProgram path =
      return $
        case runParser (whitespace >> program) () path src of
          (Left   err) -> Left $ return $ ParsingFailed err
-         (Right code) -> let flatCode = flatten code in
-           case reportErrors flatCode of
-             [ ]  -> return flatCode
+         (Right code) ->
+           case reportErrors code of
+             [ ]  -> return (flatten code)
              errs -> Left errs
 
 parseString :: Parser a -> String -> Either ParseError a
@@ -123,6 +122,7 @@ value = choice $
     , number       <&> Number
     , boolean      <&> Boolean
     ]
+  ++ [ try valueConstructor ]
 
 
 -- Patterns
@@ -130,6 +130,7 @@ pattern' :: Parser (Pattern Info)
 pattern' = choice
   [ parens pattern'
   , Value <$> value
+  , try patternConstructor
   , info $ identifier <&> Variable
   ]
 
@@ -188,7 +189,6 @@ caseBranch =
      body <- term
      return (alt, body)
 
-
 desugaredIf :: Parser (Term Info)
 desugaredIf =
   do _     <- keyword "if"
@@ -204,13 +204,25 @@ desugaredIf =
 termConstructor :: Parser (Term Info)
 termConstructor = info $
   do ctr <- constructorName
-     ts  <- option [] constructorList
+     ts  <- option [] (constructorList term)
      return $ TConstructor ctr ts
 
-constructorList :: Parser [Term Info]
-constructorList =
+patternConstructor :: Parser (Pattern Info)
+patternConstructor = info $
+  do ctr <- constructorName
+     ps  <- option [] (constructorList pattern')
+     return $ PConstructor ctr ps
+
+valueConstructor :: Parser (Value Info)
+valueConstructor = info $
+  do ctr <- constructorName
+     vs  <- option [] (constructorList value)
+     return $ VConstructor ctr vs
+
+constructorList :: Parser a -> Parser [a]
+constructorList p =
   do _  <- symbol "{"
-     ts <- term `sepBy` symbol ","
+     ts <- p `sepBy` symbol ","
      _  <- symbol "}"
      return ts
 
@@ -312,11 +324,9 @@ reserved :: Name -> Bool
 reserved = flip elem reservedKeywords
 
 
--- Flatten function definitions into one big case statement
--- E.g., from 'reverse [] = ..., reverse (x:xs) = ...'
--- to 'reverse l = case l of [] -> ... (x:xs) -> ...'
-flatten :: Program Info -> Program Info
-flatten p = newDefs defs <> remaining
+-- Flatten function definitions into a case statement with tuples
+flatten :: Program a -> Program a
+flatten p = remaining <> newDefs defs
   where
     dups      = duplicates (functions p)
     defs      = collectDuplicates dups
@@ -330,20 +340,13 @@ collectDuplicates :: [(F, Term a)] -> [[(F, Term a)]]
 collectDuplicates defs = groupBy (\(f, _) (g, _) -> f == g)
                          (sortBy (\(f, _) (g, _) -> compare f g) defs)
 
-caseBranches :: [(F, Term a)] -> [(Pattern a, Term a)]
-caseBranches [                        ] = []
-caseBranches ((_, Lambda p t _) : rest) =
-  (p, t) : caseBranches rest
-caseBranches ((f, _) : _) = error $
-  "Different number of arguments to function definitions for '"
-  ++ show f ++ "'."
-
-newDefs :: [[(F, Term Info)]] -> Program Info
-newDefs [                     ] = End
-newDefs ([            ] : rest) = newDefs rest
-newDefs (d@((f, t) : _) : rest) =
-  Function f (Case (Pattern (Variable "*x" (annotation t)))
-              (caseBranches d) (annotation t)) $ newDefs rest
+newDefs :: [[(F, Term a)]] -> Program a
+newDefs [           ] = End
+newDefs ([ ]  : rest) = newDefs rest
+newDefs (defs : rest) =
+  let fname = fst (head defs) in
+  let terms = map snd defs
+  in  Function fname (rewriteDefs fname terms) $ newDefs rest
 
 removeDefinition :: (F, Term a) -> Program a -> Program a
 removeDefinition (f', t') (Function f t rest)
@@ -357,18 +360,71 @@ removeDefinition def (Data      x ts rest) =
   Data      x ts (removeDefinition def rest)
 removeDefinition _ End = End
 
+-- Combine the different definitions of the function
+-- and rewrite them as a Case statement
+rewriteDefs :: F -> [Term a] -> Term a
+rewriteDefs fname defs =
+  lambdas (Case (Pattern inputs) branches i) i
+  where
+    splits   = map splitLambda defs
+    branches = map (\(alts, body) -> (List alts (annotation body), body)) splits
+    inputs   = generateInputPatterns fname (map fst splits)
+    lambdas  = generateLambdas inputs
+    i        = annotation $ head defs
+
+splitLambda :: Term a -> ([Pattern a], Term a)
+splitLambda (Lambda p t@(Lambda{}) _) =
+  let (alts, remaining) = splitLambda t
+  in  (p : alts, remaining)
+splitLambda (Lambda p t _) = ([p], t)
+splitLambda t              = ([ ], t)
+
+generateInputPatterns :: F -> [[Pattern a]] -> Pattern a
+generateInputPatterns fname pps =
+  if sameNoOfArguments pps
+     then List (genVars ps) (annotation $ head ps)
+     else error $ "Different number of arguments in function definitions for '"
+          ++ show fname ++ "'"
+  where
+    ps = head pps
+
+sameNoOfArguments :: [[Pattern a]] -> Bool
+sameNoOfArguments (ps:pps) =
+  all sameNo pps
+  where
+    sameNo qs = length ps == length qs
+sameNoOfArguments _ = True
+
+genVarNames :: [X]
+genVarNames = concat $ concatMap (\x -> replicate x (generateName x)) [1..]
+  where
+    generateName :: Int -> [String]
+    generateName x = map (replicate x) ['a'..'z']
+
+genVars :: [Pattern a] -> [Pattern a]
+genVars [] = []
+genVars ps =
+  let names = map ("*" ++) $ take (length ps) genVarNames in
+  let i     = annotation (head ps)
+  in  map (`Variable` i) names
+
+generateLambdas :: Pattern a -> (Term a -> a -> Term a)
+generateLambdas (List [p]     _) cases i2 =
+  Lambda p cases i2
+generateLambdas (List (p:ps) i1) cases i2 =
+  Lambda p (generateLambdas (List ps i1) cases i2) i2
+generateLambdas t cases i = Lambda t cases i
+
 
 -- Handling errors
 reportErrors :: Program Info -> [ParsingError]
 reportErrors p =
      [ MultipleSignatures  n         | n <- sigs  \\ nub sigs  ]
   ++ [ MultipleADTs        n         | n <- adts  \\ nub adts  ]
-  ++ [ MultipleFunctions  (n, pos n) | n <- funcs \\ nub funcs ]
   ++ [ MultipleProperties (n, pos n) | n <- props \\ nub props ]
   where
     sigs  = fst <$> signatures p
     adts  = fst <$> datatypes  p
-    funcs = fst <$> functions  p
     props = fst <$> properties p
     pos n =
       maybe
@@ -384,11 +440,6 @@ report ((MultipleSignatures n) : rest) =
 report ((MultipleADTs n) : rest) =
   ("Multiple ADTs declared with name '" ++ n ++ "'\n")
   ++ report rest
-report ((MultipleFunctions (n, i) : rest)) =
-  let (start, end) = i
-  in ("Multiple functions declared with name '" ++ n ++
-      "'\n beginning at \n" ++ show start ++ "\n and ending at\n" ++ show end ++ "\n")
-     ++ report rest
 report ((MultipleProperties (n, i) : rest)) =
   let (start, end) = i
   in ("Multiple properties declared with name '" ++ n ++

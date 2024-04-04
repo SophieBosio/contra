@@ -1,0 +1,5 @@
+adt MyADT = C Integer | D Integer Integer .
+
+f :: MyADT -> Integer .
+-- f (C {x}) = x .
+f (D {x, y}) = x + y .
