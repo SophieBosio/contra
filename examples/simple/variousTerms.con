@@ -51,9 +51,10 @@ or False False = False .
 or x     y     = True  .
 
 adt Example = C Integer | D Boolean Boolean .
-adt Num     = C Integer .
+adt Num     = E Integer .
 
 -- caseOfADT :: Example -> Integer . -- TODO: Detect conflicts between signatures and implementation
+caseOfADT :: Example -> Boolean .
 caseOfADT x = case x of
   ; (C {y})    -> False
   ; (D {w, z}) -> and w z
@@ -90,12 +91,10 @@ letInADT x = let y = x in (C {y}) .
 alwaysLetInADT :: Example .
 alwaysLetInADT = let x = 5 in (C {x}) .
 
-letOutADT :: Num -> Integer .
+letOutADT :: Example -> Integer .
 letOutADT x = let (C {y}) = x in y.
 
 alwaysLetOutADT :: Integer .
 alwaysLetOutADT = let (C {x}) = (C {5}) in x .
 
 main = letOutADT (C {15}) .
-
--- substitute x in  (C {y})
