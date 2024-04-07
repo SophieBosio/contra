@@ -69,7 +69,7 @@ instance HasSubstitution Constraint where
   substitution t i (t0 :=: t1) = substitution t i t0 :=: substitution t i t1
 
 emptyBindings :: Bindings
-emptyBindings = error . (++ " is unbound!")
+emptyBindings = error . (++ " is unbound or impossible to type-infer!")
 
 
 -- Annotate program
@@ -234,7 +234,10 @@ solve (constraint : rest) =
       then (if Variable' i /= t0 then Nothing else solve rest)
       else do c <- solve (substitution t0 i <$> rest)
               return $ (i, t0) : c
-    _                               -> error $ "Type constraint error: " ++ show constraint
+    _                               -> typeConstraintError constraint
+  where
+    typeConstraintError (t1 :=: t2) = error $ "Error: Expected type '" ++ show t2
+                                      ++ "' but got type '" ++ show t1 ++ "'"
 
 refine :: TypeSubstitution -> (Type -> Type)
 refine [            ] t                      = t
@@ -248,13 +251,7 @@ refine _              (ADT name)             = ADT name
 refine s              (Args ts)              = Args $ map (refine s) ts
 
 
--- Utility functions
-indices :: Type -> [Index]
-indices (Variable' i) = return i
-indices (t0  :->: t1) = indices t0 ++ indices t1
-indices (Args     ts) = concatMap indices ts
-indices _             = mempty
-
+-- Lifting (binding) variables
 liftInput :: (Pattern a, Type) -> Annotation a (Pattern Type, Bindings -> Bindings)
 liftInput (Variable x _, tau) = return (Variable x tau, bind x tau)
 liftInput (Value v, tau) =
@@ -286,6 +283,8 @@ liftFreeVariables :: [(Name, Type)] -> (Bindings -> Bindings)
 liftFreeVariables [             ] bs = bs
 liftFreeVariables ((x, t) : rest) bs = bind x t $ liftFreeVariables rest bs
 
+
+-- Alpha renaming
 alpha :: Index -> (Type -> (Index, Type))
 alpha i t =
   (if null (indices t)
@@ -306,6 +305,14 @@ alphaDef :: Index -> Constructor -> (Index, Constructor)
 alphaDef i (Constructor c cs) = second (Constructor c)
                                   (foldr (\t (j, ts) ->
                                           second (: ts) (alpha j t)) (i, []) cs)
+
+
+-- Utility functions
+indices :: Type -> [Index]
+indices (Variable' i) = return i
+indices (t0  :->: t1) = indices t0 ++ indices t1
+indices (Args     ts) = concatMap indices ts
+indices _             = mempty
 
 returnType :: Type -> Type
 returnType (_ :->: t2) = returnType t2
