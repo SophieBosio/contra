@@ -71,17 +71,18 @@ typecheck :: Program Info -> IO (Program Type)
 typecheck = return . inferProgram
 
 ast :: Program Type -> IO ()
-ast p = print $ programAST p
+ast program = print $ programAST program
 
 repl :: Program Type -> IO ()
-repl p = putStrLnGreen "Contra REPL" >> evalLoop p
+repl program = putStrLnGreen "-*- Contra: Fired up the REPL! -*-" >>
+               evalLoop program
 
 execute :: Program Type -> IO ()
 execute program = print $ runMain program
 
 checkProperties :: Program Type -> IO ()
 checkProperties program =
-  do putStrLn "--- Contra: Checking properties ---"
+  do putStrLn "-*- Contra: Checking properties -*-"
      check program
 
 
