@@ -65,7 +65,7 @@ partial ns (Application t1@(Pattern (Variable x _)) t2 a) =
        Just  s -> return s -- Already specialised
        Nothing -> if canonical t2'
                      then do t1' <- partial ns t1
-                             f <- function t1'
+                             f   <- function t1'
                              specialised <- partial ns (f t2')
                              bind x' specialised
                              return specialised
@@ -209,11 +209,9 @@ replaceWithIn' _ _ p = p
 
 -- Utility
 function :: Show a => Term a -> PartialState a (Term a -> Term a)
-function (Lambda v@(Variable _ _) t _) =
-  do notAtTopLevel v
-     return $ substitute v t
-function (Lambda p@(PConstructor {}) t _) =
-  return $ substitute p t
+function (Lambda p t _) =
+  do notAtTopLevel p
+     return $ substitute p t
 function t = error $ "expected a function, but got " ++ show t
 
 notAtTopLevel :: Pattern a -> PartialState a ()

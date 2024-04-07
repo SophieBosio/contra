@@ -74,7 +74,7 @@ evaluatePattern (Value v) = evaluateValue v
 evaluatePattern (Variable x _) =
   do program <- ask
      case map snd $ filter ((== x) . fst) (functions program ++ properties program) of
-       [ ] -> error $ "Unbound variable " ++ x
+       [ ] -> error $ "Unbound variable " ++ x ++ "!"
        [t] -> evaluate t -- Disallow shadowing at top-level
        _   -> error $ "Ambiguous bindings for " ++ x
 evaluatePattern (List ps a) =
@@ -107,11 +107,9 @@ boolean (Pattern (Value (Boolean b _))) = return b
 boolean t = error $ "Expected a boolean value, but got a " ++ show t
 
 function :: Show a => Term a -> Runtime a (Term a -> Term a)
-function (Lambda v@(Variable _ _) t _) =
-  do notAtTopLevel v
-     return $ substitute v t
-function (Lambda p@(PConstructor {}) t _) =
-  return $ substitute p t
+function (Lambda p t _) =
+  do notAtTopLevel p
+     return $ substitute p t
 function t = error $ "Expected a function, but got a " ++ show t
 
 notAtTopLevel :: Pattern a -> Runtime a ()
