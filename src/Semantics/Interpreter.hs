@@ -25,6 +25,8 @@ evaluate (Pattern p) = evaluatePattern p
 evaluate (TConstructor c ts a) =
   do ts' <- mapM evaluate ts
      return $ strengthenIfPossible c ts' a
+evaluate (Lambda p t0 a) =
+  return $ Lambda p t0 a
 evaluate (Let p t0 t1 _) =
   do notAtTopLevel p
      t0' <- evaluate t0
@@ -63,7 +65,6 @@ evaluate (Equal t0 t1 a) =
 evaluate (Not t0 a) =
   do b <- evaluate t0 >>= boolean
      return $ Pattern $ Value $ Boolean (not b) a
-evaluate t = error $ "Malformed term '" ++ show t ++ "'."
 -- evaluate (Rec x t0 a) =
 --   do notAtTopLevel (x, a)
 --      evaluate $ substitute x t0 (Rec x t0 a)
