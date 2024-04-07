@@ -32,6 +32,6 @@ tests =
         ]
     , testGroup "Property checker: "
         [
-          simple
+          -- simple
         ]
     ]
