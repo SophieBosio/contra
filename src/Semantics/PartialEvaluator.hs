@@ -10,32 +10,32 @@ import Data.Hashable
 
 
 -- Abbreviations
-type Environment  a = Program a
-type PartialState a = StateT (Environment a) (Reader (Environment a))
+type Environment  = Program Type
+type PartialState = StateT Environment (Reader Environment)
 
 
 -- Export
-partiallyEvaluate :: (Show a, Eq a) => Program a -> (Term a -> (Term a, Program a))
+partiallyEvaluate :: Program Type -> (Term Type -> (Term Type, Program Type))
 partiallyEvaluate p t =
   let (specialised, residual) = runReader (runStateT (partial [] t) p) p
   in  (specialised, residual)
 
 
 -- Memoisation
-addSpecialised :: F -> Term a -> (Environment a -> Environment a)
+addSpecialised :: F -> Term Type -> (Environment -> Environment)
 addSpecialised f t p =
   case lookup f (functions p ++ properties p) of
     Just  _ -> p
     Nothing -> Function f t End <> p
 
-bind :: F -> Term a -> PartialState a ()
+bind :: F -> Term Type -> PartialState ()
 bind f t = do
   newEnv <- lift $ local (addSpecialised f t) ask
   put newEnv
 
 
 -- Main functions
-partial :: (Show a, Eq a) => [Name] -> Term a -> PartialState a (Term a)
+partial :: [Name] -> Term Type -> PartialState (Term Type)
 partial ns (Pattern p) = partialPattern ns p
 partial ns (TConstructor c ts a) =
   do ts' <- mapM (partial ns) ts
@@ -137,7 +137,7 @@ partial ns (Not t0 a) =
 --   do notAtTopLevel (x, a)
 --      partial $ substitute x t0 (Rec x t0 a)
 
-partialPattern :: (Show a, Eq a) => [Name] -> Pattern a -> PartialState a (Term a)
+partialPattern :: [Name] -> Pattern Type -> PartialState (Term Type)
 partialPattern _ (Value v) = partialValue v
 partialPattern ns (Variable x a) =
   do program <- ask
@@ -153,7 +153,7 @@ partialPattern ns (PConstructor c ps a) =
   do ts  <- mapM (partialPattern ns) ps
      return $ strengthenIfPossible c ts a
 
-partialValue :: (Show a, Eq a) => Value a -> PartialState a (Term a)
+partialValue :: Value Type -> PartialState (Term Type)
 partialValue v = return $ Pattern $ Value v
 
 
@@ -208,13 +208,13 @@ replaceWithIn' _ _ p = p
 
 
 -- Utility
-function :: Show a => Term a -> PartialState a (Term a -> Term a)
+function :: Show a => Term a -> PartialState (Term a -> Term a)
 function (Lambda p t _) =
   do notAtTopLevel p
      return $ substitute p t
 function t = error $ "expected a function, but got " ++ show t
 
-notAtTopLevel :: Pattern a -> PartialState a ()
+notAtTopLevel :: Pattern a -> PartialState ()
 notAtTopLevel (Variable x _) =
   do program <- ask
      when (x `elem` (fst <$> functions program)) $

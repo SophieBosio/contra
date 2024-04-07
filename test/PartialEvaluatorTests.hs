@@ -19,14 +19,14 @@ partialEvaluatorTests =
 
 
 -- Helpers
-evaluateToSameTerm :: (Show a, Eq a) => Program a -> Term a -> Assertion
+evaluateToSameTerm :: Program Type -> Term Type -> Assertion
 evaluateToSameTerm p t =
   let ti       = normalise         p  t  in
   let (tp, pp) = partiallyEvaluate p  t  in
   let tip      = normalise         pp tp in
     assertBool "Should have evaluated to same term" (ti == tip)
 
-evaluateToDifferentTerm :: (Show a, Eq a) => Program a -> Term a -> Assertion
+evaluateToDifferentTerm :: Program Type -> Term Type -> Assertion
 evaluateToDifferentTerm p t =
   let ti       = normalise         p  t  in
   let (tp, pp) = partiallyEvaluate p  t  in
@@ -41,7 +41,7 @@ parseAndStrip filePath =
        Left  _ -> error $ "Parsing error in program " ++ filePath
        Right p -> return $ void p
 
-programTestOK :: (Show a, Eq a) => (Program a, Term a, Term a) -> Assertion
+programTestOK :: (Program Type, Term Type, Term Type) -> Assertion
 programTestOK (p, t, e) =
   assertEqual ""
     e (fst $ partiallyEvaluate p t)
@@ -135,16 +135,3 @@ e1 =
       (Pattern (Variable "x" ()))
     ())
   ()
-
--- TODO: Test proper inlining of nested function calls
-p2 :: Program ()
--- Check simpleAdd.con
-p2 = undefined
-
-t2 :: Term ()
--- preconditionProp
-t2 = undefined
-
-e2 :: Term ()
--- properly inlined, with all lambdas outside
-e2 = undefined
