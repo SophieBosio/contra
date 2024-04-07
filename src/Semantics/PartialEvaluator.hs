@@ -45,17 +45,17 @@ partial ns (Lambda p t0 a) =
      let (ns', alphaP, alphaT0) = alpha fvs ns p t0
      t0' <- partial ns' alphaT0
      return $ Lambda alphaP t0' a
-partial ns (Let p t0 t1 a) =
+partial ns (Let p t1 t2 a) =
   do notAtTopLevel p
      t'  <- partialPattern ns p
-     t0' <- partial ns t0
+     t1' <- partial ns t1
      let p' = strengthenToPattern t'
-     if canonical t0'
-       then case patternMatch p' t0' of
-         MatchBy u -> partial ns (applyTransformation u t1)
+     if canonical t1'
+       then case patternMatch p' t1' of
+         MatchBy u -> partial ns (applyTransformation u t2)
          NoMatch   -> error $ "Couldn't unify '" ++ show p ++
-                              "' against '" ++ show t0 ++ "'."
-       else return $ Let p' t0' t1 a
+                              "' against '" ++ show t1 ++ "'."
+       else return $ Let p' t1' t2 a
 -- Specialise named function
 partial ns (Application t1@(Pattern (Variable x _)) t2 a) =
   do t2' <- partial ns t2

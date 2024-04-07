@@ -27,13 +27,13 @@ evaluate (TConstructor c ts a) =
      return $ strengthenIfPossible c ts' a
 evaluate (Lambda p t0 a) =
   return $ Lambda p t0 a
-evaluate (Let p t0 t1 _) =
+evaluate (Let p t1 t2 _) =
   do notAtTopLevel p
-     t0' <- evaluate t0
-     case patternMatch p t0' of
-       MatchBy u -> evaluate (applyTransformation u t1)
+     t1' <- evaluate t1
+     case patternMatch p t1' of
+       MatchBy u -> evaluate (applyTransformation u t2)
        NoMatch   -> error $ "Couldn't unify '" ++ show p ++
-                            "' against '" ++ show t0 ++ "'."
+                            "' against '" ++ show t1 ++ "'."
 evaluate (Application t1 t2 _) =
   do f <- evaluate t1 >>= function
      x <- evaluate t2
