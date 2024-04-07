@@ -100,11 +100,11 @@ mainFunction End = error "No main function found."
 
 number :: (Show a, Monad m) => Term a -> m Integer
 number (Pattern (Value (Number n _))) = return n
-number t = error $ "Expected an integer, but got a " ++ show t
+number t = error $ "Expected an integer, but got the term '" ++ show t ++ "'"
 
 boolean :: (Show a, Monad m) => Term a -> m Bool
 boolean (Pattern (Value (Boolean b _))) = return b
-boolean t = error $ "Expected a boolean value, but got a " ++ show t
+boolean t = error $ "Expected a boolean, but got the term '" ++ show t ++ "'"
 
 function :: Show a => Term a -> Runtime a (Term a -> Term a)
 function (Lambda p t _) =
