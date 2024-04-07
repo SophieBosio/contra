@@ -56,7 +56,7 @@ partial ns (Let p t1 t2 a) =
          NoMatch   -> error $ "Couldn't unify '" ++ show p ++
                               "' against '" ++ show t1 ++ "'."
        else return $ Let p' t1' t2 a
--- Specialise named function
+-- Specialise named function (denoted by a variable name)
 partial ns (Application t1@(Pattern (Variable x _)) t2 a) =
   do t2' <- partial ns t2
      env <- ask

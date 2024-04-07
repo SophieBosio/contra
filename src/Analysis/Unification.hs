@@ -123,6 +123,8 @@ instance Monoid (Substitution meta a) where
 substitutes :: Pattern a -> Pattern a -> Substitution Pattern a
 substitutes p x = Substitution $ return $ x `mapsTo` p
 
+
+-- Subsitution helpers
 substituteName :: Show a => X -> Term a -> (Term a -> Term a)
 substituteName x t v = -- computes t[v/x]
   case t of
