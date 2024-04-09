@@ -212,7 +212,7 @@ function :: Show a => Term a -> PartialState (Term a -> Term a)
 function (Lambda p t _) =
   do notAtTopLevel p
      return $ substitute p t
-function t = error $ "expected a function, but got " ++ show t
+function t = error $ "Expected a function, but got the term '" ++ show t ++ "'"
 
 notAtTopLevel :: Pattern a -> PartialState ()
 notAtTopLevel (Variable x _) =

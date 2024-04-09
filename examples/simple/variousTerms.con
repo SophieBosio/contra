@@ -45,7 +45,6 @@ and True  True  = True  .
 and True  False = False .
 and False True  = False .
 and False False = False .
-and x     y     = False .
 
 or False False = False .
 or x     y     = True  .
@@ -59,7 +58,6 @@ caseOfADT x = case x of
   ; (C {y})    -> False
   ; (D {w, z}) -> and w z
   ; u          -> True .
-
 
 numIntoADT :: Integer -> Example .
 numIntoADT x = C {x} .
