@@ -222,22 +222,23 @@ solve (constraint : rest) =
     (Args    ts)  :=: (Args    ss)  -> solve $ zipWith (:=:) ts ss ++ rest
     (ADT     x1)  :=: (ADT     x2)  ->
       if   x1 /= x2
-      then Nothing
+      then Left $ typeError (ADT x1) (ADT x2)
       else solve rest
     (Variable' i) :=: t1            ->
       if   i `elem` indices t1
-      then (if Variable' i /= t1 then Nothing else solve rest)
+      then (if Variable' i /= t1
+               then Left $ typeError (Variable' i) t1
+               else solve rest)
       else do c <- solve (substitution t1 i <$> rest)
               return $ (i, t1) : c
     t0 :=: Variable' i ->
       if   i `elem` indices t0
-      then (if Variable' i /= t0 then Nothing else solve rest)
+      then (if Variable' i /= t0
+               then Left $ typeError t0 (Variable' i)
+               else solve rest)
       else do c <- solve (substitution t0 i <$> rest)
               return $ (i, t0) : c
-    _                               -> typeConstraintError constraint
-  where
-    typeConstraintError (t1 :=: t2) = error $ "Error: Expected type '" ++ show t2
-                                      ++ "' but got type '" ++ show t1 ++ "'"
+    (t0 :=: t1)                     -> Left $ typeError t0 t1
 
 refine :: TypeSubstitution -> (Type -> Type)
 refine [            ] t                      = t
@@ -346,3 +347,7 @@ addSignatures p@(Property q t rest)  sigs =
 addSignatures (Signature x t rest) sigs = Signature x t $ addSignatures rest (x : sigs)
 addSignatures (Data      x t rest) sigs = Data      x t $ addSignatures rest sigs
 addSignatures End _ = End
+
+typeError :: Type -> Type -> TypeError
+typeError t1 t2 = "Type error: Expected term of type '" ++ show t2
+                  ++ "' but got term of type '" ++ show t1 ++ "'"

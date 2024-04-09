@@ -68,7 +68,10 @@ parse file =
        Right program  -> return program
 
 typecheck :: Program Info -> IO (Program Type)
-typecheck = return . inferProgram
+typecheck program =
+  case inferProgram program of
+    Left err -> die err
+    Right tp -> return tp
 
 ast :: Program Type -> IO ()
 ast program = print $ programAST program
