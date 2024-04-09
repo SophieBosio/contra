@@ -8,7 +8,6 @@ import Environment.ERWS
 
 import Control.Monad (zipWithM_, replicateM)
 import Control.Arrow (second)
-import Data.Maybe    (fromMaybe)
 import Data.Foldable (foldrM)
 
 -- Abbreviations
@@ -18,13 +17,15 @@ data Constraint = Type :=: Type
 type Bindings         = Mapping Name Type
 type Annotation     a = ERWS a Bindings [Constraint] Index
 type TypeSubstitution = [(Index, Type)]
+type TypeError        = String
 
 
 -- Export
-inferProgram :: Program a -> Program Type
-inferProgram program = flip addSignatures [] $
-                       refine (resolveConstraints constraints)
-                       <$> annotatedProgram
+inferProgram :: Program a -> Either TypeError (Program Type)
+inferProgram program =
+  case solve constraints of
+    Left err -> Left  err
+    Right cs -> Right $ addSignatures [] $ refine cs <$> annotatedProgram
   where
     definitions prog = functions prog ++ properties prog
     constraints = annotationConstraints ++ signatureDefinitionAccord
@@ -208,11 +209,8 @@ annotateValue (VConstructor c vs _) =
 
 
 -- Resolve constraints
-resolveConstraints :: [Constraint] -> TypeSubstitution
-resolveConstraints = fromMaybe (error "Type error occurred") . solve
-
-solve :: [Constraint] -> Maybe TypeSubstitution
-solve [                 ] = return mempty
+solve :: [Constraint] -> Either TypeError TypeSubstitution
+solve [                 ] = Right mempty
 solve (constraint : rest) =
   case constraint of
     Unit'         :=: Unit'         -> solve rest
@@ -327,26 +325,26 @@ mustReturnBool p t =
       "Type error: Property '" ++ show p ++ "'must return Boolean."
 
 
-addSignatures :: Program Type -> [Name] -> Program Type
-addSignatures p@(Function f t rest) sigs =
+addSignatures :: [Name] -> Program Type -> Program Type
+addSignatures sigs p@(Function f t rest) =
   case lookup f (signatures p) of
-    Just  _ -> Function  f t (addSignatures rest (f : sigs))
+    Just  _ -> Function  f t (addSignatures (f : sigs) rest)
     Nothing -> if f `elem` sigs
-                then Function  f t (addSignatures rest sigs)
+                then Function  f t (addSignatures sigs rest)
                 else Signature f (annotation t) $
                      Function f t $
-                     addSignatures rest (f : sigs)
-addSignatures p@(Property q t rest)  sigs =
+                     addSignatures (f : sigs) rest
+addSignatures sigs p@(Property q t rest) =
   case lookup q (signatures p) of
-    Just  _ -> Property  q t (addSignatures rest (q : sigs))
+    Just  _ -> Property  q t (addSignatures (q : sigs) rest)
     Nothing -> if q `elem` sigs
-                then Property  q t (addSignatures rest sigs)
+                then Property  q t (addSignatures sigs rest)
                 else Signature q (annotation t) $
                      Property q t $
-                     addSignatures rest (q : sigs)
-addSignatures (Signature x t rest) sigs = Signature x t $ addSignatures rest (x : sigs)
-addSignatures (Data      x t rest) sigs = Data      x t $ addSignatures rest sigs
-addSignatures End _ = End
+                     addSignatures (q : sigs) rest
+addSignatures sigs (Signature x t rest) = Signature x t $ addSignatures (x : sigs) rest
+addSignatures sigs (Data      x t rest) = Data      x t $ addSignatures sigs rest
+addSignatures _ End = End
 
 typeError :: Type -> Type -> TypeError
 typeError t1 t2 = "Type error: Expected term of type '" ++ show t2
