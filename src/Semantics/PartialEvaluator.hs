@@ -79,16 +79,17 @@ partial ns (Application t1 t2 a) =
        then do f <- function t1'
                partial ns (f t2')
        else return $ Application t1' t2' a
--- TODO: Eliminate unreachable paths in Case statement
 partial ns (Case t0 ts a) =
   do v <- partial ns t0
      if canonical v
        then do (u, t) <- firstMatch (strengthenToPattern v) ts
                partial ns $ applyTransformation u t
        else do alts   <- mapM (partial ns . weakenToTerm . fst) ts
-               let alts' = map strengthenToPattern alts
                bodies <- mapM (partial ns . snd) ts
-               return $ Case v (zip alts' bodies) a
+               let alts' = map strengthenToPattern alts
+               let cases = zip alts' bodies
+               let ts'   = eliminateUnreachable (strengthenToPattern v) cases
+               return $ Case v ts' a
 partial ns (Plus t1 t2 a) =
   do t1' <- partial ns t1
      t2' <- partial ns t2
@@ -205,6 +206,15 @@ replaceWithIn' x x' (List ps a) =
   let ps' = map (manipulateWith (replaceWithIn x x')) ps
   in  List ps' a
 replaceWithIn' _ _ p = p
+
+
+-- Eliminating unreachable paths in case statement
+eliminateUnreachable :: Show a => Pattern a -> [(Pattern a, Term a)] -> [(Pattern a, Term a)]
+eliminateUnreachable p ts =
+  foldr (\(alt, body) ts' -> case patternMatch p (Pattern alt) of
+          NoMatch   -> ts'
+          MatchBy _ -> ts' ++ [(alt, body)]
+        ) [] ts
 
 
 -- Utility
