@@ -18,10 +18,10 @@ data SValue =
   | SBoolean SBool
   | SNumber  SInteger
   | SCtr     String [SValue]
+  | SList    [SValue]
   deriving Show
 type Bindings   = Mapping X SValue
 type Formula  a = ERSym Type Bindings a
-
 
 -- Export
 check :: Program Type -> IO ()
@@ -99,8 +99,11 @@ fresh x Boolean' =
 fresh x (Variable' _) =
   do sx <- liftSymbolic $ free x
      return $ SNumber sx
--- fresh x (t1 :->: t2) =
--- fresh x (ADT t) =
+fresh x (Args ts) = undefined
+--   do sxs <- mapM fresh ts
+--      return $ SList sxs
+fresh x (t1 :->: t2) = undefined
+fresh x (ADT t) = undefined
 --   do env <- environment
 -- To generate a fresh ADT variable, you could maybe generate a list of possible constructors + their args
 
@@ -161,6 +164,9 @@ translatePattern (Variable x _) =
 translatePattern (PConstructor c ps _) =
   do sps <- mapM translatePattern ps
      return $ SCtr c sps
+translatePattern (List ps _) =
+  do sps <- mapM translatePattern ps
+     return $ SList sps
 
 translateValue :: Value a -> Formula SValue
 translateValue (Unit      _) = return SUnit
@@ -201,15 +207,16 @@ merge b (SNumber  x) (SNumber  y) = SNumber  $ ite b x y
 merge b (SBoolean x) (SBoolean y) = SBoolean $ ite b x y
 merge b (SCtr  x xs) (SCtr  y ys)
   | x == y    = SCtr x $ mergeList b xs ys
-  | otherwise = error $ "Mismatching type constructors '"
+  | otherwise = error $ "Type mismatch between data type constructors '"
                 ++ show x ++ "' and '" ++ show y ++ "'"
+merge b (SList   xs) (SList   ys) = SList $ mergeList b xs ys
 merge _ x y = error $ "Type mismatch between symbolic values '"
               ++ show x ++ "' and '" ++ show y ++ "'"
 
 mergeList :: SBool -> [SValue] -> [SValue] -> [SValue]
 mergeList sb xs ys
   | Just b <- unliteral sb = if b then xs else ys
-  | otherwise              = error $ "Unable to merge constructor arguments '"
+  | otherwise              = error $ "Unable to merge arguments '"
                              ++ show xs ++ "' with '" ++ show ys ++ "'"
 
 
@@ -224,6 +231,8 @@ sEqual (SBoolean  b) (SBoolean  c) = SBoolean (b .== c)
 sEqual (SNumber   n) (SNumber   m) = SBoolean (n .== m)
 sEqual (SCtr   x xs) (SCtr   y ys) = SBoolean $ sAnd $ fromBool (x == y)
                                      : map truthy (zipWith sEqual xs ys)
+sEqual (SList    xs) (SList    ys) = SBoolean $ sAnd $ map truthy $
+                                                zipWith sEqual xs ys
 sEqual _             _             = SBoolean sFalse
 
 
