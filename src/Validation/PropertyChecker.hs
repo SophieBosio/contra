@@ -76,11 +76,11 @@ emptyBindings :: Bindings
 emptyBindings = error . (++ " is unbound!")
 
 liftInput :: Pattern Type -> Formula (Bindings -> Bindings)
-liftInput (Value v) = return id
+liftInput (Value _) = return id
 liftInput (Variable x tau) =
   do sx <- fresh x tau
      return (bind x sx)
-liftInput (PConstructor c ps _) =
+liftInput (PConstructor _ ps _) =
   do foldrM (\p bs' -> do b <- liftInput p
                           return (bs' . b)
             ) id ps
