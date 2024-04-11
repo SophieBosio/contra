@@ -40,11 +40,11 @@ partial ns (Pattern p) = partialPattern ns p
 partial ns (TConstructor c ts a) =
   do ts' <- mapM (partial ns) ts
      return $ strengthenIfPossible c ts' a
-partial ns (Lambda p t0 a) =
+partial ns (Lambda p t a) =
   do let fvs = freeVariables' p
-     let (ns', alphaP, alphaT0) = alpha fvs ns p t0
-     t0' <- partial ns' alphaT0
-     return $ Lambda alphaP t0' a
+     let (ns', alphaP, alphaT) = alpha fvs ns p t
+     t'  <- partial ns' alphaT
+     return $ Lambda alphaP t' a
 partial ns (Let p t1 t2 a) =
   do notAtTopLevel p
      t'  <- partialPattern ns p
@@ -134,9 +134,7 @@ partial ns (Not t0 a) =
        then do b <- boolean t0'
                return $ Pattern $ Value $ Boolean (not b) a
        else return $ Not t0' a
--- partial (Rec x t0 a) =
---   do notAtTopLevel (x, a)
---      partial $ substitute x t0 (Rec x t0 a)
+-- partial (Rec x t0 a) = -- future work
 
 partialPattern :: [Name] -> Pattern Type -> PartialState (Term Type)
 partialPattern _ (Value v) = partialValue v
@@ -176,8 +174,8 @@ alpha (x:fvs) ns p t =
 -- replace x with x' in t
 replaceWithIn :: Show a => X -> X -> Term a -> Term a
 replaceWithIn x x' (Pattern     p) = Pattern $ replaceWithIn' x x' p
-replaceWithIn x x' (Lambda p t0 a) =
-  Lambda (manipulateWith (replaceWithIn x x') p) (replaceWithIn x x' t0) a
+replaceWithIn x x' (Lambda p t a) =
+  Lambda (manipulateWith (replaceWithIn x x') p) (replaceWithIn x x' t)  a
 replaceWithIn x x' (Application t1 t2 a) =
   Application (replaceWithIn x x' t1) (replaceWithIn x x' t2) a
 replaceWithIn _ _  t@(Let            {}) = t -- local scope takes precedence

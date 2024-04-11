@@ -135,7 +135,7 @@ substituteName x t v = -- computes t[v/x]
       Pattern (PConstructor c (map (manipulateWith subs) ps) a)
     TConstructor         c ts  a  -> TConstructor    c (map subs ts) a
     Lambda               p t0  a  | not (p `contains` x)
-                                  -> Lambda p        (subs t0)       a
+                                  -> Lambda p    (subs t0)           a
     Application          t1 t2 a  -> Application (subs t1) (subs t2) a
     Let                p t1 t2 a  ->
       Let p (subs t1) ((if p `contains` x then id else subs) t2)     a
@@ -148,7 +148,7 @@ substituteName x t v = -- computes t[v/x]
     Equal t0 t1  a                -> Equal (subs t0) (subs t1)       a
     Not   t0     a                -> Not   (subs t0)                 a
     _                             -> t
-    -- Rec  y t1    a | x /= y  -> Rec y (subs t1)                 a
+    -- Rec  p t1 a -- future work
   where
     subs = flip (substituteName x) v
 
@@ -162,9 +162,9 @@ validateUnifiers us
 freeVariables :: Term a -> [Name]
 freeVariables (Pattern           p) = freeVariables' p
 freeVariables (TConstructor _ ts _) = concatMap freeVariables ts
-freeVariables (Lambda       x t0 _) =
+freeVariables (Lambda       x t _) =
   let bound = freeVariables' x
-  in  [ y | y <- freeVariables t0, y `notElem` bound ]
+  in  [ y | y <- freeVariables t, y `notElem` bound ]
 freeVariables (Application t1 t2 _) = freeVariables t1 ++ freeVariables t2
 freeVariables (Let       x t1 t2 _) =
   let bound = freeVariables' x

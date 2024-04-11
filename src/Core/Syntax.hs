@@ -19,8 +19,6 @@ type T0   a = Term    a
 type T1   a = Term    a
 type T2   a = Term    a
 type P0   a = Pattern a
-type P1   a = Pattern a
-type P2   a = Pattern a
 
 type Alt  a = Pattern a  -- Case alternative
 type Body a = Term    a  -- Case alternative body
@@ -151,7 +149,7 @@ class Annotated term where
 instance Annotated Term where
   annotations (Pattern           p) = annotations p
   annotations (TConstructor _ ts a) = a : concatMap annotations ts
-  annotations (Lambda _ t0       a) = a : annotations t0
+  annotations (Lambda _ t        a) = a : annotations t
   annotations (Let    _    t1 t2 a) = a : ([t1, t2]     >>= annotations)
   annotations (Application t1 t2 a) = a : ([t1, t2]     >>= annotations)
   annotations (Case     t0 ts    a) = a : annotations t0
@@ -164,7 +162,7 @@ instance Annotated Term where
   annotations (Equal    t0 t1    a) = a : ([t0, t1]     >>= annotations)
   annotations (Not      t0       a) = a : annotations t0
   annotation  t                     = head $ annotations t
-  -- annotations (Rec    _ t0       a) = a : annotations t0
+  -- annotations (Rec    _ t0       a) = a : annotations t0 -- future work
 
 instance Annotated Pattern where
   annotations (Value              v) = annotations v
@@ -201,15 +199,15 @@ instance Eq Constructor where
   Constructor c cs == Constructor d ds = c == d && and (zipWith (==) cs ds)
 
 instance (Eq a) => Eq (Term a) where
-  (Pattern     p) == (Pattern       q) = p == q
-  (Plus  t0 t1 a) == (Plus  t0' t1' b) = a == b && t0 == t0' && t1 == t1'
-  (Minus t0 t1 a) == (Minus t0' t1' b) = a == b && t0 == t0' && t1 == t1'
-  (Lt    t0 t1 a) == (Lt    t0' t1' b) = a == b && t0 == t0' && t1 == t1'
-  (Gt    t0 t1 a) == (Gt    t0' t1' b) = a == b && t0 == t0' && t1 == t1'
-  (Equal t0 t1 a) == (Equal t0' t1' b) = a == b && t0 == t0' && t1 == t1'
-  (Not   t0    a) == (Not   t0'     b) = a == b && t0 == t0'
-  (Lambda x t0 a) == (Lambda  y t0' b) = x == y &&  a == b   && t0 == t0'
-  (Let x t0 t1 a) == (Let y t0' t1' b) = x == y &&  a == b   &&
+  (Pattern      p) == (Pattern       q) = p == q
+  (Plus   t0 t1 a) == (Plus  t0' t1' b) = a == b && t0 == t0' && t1 == t1'
+  (Minus  t0 t1 a) == (Minus t0' t1' b) = a == b && t0 == t0' && t1 == t1'
+  (Lt     t0 t1 a) == (Lt    t0' t1' b) = a == b && t0 == t0' && t1 == t1'
+  (Gt     t0 t1 a) == (Gt    t0' t1' b) = a == b && t0 == t0' && t1 == t1'
+  (Equal  t0 t1 a) == (Equal t0' t1' b) = a == b && t0 == t0' && t1 == t1'
+  (Not    t0    a) == (Not   t0'     b) = a == b && t0 == t0'
+  (Lambda x  t  a) == (Lambda y  t'  b) = x == y &&  a == b   && t  == t'
+  (Let  x t0 t1 a) == (Let y t0' t1' b) = x == y &&  a == b   &&
                                         t0 == t0' && t1 == t1'
   (Application t1 t2 a) == (Application t1' t2' b) =
     a == b && t1 == t1' && t2 == t2'
@@ -362,7 +360,7 @@ instance Show (Term a) where
   show (Pattern               p) = show p
   show (TConstructor c  ts    _) = c ++
     " {" ++ unwords (map show ts) ++ "}"
-  show (Lambda       x  t0    _) = parens $ "\\" ++ show x ++ " -> " ++ show t0
+  show (Lambda       x  t     _) = parens $ "\\" ++ show x ++ " -> " ++ show t
   show (Let          x  t1 t2 _) = "let " ++ show x ++ " = " ++ show t1 ++
     " in " ++ show  t2
   show (Application     t1 t2 _) = show t1 ++ " " ++ parens (show t2)

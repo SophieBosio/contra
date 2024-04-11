@@ -25,8 +25,8 @@ evaluate (Pattern p) = evaluatePattern p
 evaluate (TConstructor c ts a) =
   do ts' <- mapM evaluate ts
      return $ strengthenIfPossible c ts' a
-evaluate (Lambda p t0 a) =
-  return $ Lambda p t0 a
+evaluate (Lambda p t a) =
+  return $ Lambda p t a
 evaluate (Let p t1 t2 _) =
   do notAtTopLevel p
      t1' <- evaluate t1
@@ -65,9 +65,7 @@ evaluate (Equal t0 t1 a) =
 evaluate (Not t0 a) =
   do b <- evaluate t0 >>= boolean
      return $ Pattern $ Value $ Boolean (not b) a
--- evaluate (Rec x t0 a) =
---   do notAtTopLevel (x, a)
---      evaluate $ substitute x t0 (Rec x t0 a)
+-- evaluate (Rec x t0 a) = -- future work
 
 evaluatePattern :: (Show a, Eq a) => Pattern a -> Runtime a (Term a)
 evaluatePattern (Value v) = evaluateValue v
@@ -75,7 +73,8 @@ evaluatePattern (Variable x _) =
   do program <- ask
      case map snd $ filter ((== x) . fst) (functions program ++ properties program) of
        [ ] -> error $ "Unbound variable " ++ x ++ "!"
-       [t] -> evaluate t -- Disallow shadowing at top-level
+       [t] -> evaluate t
+       -- Disallow shadowing at top-level
        _   -> error $ "Ambiguous bindings for " ++ x
 evaluatePattern (List ps a) =
   do ts <- mapM evaluatePattern ps

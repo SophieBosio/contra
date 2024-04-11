@@ -109,11 +109,11 @@ annotate (TConstructor c ts _) =
      cs  <- constructorTypes env c
      zipWithM_ hasType ts' cs
      return $ strengthenIfPossible c ts' (ADT adt)
-annotate (Lambda p t0 _) =
+annotate (Lambda p t _) =
   do tau <- fresh
      (p', bs) <- liftInput (p, tau)
-     t0' <- local bs $ annotate t0
-     return $ Lambda p' t0' (tau :->: annotation t0')
+     t'  <- local bs $ annotate t
+     return $ Lambda p' t' (tau :->: annotation t')
 annotate (Let p t1 t2 _) =
   do t1' <- annotate t1
      let tau = annotation t1'
@@ -134,7 +134,7 @@ annotate (Case t0 ts _) =
      t0'  <- annotate t0
      t0' `hasType` tau0
      ts'  <- mapM (\(alt, body) -> do (alt', bs) <- liftInput (alt, tau0)
-                                      body'      <- local bs $ annotate body
+                                      body'        <- local bs $ annotate body
                                       body' `hasType` tau1
                                       return (alt', body')
                   ) ts
