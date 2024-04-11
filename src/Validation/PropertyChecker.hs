@@ -113,17 +113,17 @@ liftInput (List ps _) =
                           return (bs' . b)
             ) id ps
 
-liftInputVars :: Term Type -> Formula (Term Type, Bindings -> Bindings)
-liftInputVars (Lambda p t _) =
+liftLambdaInputs :: Term Type -> Formula (Term Type, Bindings -> Bindings)
+liftLambdaInputs (Lambda p t _) =
   do bs <- liftInput p
      return (t, bs)
-liftInputVars t = return (t, id)
+liftLambdaInputs t = return (t, id)
 
 
 -- Constraint generation
 formula :: Term Type -> Formula SValue
 formula prop =
-  do (prop', bs) <- liftInputVars prop
+  do (prop', bs) <- liftLambdaInputs prop
      local bs $ translate prop'
 
 translate :: Term Type -> Formula SValue
