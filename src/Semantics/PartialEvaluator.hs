@@ -208,11 +208,11 @@ replaceWithIn' _ _ p = p
 
 -- Eliminating unreachable paths in case statement
 eliminateUnreachable :: Show a => Pattern a -> [(Pattern a, Term a)] -> [(Pattern a, Term a)]
-eliminateUnreachable p ts =
+eliminateUnreachable p =
   foldr (\(alt, body) ts' -> case patternMatch p (Pattern alt) of
           NoMatch   -> ts'
           MatchBy _ -> ts' ++ [(alt, body)]
-        ) [] ts
+        ) []
 
 
 -- Utility
