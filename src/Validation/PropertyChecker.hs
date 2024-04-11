@@ -7,6 +7,7 @@ import Semantics.PartialEvaluator (partiallyEvaluate)
 import Environment.Environment
 import Environment.ERSym
 
+import Data.Foldable (foldrM)
 import Control.Monad (foldM_, liftM2)
 import Control.Arrow ((***))
 import Data.SBV
@@ -82,6 +83,20 @@ liftInputVars (Lambda (PConstructor _ ps _) t _) =
   do mapM_ (liftInputVars . weakenToTerm) ps
      liftInputVars t
 liftInputVars _ = return ()
+
+liftInput :: Pattern Type -> Formula (Bindings -> Bindings)
+liftInput (Value v) = return id
+liftInput (Variable x tau) =
+  do sx <- fresh x tau
+     return (bind x sx)
+liftInput (PConstructor c ps _) =
+  do foldrM (\p bs' -> do b <- liftInput p
+                          return (bs' . b)
+            ) id ps
+liftInput (List ps _) =
+  do foldrM (\p bs' -> do b <- liftInput p
+                          return (bs' . b)
+            ) id ps
 
 
 -- Bindings
