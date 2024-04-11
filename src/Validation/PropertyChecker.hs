@@ -75,15 +75,6 @@ realise sv =
 emptyBindings :: Bindings
 emptyBindings = error . (++ " is unbound!")
 
-liftInputVars :: Term Type -> Formula ()
-liftInputVars (Lambda (Variable x tau) t _) =
-  do sx <- fresh x tau
-     local (bind x sx) $ liftInputVars t
-liftInputVars (Lambda (PConstructor _ ps _) t _) =
-  do mapM_ (liftInputVars . weakenToTerm) ps
-     liftInputVars t
-liftInputVars _ = return ()
-
 liftInput :: Pattern Type -> Formula (Bindings -> Bindings)
 liftInput (Value v) = return id
 liftInput (Variable x tau) =
@@ -97,6 +88,12 @@ liftInput (List ps _) =
   do foldrM (\p bs' -> do b <- liftInput p
                           return (bs' . b)
             ) id ps
+
+liftInputVars :: Term Type -> Formula (Term Type, Bindings -> Bindings)
+liftInputVars (Lambda p t _) =
+  do bs <- liftInput p
+     return (t, bs)
+liftInputVars t = return (t, id)
 
 
 -- Bindings
@@ -125,7 +122,9 @@ fresh x (ADT t) = undefined
 
 -- Constraint generation
 formula :: Term Type -> Formula SValue
-formula p = liftInputVars p >> translate p
+formula prop =
+  do (prop', bs) <- liftInputVars prop
+     local bs $ translate prop'
 
 translate :: Term Type -> Formula SValue
 translate (Pattern    p) = translatePattern p
