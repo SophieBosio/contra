@@ -71,6 +71,30 @@ realise sv =
                     ++ show other
 
 
+-- Bindings
+bind :: X -> SValue -> X `MapsTo` SValue
+bind x tau look y = if x == y then tau else look y
+
+fresh :: X -> Type -> Formula SValue
+fresh _ Unit'    = return SUnit
+fresh x Integer' =
+  do sx <- liftSymbolic $ sInteger x
+     return $ SNumber sx
+fresh x Boolean' =
+  do sx <- liftSymbolic $ sBool x
+     return $ SBoolean sx
+fresh x (Variable' _) =
+  do sx <- liftSymbolic $ free x
+     return $ SNumber sx
+fresh x (Args ts) = undefined
+--   do sxs <- mapM fresh ts
+--      return $ SList sxs
+fresh x (t1 :->: t2) = undefined
+fresh x (ADT t) = undefined
+--   do env <- environment
+-- To generate a fresh ADT variable, you could maybe generate a list of possible constructors + their args
+
+
 -- Create symbolic input variables
 emptyBindings :: Bindings
 emptyBindings = error . (++ " is unbound!")
@@ -94,30 +118,6 @@ liftInputVars (Lambda p t _) =
   do bs <- liftInput p
      return (t, bs)
 liftInputVars t = return (t, id)
-
-
--- Bindings
-bind :: X -> SValue -> X `MapsTo` SValue
-bind x tau look y = if x == y then tau else look y
-
-fresh :: X -> Type -> Formula SValue
-fresh _ Unit'    = return SUnit
-fresh x Integer' =
-  do sx <- liftSymbolic $ sInteger x
-     return $ SNumber sx
-fresh x Boolean' =
-  do sx <- liftSymbolic $ sBool x
-     return $ SBoolean sx
-fresh x (Variable' _) =
-  do sx <- liftSymbolic $ free x
-     return $ SNumber sx
-fresh x (Args ts) = undefined
---   do sxs <- mapM fresh ts
---      return $ SList sxs
-fresh x (t1 :->: t2) = undefined
-fresh x (ADT t) = undefined
---   do env <- environment
--- To generate a fresh ADT variable, you could maybe generate a list of possible constructors + their args
 
 
 -- Constraint generation
