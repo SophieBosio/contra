@@ -207,17 +207,38 @@ boolean sv           = error $ "Expected a boolean symval, but got " ++ show sv
 -- branches :: SValue -> [(SValue, SValue)] -> SValue
 -- branches _ [] = error "Non-exhaustive patterns in case statement"
 -- branches v ((p, t) : rest) =
---   merge (symLift v p) (substituteIn t v p) $ branches v rest
+--   merge (unifyAndLift v p) (substituteIn t v p) $ branches v rest
 
 
 -- SValue Unification
 -- Unify a regular pattern against a symbolic value and return the new bindings
-unifyAndLift :: Pattern Type -> SValue -> Formula (Bindings -> Bindings)
-unifyAndLift p sv = undefined
+unifyAndLift :: Pattern a -> SValue -> Formula (Bindings -> Bindings)
+unifyAndLift (Value             _) _            = return id
+unifyAndLift (Variable     x    _) sx           = return $ bind x sx
+unifyAndLift (List           ps _) (SList  svs) = unifyAndLiftMany $ zip ps svs
+unifyAndLift (PConstructor c ps _) (SCtr d svs)
+  | c == d = unifyAndLiftMany $ zip ps svs
+  | otherwise = error $
+    "Type mismatch occurred when trying to unify\n\
+    \pattern with constructor '" ++ c ++
+    "' against symbolic value with constructor '" ++ d ++ "'"
+unifyAndLift p sv = error $
+  "Unexpected type error occurred\n\
+  \trying to unify concrete pattern '"
+  ++ show p ++ "' against symbolic value '"
+  ++ show sv ++ "'"
+
+unifyAndLiftMany :: [(Pattern a, SValue)] -> Formula (Bindings -> Bindings)
+unifyAndLiftMany =
+  foldrM (\(p, sv) bs -> do b <- unifyAndLift p sv
+                            return (bs . b)
+         ) id
 
 -- substituteIn :: SValue -> SValue -> SValue -> SValue
 -- substituteIn = undefined
 
+
+-- Custom implementation of 'merge'
 merge :: SBool -> SValue -> SValue -> SValue
 merge _  SUnit        SUnit       = SUnit
 merge b (SNumber  x) (SNumber  y) = SNumber  $ ite b x y
