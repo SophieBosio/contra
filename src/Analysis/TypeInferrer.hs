@@ -111,13 +111,13 @@ annotate (TConstructor c ts _) =
      return $ strengthenIfPossible c ts' (ADT adt)
 annotate (Lambda p t _) =
   do tau <- fresh
-     (p', bs) <- liftInput (p, tau)
+     (p', bs) <- liftPattern (p, tau)
      t'  <- local bs $ annotate t
      return $ Lambda p' t' (tau :->: annotation t')
 annotate (Let p t1 t2 _) =
   do t1' <- annotate t1
      let tau = annotation t1'
-     (p', bs) <- liftInput (p, tau)
+     (p', bs) <- liftPattern (p, tau)
      t2' <- local bs $ annotate t2
      return $ Let p' t1' t2' (annotation t2')
 annotate (Application t1 t2 _) =
@@ -133,7 +133,7 @@ annotate (Case t0 ts _) =
      tau1 <- fresh
      t0'  <- annotate t0
      t0' `hasType` tau0
-     ts'  <- mapM (\(alt, body) -> do (alt', bs) <- liftInput (alt, tau0)
+     ts'  <- mapM (\(alt, body) -> do (alt', bs) <- liftPattern (alt, tau0)
                                       body'        <- local bs $ annotate body
                                       body' `hasType` tau1
                                       return (alt', body')
@@ -251,21 +251,21 @@ refine s              (Args ts)              = Args $ map (refine s) ts
 
 
 -- Lifting (binding) variables
-liftInput :: (Pattern a, Type) -> Annotation a (Pattern Type, Bindings -> Bindings)
-liftInput (Variable x _, tau) = return (Variable x tau, bind x tau)
-liftInput (Value v, tau) =
+liftPattern :: (Pattern a, Type) -> Annotation a (Pattern Type, Bindings -> Bindings)
+liftPattern (Variable x _, tau) = return (Variable x tau, bind x tau)
+liftPattern (Value v, tau) =
   do t' <- annotateValue v
      t' `hasType` tau
      let p' = strengthenToPattern t'
      return (p', id)
-liftInput (PConstructor c ps _, tau) =
+liftPattern (PConstructor c ps _, tau) =
   do env <- environment
      adt <- datatype env c
      cs  <- constructorTypes env c
      tell [tau :=: ADT adt]
      (ps', bs) <- foldrM liftSub ([], id) (zip ps cs)
      return (PConstructor c ps' tau, bs)
-liftInput (List ps _, tau) =
+liftPattern (List ps _, tau) =
   do xs <- replicateM (length ps) fresh
      (ps', bs) <- foldrM liftSub ([], id) (zip ps xs)
      tell [tau :=: Args xs]
@@ -274,7 +274,7 @@ liftInput (List ps _, tau) =
 liftSub :: (Pattern a, Type) -> ([Pattern Type], Bindings -> Bindings)
         -> Annotation a ([Pattern Type], Bindings -> Bindings)
 liftSub (p, tau) (ps, bs) =
-  do (p', b) <- liftInput (p, tau)
+  do (p', b) <- liftPattern (p, tau)
      return (ps ++ [p'], bs . b)
 
 
