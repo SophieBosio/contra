@@ -21,7 +21,7 @@ newtype Substitution meta a = Substitution { unifier :: Unifier (meta a) }
   deriving Show
 
 mapsTo :: Pattern a -> Pattern a -> Transformation Pattern a
-mapsTo x p = return (x, p)
+mapsTo p q = return (p, q)
 
 
 -- Exports
@@ -74,9 +74,9 @@ unifyPattern :: Pattern a -> Pattern a -> Substitution Pattern a
 unifyPattern (Value        v) (Value        w) = unifyValue v w
 unifyPattern v@(Variable x _) w@(Variable y _)
   | x == y    = mempty
-  | otherwise = v `substitutes` w
-unifyPattern v@(Variable x _) p                | not $ p `contains` x = p `substitutes` v
-unifyPattern p                v@(Variable x _) | not $ p `contains` x = p `substitutes` v
+  | otherwise = v `replaces` w
+unifyPattern v@(Variable x _) p                | not $ p `contains` x = p `replaces` v
+unifyPattern p                v@(Variable x _) | not $ p `contains` x = p `replaces` v
 unifyPattern (List      ps _) (List     ps' _) =
   case validateUnifiers (zipWith unifyPattern ps ps') of
     Just us -> us
@@ -120,9 +120,8 @@ instance Monoid (Substitution meta a) where
   mempty  = Substitution $ return []
   mappend = (<>)
 
--- TODO: Maybe this should be renamed to `unifiesWith` or something similar?
-substitutes :: Pattern a -> Pattern a -> Substitution Pattern a
-substitutes p x = Substitution $ return $ x `mapsTo` p
+replaces :: Pattern a -> Pattern a -> Substitution Pattern a
+replaces p q = Substitution $ return $ q `mapsTo` p
 
 
 -- Subsitution helpers
