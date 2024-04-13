@@ -75,7 +75,7 @@ evaluatePattern (Variable x _) =
        [ ] -> error $ "Unbound variable " ++ x ++ "!"
        [t] -> evaluate t
        -- Disallow shadowing at top-level
-       _   -> error $ "Ambiguous bindings for " ++ x
+       _   -> error $ "Ambiguous bindings for '" ++ x ++ "'"
 evaluatePattern (List ps a) =
   do ts <- mapM evaluatePattern ps
      let ps' = map strengthenToPattern ts

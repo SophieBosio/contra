@@ -30,7 +30,7 @@ patternMatch p q = maybe NoMatch MatchBy (unifier $ unify p q)
 
 applyTransformation :: Show a => Transformation Pattern a -> Term a -> Term a
 applyTransformation xs t =
-  foldr ((\(x, v) t' -> substitute x t' v) . second weakenToTerm) t xs
+  foldr ((\(x, s) t' -> substitute x t' s) . second weakenToTerm) t xs
 
 firstMatch :: Show a => (Monad m) => Pattern a -> [(Pattern a, Term a)]
            -> m (Transformation Pattern a, Term a)
@@ -41,7 +41,7 @@ firstMatch v ((p, t) : rest) =
        MatchBy u -> return (u, t)
 
 -- 'substitute p t s' computes t[s/p]
--- I.e., the term t with the term s instead of the pattern p
+-- I.e., substitute all occurrences of pattern p in term t with term s
 substitute :: Show a => Pattern a -> Term a -> (Term a -> Term a)
 substitute (Variable     x    _) t s = substituteName x t s
 substitute (PConstructor p cs _) t (Pattern (Value (VConstructor q ds _)))
@@ -120,6 +120,7 @@ instance Monoid (Substitution meta a) where
   mempty  = Substitution $ return []
   mappend = (<>)
 
+-- TODO: Maybe this should be renamed to `unifiesWith` or something similar?
 substitutes :: Pattern a -> Pattern a -> Substitution Pattern a
 substitutes p x = Substitution $ return $ x `mapsTo` p
 
