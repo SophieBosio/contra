@@ -120,7 +120,3 @@ notAtTopLevel (Variable x _) =
 notAtTopLevel (PConstructor _ ps _) = mapM_ notAtTopLevel ps
 notAtTopLevel (List           ps _) = mapM_ notAtTopLevel ps
 notAtTopLevel _                     = return ()
-
-unificationError :: Pattern a -> Term a -> b
-unificationError p t =
-  error $ "Couldn't unify '" ++ show p ++ "' against '" ++ show t ++ "'."
