@@ -5,7 +5,7 @@ module Validation.PropertyChecker where
 import Core.Syntax
 import Semantics.PartialEvaluator (partiallyEvaluate)
 import Environment.Environment
-import Environment.ERSym
+import Environment.ERSymbolic
 
 import Data.Foldable (foldrM)
 import Control.Monad (foldM_, liftM2)
@@ -22,7 +22,7 @@ data SValue =
   | SList    [SValue]
   deriving Show
 type Bindings   = Mapping X SValue
-type Formula  a = ERSym Type Bindings a
+type Formula  a = ERSymbolic Type Bindings a
 
 -- Export
 check :: Program Type -> IO ()

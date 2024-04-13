@@ -29,7 +29,7 @@ library
       Core.Parser
       Core.Syntax
       Environment.Environment
-      Environment.ERSym
+      Environment.ERSymbolic
       Environment.ERWS
       Semantics.Interpreter
       Semantics.PartialEvaluator
