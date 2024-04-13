@@ -263,17 +263,17 @@ liftPattern (PConstructor c ps _, tau) =
      adt <- datatype env c
      cs  <- constructorTypes env c
      tell [tau :=: ADT adt]
-     (ps', bs) <- foldrM liftSub ([], id) (zip ps cs)
+     (ps', bs) <- foldrM liftMany ([], id) (zip ps cs)
      return (PConstructor c ps' tau, bs)
 liftPattern (List ps _, tau) =
   do xs <- replicateM (length ps) fresh
-     (ps', bs) <- foldrM liftSub ([], id) (zip ps xs)
+     (ps', bs) <- foldrM liftMany ([], id) (zip ps xs)
      tell [tau :=: Args xs]
      return (List ps' tau, bs)
 
-liftSub :: (Pattern a, Type) -> ([Pattern Type], Bindings -> Bindings)
-        -> Annotation a ([Pattern Type], Bindings -> Bindings)
-liftSub (p, tau) (ps, bs) =
+liftMany :: (Pattern a, Type) -> ([Pattern Type], Bindings -> Bindings)
+         -> Annotation a ([Pattern Type], Bindings -> Bindings)
+liftMany (p, tau) (ps, bs) =
   do (p', b) <- liftPattern (p, tau)
      return (ps ++ [p'], bs . b)
 
