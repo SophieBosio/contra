@@ -1,7 +1,7 @@
 module Semantics.Interpreter where
 
 import Core.Syntax
-import Analysis.Unification
+import Analysis.Unifier
 
 import Control.Monad.Reader
 

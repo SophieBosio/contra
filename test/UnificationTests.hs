@@ -1,7 +1,7 @@
 module UnificationTests where
 
 import Core.Syntax
-import Analysis.Unification
+import Analysis.Unifier
 
 import Test.Tasty
 import Test.Tasty.HUnit

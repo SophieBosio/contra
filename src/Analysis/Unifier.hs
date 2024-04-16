@@ -1,4 +1,4 @@
-module Analysis.Unification where
+module Analysis.Unifier where
 
 import Core.Syntax
 
