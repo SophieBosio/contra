@@ -36,6 +36,8 @@ library
       Semantics.REPL
       Validation.Formula
       Validation.PropertyChecker
+      Validation.SymUnifier
+      Validation.Translator
   other-modules:
       Paths_contra
   autogen-modules:
