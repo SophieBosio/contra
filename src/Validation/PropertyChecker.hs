@@ -139,7 +139,10 @@ translate (Let p t1 t2 _) =
   do t1' <- translate t1
      bs  <- unifyAndLift p t1'
      local bs $ translate t2
--- TODO: Reconsider 'translate Case' implementation
+-- translate (Case t0 ts _) =
+--   do p'  <- translate t0
+     -- basically, write a firstMatch that tries to do
+     -- unifyAndLift with the alt and p' (t0)
 -- translate (Case t0 ts _) =
 --   do t0' <- translate t0
 --      let translatePair = (translate . weakenToTerm) *** translate
