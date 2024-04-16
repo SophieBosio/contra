@@ -45,11 +45,11 @@ proveFormula f =
 
 generateFormula :: Program Type -> Term Type -> Symbolic SBool
 generateFormula program p =
-  let sValueFormula = runFormula (formula p) program emptyBindings
+  let sValueFormula = runFormula (translateToFormula p) program emptyBindings
   in  realise sValueFormula
 
 
--- Realise 'SValue' as an 'SBool'
+-- Realise 'SValue' formula as an SBV 'SBool' formula
 realise :: Symbolic SValue -> Symbolic SBool
 realise sv =
   sv >>= \case

@@ -10,8 +10,8 @@ import Data.SBV
 
 
 -- Export
-formula :: Term Type -> Formula SValue
-formula prop =
+translateToFormula :: Term Type -> Formula SValue
+translateToFormula prop =
   do (prop', bs) <- liftLambdaInputs prop
      local bs $ translate prop'
 
