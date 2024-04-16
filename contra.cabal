@@ -34,6 +34,7 @@ library
       Semantics.Interpreter
       Semantics.PartialEvaluator
       Semantics.REPL
+      Validation.Formula
       Validation.PropertyChecker
   other-modules:
       Paths_contra
