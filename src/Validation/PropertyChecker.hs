@@ -131,8 +131,10 @@ translate (Pattern    p) = translatePattern p
 translate (Lambda p t _) =
   do bs <- liftInput p
      local bs $ translate t
--- https://hackage.haskell.org/package/sbv-10.5/docs/Data-SBV.html#g:40
--- translate (Application t1 t2 _) = _
+translate (Application t1 t2 _) =
+  do t2'        <- translate t2
+     (bs, body) <- functionUnify t1 t2'
+     local bs $ translate body
 translate (Let p t1 t2 _) =
   do t1' <- translate t1
      bs  <- unifyAndLift p t1'
@@ -233,6 +235,13 @@ unifyAndLiftMany =
   foldrM (\(p, sv) bs -> do b <- unifyAndLift p sv
                             return (bs . b)
          ) id
+
+functionUnify :: Term a -> SValue -> Formula (Bindings -> Bindings, Term a)
+functionUnify (Lambda p t1 _) sv =
+  do bs <- unifyAndLift p sv
+     return (bs, t1)
+functionUnify t _ = error $ "Expected a function, but got a '" ++ show t ++
+                            "' when trying to translate a function application"
 
 -- substituteIn :: SValue -> SValue -> SValue -> SValue
 -- substituteIn = undefined
