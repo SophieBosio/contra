@@ -8,8 +8,7 @@ import Environment.ERSymbolic
 import Validation.Formula
 import Validation.Translator
 
-import Control.Monad (foldM_, liftM2)
-import Control.Arrow ((***))
+import Control.Monad (foldM_)
 import Data.SBV
 
 
