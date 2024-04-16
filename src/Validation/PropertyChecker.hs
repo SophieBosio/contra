@@ -238,7 +238,11 @@ unifyAndLiftMany =
 -- substituteIn = undefined
 
 
--- Custom implementation of 'merge'
+-- SValues are 'Mergeable'
+-- This means we can use SBV's if-then-else implementation, called 'ite'
+instance Mergeable SValue where
+  symbolicMerge = const merge
+
 merge :: SBool -> SValue -> SValue -> SValue
 merge _  SUnit        SUnit       = SUnit
 merge b (SNumber  x) (SNumber  y) = SNumber  $ ite b x y
