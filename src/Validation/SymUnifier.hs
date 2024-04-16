@@ -4,7 +4,6 @@ import Core.Syntax
 import Validation.Formula
 
 import Data.Foldable (foldrM)
-import Data.SBV
 
 -- SValue Unification
 -- Unify a regular pattern against a symbolic value and return the new bindings
@@ -41,3 +40,6 @@ functionUnify t1 t2 = error $ "Error when translating the application of term '"
                            ++ show t1 ++ "' to symbolic value '" ++ show t2
                            ++ "'\n'" ++ show t1 ++ "' is not a function."
 
+
+firstMatch :: SValue -> [(Pattern a, Term a)] -> Formula (Bindings -> Bindings, Term a)
+firstMatch sv ts = undefined

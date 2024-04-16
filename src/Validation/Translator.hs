@@ -55,16 +55,10 @@ translate (Let p t1 t2 _) =
   do t1' <- translate t1
      bs  <- unifyAndLift p t1'
      local bs $ translate t2
--- translate (Case t0 ts _) =
---   do p'  <- translate t0
-     -- basically, write a firstMatch that tries to do
-     -- unifyAndLift with the alt and p' (t0)
--- translate (Case t0 ts _) =
---   do t0' <- translate t0
---      let translatePair = (translate . weakenToTerm) *** translate
---      let ts' = map translatePair ts
---      ts'' <- mapM (uncurry (liftM2 (,))) ts'
---      return $ branches t0' ts''
+translate (Case t0 ts _) =
+  do sp      <- translate t0
+     (bs, t) <- firstMatch sp ts
+     local bs $ translate t
 translate (TConstructor c ts _) =
   do sts <- mapM translate ts
      return $ SCtr c sts
