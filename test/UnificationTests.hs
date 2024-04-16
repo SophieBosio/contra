@@ -5,7 +5,6 @@ import Analysis.Unifier
 
 import Test.Tasty
 import Test.Tasty.HUnit
-import Control.Monad (void)
 
 
 -- Export

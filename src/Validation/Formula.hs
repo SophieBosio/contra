@@ -24,6 +24,7 @@ type Formula  a = ERSymbolic Type Bindings a
 -- Symbolic equality
 truthy :: SValue -> SBool
 truthy (SBoolean b) = b
+truthy  SUnit       = sTrue
 truthy v = error $ "Expected a symbolic boolean value, but got " ++ show v
 
 sEqual :: SValue -> SValue -> SValue
@@ -61,7 +62,7 @@ mergeList sb xs ys
                              ++ show xs ++ "' with '" ++ show ys ++ "'"
 
 
--- Monad operations: Binding variables and generating fresh symbolic variables
+-- Binding and generating fresh symbolic variables
 bind :: X -> SValue -> X `MapsTo` SValue
 bind x tau look y = if x == y then tau else look y
 
@@ -77,8 +78,6 @@ fresh x (Variable' _) =
   do sx <- liftSymbolic $ free x
      return $ SNumber sx
 fresh x (Args ts) = undefined
---   do sxs <- mapM fresh ts
---      return $ SList sxs
 fresh x (t1 :->: t2) = undefined
 fresh x (ADT t) = undefined
 --   do env <- environment
