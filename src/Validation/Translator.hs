@@ -53,7 +53,7 @@ translate (Application t1 t2 _) =
      local bs $ translate body
 translate (Let p t1 t2 _) =
   do t1' <- translate t1
-     bs  <- unifyAndLift p t1'
+     bs  <- symUnify p t1'
      local bs $ translate t2
 translate (Case t0 ts _) =
   do sp      <- translate t0
