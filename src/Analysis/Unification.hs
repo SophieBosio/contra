@@ -42,6 +42,7 @@ firstMatch v ((p, t) : rest) =
 
 -- 'substitute p t s' computes t[s/p]
 -- I.e., substitute all occurrences of pattern p in term t with term s
+-- TODO: The three 'substitute' cases for Constructors should be pretty easy to refactor
 substitute :: Show a => Pattern a -> Term a -> (Term a -> Term a)
 substitute (Variable     x    _) t s = substituteName x t s
 substitute (PConstructor p cs _) t (Pattern (Value (VConstructor q ds _)))

@@ -203,11 +203,11 @@ translateValue (VConstructor c vs _) =
 -- Translation helpers
 numeric :: SValue -> Formula SInteger
 numeric (SNumber n) = return n
-numeric sv          = error $ "Expected a numeric symval, but got " ++ show sv
+numeric sv          = error  $ "Expected a numeric symval, but got " ++ show sv
 
 boolean :: SValue -> Formula SBool
 boolean (SBoolean b) = return b
-boolean sv           = error $ "Expected a boolean symval, but got " ++ show sv
+boolean sv           = error  $ "Expected a boolean symval, but got " ++ show sv
 
 -- branches :: SValue -> [(SValue, SValue)] -> SValue
 -- branches _ [] = error "Non-exhaustive patterns in case statement"

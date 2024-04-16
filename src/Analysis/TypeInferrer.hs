@@ -134,7 +134,7 @@ annotate (Case t0 ts _) =
      t0'  <- annotate t0
      t0' `hasType` tau0
      ts'  <- mapM (\(alt, body) -> do (alt', bs) <- liftPattern (alt, tau0)
-                                      body'        <- local bs $ annotate body
+                                      body'      <- local bs $ annotate body
                                       body' `hasType` tau1
                                       return (alt', body')
                   ) ts

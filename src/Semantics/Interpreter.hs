@@ -39,8 +39,8 @@ evaluate (Application t1 t2 _) =
      x <- evaluate t2
      evaluate (f x)
 evaluate (Case t0 ts _) =
-  do v      <- evaluate t0
-     (u, t) <- firstMatch (strengthenToPattern v) ts
+  do v       <- evaluate t0
+     (u, t)  <- firstMatch (strengthenToPattern v) ts
      evaluate $ applyTransformation u t
 evaluate (Plus t1 t2 a) =
   do m <- evaluate t1 >>= number
