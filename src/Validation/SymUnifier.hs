@@ -21,7 +21,7 @@ unifyAndLift (PConstructor c ps _) (SCtr d svs)
 unifyAndLift p sv = error $
   "Unexpected type error occurred\n\
   \trying to unify concrete pattern '"
-  ++ show p ++ "' against symbolic value '"
+  ++ show p  ++ "' against symbolic value '"
   ++ show sv ++ "'"
 
 unifyAndLiftMany :: [(Pattern a, SValue)] -> Formula (Bindings -> Bindings)
@@ -30,12 +30,14 @@ unifyAndLiftMany =
                             return (bs . b)
          ) id
 
+-- Unify the function's input pattern against the symbolic argument
+-- If there's a match, return the bindings and the body so we can translate
+-- the body wrt. the new bindings
 functionUnify :: Term a -> SValue -> Formula (Bindings -> Bindings, Term a)
 functionUnify (Lambda p t1 _) sv =
   do bs <- unifyAndLift p sv
      return (bs, t1)
-functionUnify t _ = error $ "Expected a function, but got a '" ++ show t ++
-                            "' when trying to translate a function application"
+functionUnify t1 t2 = error $ "Error when translating the application of term '"
+                           ++ show t1 ++ "' to symbolic value '" ++ show t2
+                           ++ "'\n'" ++ show t1 ++ "' is not a function."
 
--- substituteIn :: SValue -> SValue -> SValue -> SValue
--- substituteIn = undefined
