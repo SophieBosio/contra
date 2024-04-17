@@ -21,25 +21,34 @@ type Bindings   = Mapping X SValue
 type Formula  a = ERSymbolic Type Bindings a
 
 
--- Symbolic equality
-truthy :: SValue -> SBool
-truthy (SBoolean b) = b
-truthy  SUnit       = sTrue
-truthy v = error $ "Expected a symbolic boolean value, but got " ++ show v
-
-sEqual :: SValue -> SValue -> SValue
-sEqual  SUnit         SUnit        = SBoolean sTrue
-sEqual (SBoolean  b) (SBoolean  c) = SBoolean (b .== c)
-sEqual (SNumber   n) (SNumber   m) = SBoolean (n .== m)
-sEqual (SCtr   x xs) (SCtr   y ys) = SBoolean $ sAnd $ fromBool (x == y)
-                                     : map truthy (zipWith sEqual xs ys)
-sEqual (SList    xs) (SList    ys) = SBoolean $ sAnd $ map truthy $
-                                                zipWith sEqual xs ys
-sEqual _             _             = SBoolean sFalse
+-- Bind names to symbolic values
+bind :: X -> SValue -> X `MapsTo` SValue
+bind x tau look y = if x == y then tau else look y
 
 
--- SValues are 'Mergeable'
--- This means we can use SBV's if-then-else implementation, called 'ite'
+-- Create symbolic variables
+createSymbolic :: X -> Type -> Formula SValue
+createSymbolic _ Unit'    = return SUnit
+createSymbolic x Integer' =
+  do sx <- liftSymbolic $ sInteger x
+     return $ SNumber sx
+createSymbolic x Boolean' =
+  do sx <- liftSymbolic $ sBool x
+     return $ SBoolean sx
+createSymbolic x (Variable' _) =
+  do sx <- liftSymbolic $ free x
+     return $ SNumber sx
+createSymbolic x (Tuple ts) = undefined
+-- Empty: SymTuple ()
+-- Nested SymTuples
+createSymbolic x (t1 :->: t2) = undefined
+-- You have the name of the function and the program env
+createSymbolic x (ADT t) = undefined
+--   do env <- environment
+-- To generate an ADT variable, you could maybe generate a list of possible constructors + their args
+
+
+-- SValues are 'Mergeable', meaning we can use SBV's if-then-else, called 'ite'
 instance Mergeable SValue where
   symbolicMerge = const merge
 
@@ -62,27 +71,20 @@ mergeList sb xs ys
                              ++ show xs ++ "' with '" ++ show ys ++ "'"
 
 
--- Binding and generating fresh symbolic variables
-bind :: X -> SValue -> X `MapsTo` SValue
-bind x tau look y = if x == y then tau else look y
+-- SValue (symbolic) equality
+sEqual :: SValue -> SValue -> SValue
+sEqual  SUnit         SUnit        = SBoolean sTrue
+sEqual (SBoolean  b) (SBoolean  c) = SBoolean (b .== c)
+sEqual (SNumber   n) (SNumber   m) = SBoolean (n .== m)
+sEqual (SCtr   x xs) (SCtr   y ys) = SBoolean $ sAnd $ fromBool (x == y)
+                                     : map truthy (zipWith sEqual xs ys)
+sEqual (SList    xs) (SList    ys) = SBoolean $ sAnd $ map truthy $
+                                                zipWith sEqual xs ys
+sEqual _             _             = SBoolean sFalse
 
--- TODO: Rename, maybe 'goSymbolic'?
-fresh :: X -> Type -> Formula SValue
-fresh _ Unit'    = return SUnit
-fresh x Integer' =
-  do sx <- liftSymbolic $ sInteger x
-     return $ SNumber sx
-fresh x Boolean' =
-  do sx <- liftSymbolic $ sBool x
-     return $ SBoolean sx
-fresh x (Variable' _) =
-  do sx <- liftSymbolic $ free x
-     return $ SNumber sx
-fresh x (Tuple ts) = undefined
--- Empty: SymTuple ()
--- Nested SymTuples
-fresh x (t1 :->: t2) = undefined
--- You have the name of the function and the program env
-fresh x (ADT t) = undefined
---   do env <- environment
--- To generate a fresh ADT variable, you could maybe generate a list of possible constructors + their args
+
+-- Utility functions
+truthy :: SValue -> SBool
+truthy (SBoolean b) = b
+truthy  SUnit       = sTrue
+truthy v = error $ "Expected a symbolic boolean value, but got " ++ show v
