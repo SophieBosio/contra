@@ -27,6 +27,9 @@ evaluate (TConstructor c ts a) =
      return $ strengthenIfPossible c ts' a
 evaluate (Lambda p t a) =
   return $ Lambda p t a
+evaluate (Rec p t a) =
+  do notAtTopLevel p
+     evaluate $ substitute p t (Rec p t a)
 evaluate (Let p t1 t2 _) =
   do notAtTopLevel p
      t1' <- evaluate t1
@@ -65,7 +68,6 @@ evaluate (Equal t0 t1 a) =
 evaluate (Not t0 a) =
   do b <- evaluate t0 >>= boolean
      return $ Pattern $ Value $ Boolean (not b) a
--- evaluate (Rec x t0 a) = -- future work
 
 evaluatePattern :: (Show a, Eq a) => Pattern a -> Runtime a (Term a)
 evaluatePattern (Value v) = evaluateValue v
