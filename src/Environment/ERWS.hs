@@ -1,8 +1,19 @@
-module Environment.ERWS where
+{-------------------------------------------------------------------------------
 
--- Please note:
--- The author of the monad in this file is Joachim Tilsted Kristensen.
--- Sophie Bosio has only extended it and adapted it to her use case.
+  Module      : Environment.ERWS
+  Description : Environment Reader Writer State monad.
+  Copyright   : (c) 2022 Joachim Tilsted Kristensen, 2024 Sophie Adeline Solheim Bosio
+  License     : GLP-3.0
+
+  Maintainer  : sophie.bosio@outlook.com
+  Stability   : experimental
+  Portability : POSIX
+
+  -- TODO: Description of ERWS monad
+
+-------------------------------------------------------------------------------}
+
+module Environment.ERWS where
 
 import Core.Syntax
 import Environment.Environment

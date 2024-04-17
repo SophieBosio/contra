@@ -1,5 +1,32 @@
 {-# LANGUAGE FlexibleContexts, ScopedTypeVariables, TypeOperators #-}
 
+{-------------------------------------------------------------------------------
+
+  Module      : Validation.Formula
+  Description : Formula monad and SValue definition.
+  Copyright   : (c) 2024 Sophie Adeline Solheim Bosio
+  License     : GLP-3.0
+
+  Maintainer  : sophie.bosio@outlook.com
+  Stability   : experimental
+  Portability : POSIX
+
+  This file contains:
+   - Definition of SValue - middle layer between SBV and Contra values
+   - The Formula monad
+   - 'bind' for creating/updating bindings from variable names to SValues
+   - 'createSymbolic' for creating a symbolic variable from a Contra variable
+   - `Mergeable` instance for SValues
+   - Helper function 'sEqual' for comparing SValues
+
+  The Formula monad is an instantiation of the ERSymbolic monad and keeps track
+  of the following contexts:
+   - Environment : Type, which is the typed program text
+   - Reader      : Bindings, which are mappings from variable names to SValues
+   - Symbolic    : SBV's Symbolic monad, which keeps track of solver state
+
+-------------------------------------------------------------------------------}
+
 module Validation.Formula where
 
 import Core.Syntax

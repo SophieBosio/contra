@@ -1,5 +1,20 @@
 {-# LANGUAGE FlexibleContexts, ScopedTypeVariables, LambdaCase #-}
 
+{-------------------------------------------------------------------------------
+
+  Module      : Validation.PropertyChecker
+  Description : PropertyChecker for Contra.
+  Copyright   : (c) 2024 Sophie Adeline Solheim Bosio
+  License     : GLP-3.0
+
+  Maintainer  : sophie.bosio@outlook.com
+  Stability   : experimental
+  Portability : POSIX
+
+  -- TODO: Description of PropertyChecker
+
+-------------------------------------------------------------------------------}
+
 module Validation.PropertyChecker where
 
 import Core.Syntax

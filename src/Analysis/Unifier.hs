@@ -1,3 +1,31 @@
+{-------------------------------------------------------------------------------
+
+  Module      : Analysis.Unifier
+  Description : Unification algorithm for Contra.
+  Copyright   : (c) 2024 Sophie Adeline Solheim Bosio
+  License     : GLP-3.0
+
+  Maintainer  : sophie.bosio@outlook.com
+  Stability   : experimental
+  Portability : POSIX
+
+  Unification algorithm for Contra.
+
+  A PatternMatch is either unsuccessful or it is given by a Transformation
+  from 'Pattern a' to 'Pattern a'.
+
+  We find the Transformation by unifying two patterns.
+
+  The result of unification is a Substitution with a Unifier. Either a Unifier
+  doesn't exist for the two patterns, or is it a map from pattern to pattern,
+  that maps all the free variables in each pattern to a concrete pattern such
+  that the two unify.
+
+  If this Unifier exists, that constitutes our Transformation.
+
+-------------------------------------------------------------------------------}
+
+
 module Analysis.Unifier where
 
 import Core.Syntax

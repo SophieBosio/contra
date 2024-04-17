@@ -1,3 +1,22 @@
+{-------------------------------------------------------------------------------
+
+  Module      : Semantics.PartialEvaluator
+  Description : Partial evaluator for Contra.
+  Copyright   : (c) 2024 Sophie Adeline Solheim Bosio
+  License     : GLP-3.0
+
+  Maintainer  : sophie.bosio@outlook.com
+  Stability   : experimental
+  Portability : POSIX
+
+  Partial evaluator for Contra, based on online partial evaluation.
+
+  The PartialState monad keeps track of the following contexts:
+   - State  : Program Type, which is keeps track of specialised functions
+   - Reader : Program Type, which is the original, typed program text
+
+-------------------------------------------------------------------------------}
+
 module Semantics.PartialEvaluator where
 
 import Core.Syntax

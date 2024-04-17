@@ -1,5 +1,25 @@
 module Validation.Translator where
 
+{-------------------------------------------------------------------------------
+
+  Module      : Validation.Translator
+  Description : Symbolic formula translator for Contra.
+  Copyright   : (c) 2024 Sophie Adeline Solheim Bosio
+  License     : GLP-3.0
+
+  Maintainer  : sophie.bosio@outlook.com
+  Stability   : experimental
+  Portability : POSIX
+
+  The Translator is responsible for translating Contra terms into SBV formulae,
+  via SValues.
+
+  It uses the Formula monad, defined in Validation.Formula.
+
+  -- TODO: Finish Translator description
+
+-------------------------------------------------------------------------------}
+
 import Core.Syntax
 import Environment.ERSymbolic
 import Validation.Formula

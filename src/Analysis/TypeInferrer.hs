@@ -1,5 +1,42 @@
 {-# LANGUAGE TypeOperators #-}
 
+{-------------------------------------------------------------------------------
+
+  Module      : Analysis.TypeInferrer
+  Description : Type inference algorithm for Contra.
+  Copyright   : (c) 2024 Sophie Adeline Solheim Bosio
+  License     : GLP-3.0
+
+  Maintainer  : sophie.bosio@outlook.com
+  Stability   : experimental
+  Portability : POSIX
+
+  This type inference algorithm is based on De Bruijn indices and constraint
+  solving.
+
+  Terms are annotated with a type, which is either a concrete type or
+  a unification variable denoted by an index.
+  Values (literals/canonical terms) are type-annotated directly with their
+  concrete type, while Patterns and general Terms are annotated indirectly.
+
+  Either a term's type judgement rule let us decide their type by the type of
+  their subterms, or we generate fresh unification variables and add constraints
+  to them according to the type judgement rules.
+
+  Finally, we solve the constraints and replace each unification
+  variable with a concrete type. If the constraints cannot be solved,
+  we throw an error with a description of the unsatisfiable constraint.
+
+  The Annotation monad is an instantiation of the ERWS monad and keeps track
+  of the following contexts:
+   - Environment: Type, which is the typed program text - including definitions
+     of algebraic data types)
+   - Reader: Bindings, which is a mapping from variable names to types
+   - Writer: [Constraint], a list of type equality constraints
+   - State: Index, the latest unification variable index
+
+-------------------------------------------------------------------------------}
+
 module Analysis.TypeInferrer where
 
 import Core.Syntax

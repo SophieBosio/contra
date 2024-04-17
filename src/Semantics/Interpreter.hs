@@ -1,3 +1,27 @@
+{-------------------------------------------------------------------------------
+
+  Module      : Semantics.Interpreter
+  Description : Interpreter for Contra.
+  Copyright   : (c) 2024 Sophie Adeline Solheim Bosio
+  License     : GLP-3.0
+
+  Maintainer  : sophie.bosio@outlook.com
+  Stability   : experimental
+  Portability : POSIX
+
+  Interpreter for the functional language Contra.
+
+  Mostly, variables are bound directly, as in function application or
+  let-statements. Then, we can simply subsitute the variable name(s) in the
+  relevant term with the terms they are bound to.
+
+  However, we cannot do this directly for top-level bindings. That's why the
+  interpreter uses the Reader monad to access the program text.
+  With it, we can find the function/property definition bound by that name in
+  the program text and substitute the variable name for the definition.
+
+-------------------------------------------------------------------------------}
+
 module Semantics.Interpreter where
 
 import Core.Syntax

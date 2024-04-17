@@ -1,5 +1,20 @@
 module Validation.SymUnifier where
 
+{-------------------------------------------------------------------------------
+
+  Module      : Validation.SymUnifier
+  Description : Symbolic unification algorithm for Contra.
+  Copyright   : (c) 2024 Sophie Adeline Solheim Bosio
+  License     : GLP-3.0
+
+  Maintainer  : sophie.bosio@outlook.com
+  Stability   : experimental
+  Portability : POSIX
+
+  -- TODO: Description of SymUnifier
+
+-------------------------------------------------------------------------------}
+
 import Core.Syntax
 import Validation.Formula
 

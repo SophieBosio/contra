@@ -1,3 +1,24 @@
+{-------------------------------------------------------------------------------
+
+  Module      : Core.Parser
+  Description : The parser for Contra.
+  Copyright   : (c) 2024 Sophie Adeline Solheim Bosio
+  License     : GLP-3.0
+
+  Maintainer  : sophie.bosio@outlook.com
+  Stability   : experimental
+  Portability : POSIX
+
+  Parser for the functional language Contra.
+
+  The language's concrete syntax closely resembles that
+  of Haskell.
+
+  The parser is implemented with the monadic parser
+  combinator library Parsec. It is available on Hackage.
+
+-------------------------------------------------------------------------------}
+
 module Core.Parser where
 
 import Core.Syntax hiding (parens)

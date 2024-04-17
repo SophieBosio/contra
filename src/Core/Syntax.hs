@@ -1,19 +1,45 @@
 {-# LANGUAGE DeriveFunctor #-}
 
+{-------------------------------------------------------------------------------
+
+  Module      : Core.Syntax
+  Description : Abstract syntax of Contra.
+  Copyright   : (c) 2024 Sophie Adeline Solheim Bosio
+  License     : GLP-3.0
+
+  Maintainer  : sophie.bosio@outlook.com
+  Stability   : experimental
+  Portability : POSIX
+
+  The abstract syntax of the functional programming language Contra.
+
+  This is a prototype version, first published as part of
+  Sophie Bosio's MSc thesis at the University of Oslo, 2024.
+
+  Besides the abstract syntax, this file also contains functions and
+  typeclass instances pertaining to:
+   - Term & program equality
+   - Term canonicity (literals)
+   - Term annotations
+   - Pretty printing
+   - Other utility functions
+
+-------------------------------------------------------------------------------}
+
 module Core.Syntax where
 
 import Data.List (intercalate)
 
 
 -- Abbreviations
-type Index = Integer    -- Unification variable index
+type Index = Integer -- Unification variable index
 
 type Name = String
-type X    = Name    -- Variable name
-type F    = Name    -- Function name
-type P    = Name    -- Property name
-type C    = Name    -- Data constructor name
-type T    = Name    -- Data type name
+type X    = Name     -- Variable name
+type F    = Name     -- Function name
+type P    = Name     -- Property name
+type C    = Name     -- Data constructor name
+type T    = Name     -- Data type name
 
 type T0   a = Term    a
 type T1   a = Term    a

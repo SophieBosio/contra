@@ -1,3 +1,18 @@
+{-------------------------------------------------------------------------------
+
+  Module      : Environment.Environment
+  Description : Program environment definition.
+  Copyright   : (c) 2024 Sophie Adeline Solheim Bosio
+  License     : GLP-3.0
+
+  Maintainer  : sophie.bosio@outlook.com
+  Stability   : experimental
+  Portability : POSIX
+
+  -- TODO: Description of Environment
+
+-------------------------------------------------------------------------------}
+
 module Environment.Environment where
 
 import Core.Syntax

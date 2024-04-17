@@ -1,3 +1,18 @@
+{-------------------------------------------------------------------------------
+
+  Module      : Environment.ERSymbolic
+  Description : Environment Reader Symbolic monad.
+  Copyright   : (c) 2024 Sophie Adeline Solheim Bosio
+  License     : GLP-3.0
+
+  Maintainer  : sophie.bosio@outlook.com
+  Stability   : experimental
+  Portability : POSIX
+
+  -- TODO: Description of ERSymbolic monad
+
+-------------------------------------------------------------------------------}
+
 module Environment.ERSymbolic where
 
 import Core.Syntax
