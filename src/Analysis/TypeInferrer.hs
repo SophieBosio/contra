@@ -114,6 +114,11 @@ annotate (Lambda p t _) =
      (p', bs) <- liftPattern (p, tau)
      t'  <- local bs $ annotate t
      return $ Lambda p' t' (tau :->: annotation t')
+annotate (Rec   p  t  _) =
+  do tau <- fresh
+     (p', bs) <- liftPattern (p, tau)
+     t'  <- local bs $ annotate t
+     return $ Rec p' t' $ annotation t'
 annotate (Let p t1 t2 _) =
   do t1' <- annotate t1
      let tau = annotation t1'
@@ -172,10 +177,6 @@ annotate (Not t0 _) =
   do t0' <- annotate t0
      t0' `hasType` Boolean'
      return $ Not t0' Boolean'
--- annotate (Rec x t0 _) =
---   do tau <- fresh
---      t0' <- local (bind x tau) $ annotate t0
---      return $ Rec x t0' $ annotation t0'
 
 annotatePattern :: Pattern a -> Annotation a (Term Type)
 annotatePattern (Value      v) = annotateValue v
