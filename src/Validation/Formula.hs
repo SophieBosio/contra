@@ -66,6 +66,7 @@ mergeList sb xs ys
 bind :: X -> SValue -> X `MapsTo` SValue
 bind x tau look y = if x == y then tau else look y
 
+-- TODO: Rename, maybe 'goSymbolic'?
 fresh :: X -> Type -> Formula SValue
 fresh _ Unit'    = return SUnit
 fresh x Integer' =
@@ -77,8 +78,11 @@ fresh x Boolean' =
 fresh x (Variable' _) =
   do sx <- liftSymbolic $ free x
      return $ SNumber sx
-fresh x (Args ts) = undefined
+fresh x (Tuple ts) = undefined
+-- Empty: SymTuple ()
+-- Nested SymTuples
 fresh x (t1 :->: t2) = undefined
+-- You have the name of the function and the program env
 fresh x (ADT t) = undefined
 --   do env <- environment
 -- To generate a fresh ADT variable, you could maybe generate a list of possible constructors + their args

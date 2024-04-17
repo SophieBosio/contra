@@ -40,7 +40,7 @@ data Type =
   | Variable' Index
   | Type :->: Type
   | ADT  T
-  | Args [Type] -- Only used internally
+  | Tuple [Type] -- Only used internally
 
 data Constructor = Constructor C [Type]
 
@@ -191,7 +191,7 @@ equivalent Integer'     Integer'       = True
 equivalent Boolean'     Boolean'       = True
 equivalent (t0 :->: t1) (t0' :->: t1') = t0 == t0' && t1 == t1'
 equivalent (ADT      t) (ADT        s) = t == s
-equivalent (Args    ts) (Args      ss) = and $ zipWith (==) ts ss 
+equivalent (Tuple   ts) (Tuple     ss) = and $ zipWith (==) ts ss 
 equivalent _            _              = False
 
 instance Eq Constructor where
@@ -350,7 +350,7 @@ instance Show Type where
   show (Variable' i) = "V" ++ show i
   show (t0  :->: t1) = show t0 ++ " -> " ++ show t1
   show (ADT       t) = t
-  show (Args     ts) = "[" ++ intercalate ", " (map show ts) ++ "]"
+  show (Tuple     ts) = "[" ++ intercalate ", " (map show ts) ++ "]"
 
 instance Show Constructor where
   show (Constructor c []) = show c
@@ -391,7 +391,8 @@ instance Show (Value a) where
 
 -- "Direct" AST printing
 -- This is mostly here to ask the parser to write the AST for us,
--- so we can write normal programs instead of ASTs by hand to use in our tests
+-- so that for testing, we can write normal programs instead of
+-- writing ASTs by hand
 programAST :: Program Type -> String
 programAST (Signature x t rest) = "(Signature " ++ show x ++ " " ++ typeAST t
                                   ++ " " ++ programAST rest ++ ")"
@@ -478,4 +479,4 @@ typeAST Boolean'      = "Boolean'"
 typeAST (Variable' i) = "(Variable' " ++ show i ++ ")"
 typeAST (t0 :->:  t1) = "(" ++ typeAST t0 ++ " :->: " ++ typeAST t1 ++ ")"
 typeAST (ADT       t) = "(ADT " ++ t ++ ")"
-typeAST (Args     ts) = "(Args [" ++ intercalate ", " (map typeAST ts) ++ "])"
+typeAST (Tuple    ts) = "(Tuple [" ++ intercalate ", " (map typeAST ts) ++ "])"
