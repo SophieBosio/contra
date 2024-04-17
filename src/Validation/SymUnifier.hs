@@ -20,31 +20,31 @@ type Unifier = Either String Transformation
 -- SValue unification
 symUnify :: Pattern a -> SValue -> Formula Transformation
 symUnify p sv =
-  case unify p sv of
+  case sUnify p sv of
     Right bs -> return bs
     Left err -> error err
 
 
 -- Unify a regular pattern against a symbolic value and return the new bindings
-unify :: Pattern a -> SValue -> Unifier
-unify (Value             _) _            = Right id
-unify (Variable     x    _) sx           = Right $ bind x sx
-unify (List           ps _) (SList  svs) = unifyMany $ zip ps svs
-unify (PConstructor c ps _) (SCtr d svs)
-  | c == d    = unifyMany $ zip ps svs
+sUnify :: Pattern a -> SValue -> Unifier
+sUnify (Value             _) _            = Right id
+sUnify (Variable     x    _) sx           = Right $ bind x sx
+sUnify (List           ps _) (SList  svs) = sUnifyMany $ zip ps svs
+sUnify (PConstructor c ps _) (SCtr d svs)
+  | c == d    = sUnifyMany $ zip ps svs
   | otherwise = Left $
     "Type mismatch occurred when trying to unify\n\
     \pattern with constructor '" ++ c ++
     "' against symbolic value with constructor '" ++ d ++ "'"
-unify p sv = Left $
+sUnify p sv = Left $
   "Unexpected type error occurred\n\
   \trying to unify concrete pattern '"
   ++ show p  ++ "' against symbolic value '"
   ++ show sv ++ "'"
 
-unifyMany :: [(Pattern a, SValue)] -> Unifier
-unifyMany =
-  foldrM (\(p, sv) bs -> case unify p sv of
+sUnifyMany :: [(Pattern a, SValue)] -> Unifier
+sUnifyMany =
+  foldrM (\(p, sv) bs -> case sUnify p sv of
                            Right  b -> Right (bs . b)
                            Left err -> Left err
          ) id
@@ -55,7 +55,7 @@ unifyMany =
 -- the body wrt. the new bindings
 functionUnify :: Term a -> SValue -> Formula (Transformation, Term a)
 functionUnify (Lambda p t1 _) sv =
-  case unify p sv of
+  case sUnify p sv of
     Right bs  -> return (bs, t1)
     Left  err -> error err
 functionUnify t1 t2 = error $ "Error when translating the application of term '"
@@ -64,11 +64,11 @@ functionUnify t1 t2 = error $ "Error when translating the application of term '"
 
 
 -- Find the first match between a (symbolic) selector value and concrete patterns
--- in a series of case branches
+-- in a series of case branches on the form [(Pattern a, Term a)]
 firstMatch :: SValue -> [(Pattern a, Term a)] -> Formula (Transformation, Term a)
 firstMatch sv [] = error $ "Non-exhaustive patterns in case statement - "
                         ++ "no match for '" ++ show sv ++ "'"
 firstMatch sv ((p, t) : rest) =
-  case unify p sv of
+  case sUnify p sv of
     Right bs -> return (bs, t)
     Left  _  -> firstMatch sv rest
