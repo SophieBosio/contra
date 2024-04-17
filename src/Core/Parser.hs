@@ -53,7 +53,7 @@ reservedKeywords =
   , "in"
   , "adt"
   , "not"
-  -- , "rec"
+  , "rec"
   ]
 
 identHead :: Parser Char
@@ -118,9 +118,9 @@ value :: Parser (Value Info)
 value = choice $
   parens value :
   map info
-    [ Unit         <$  unit
-    , number       <&> Number
-    , boolean      <&> Boolean
+    [ Unit    <$  unit
+    , number  <&> Number
+    , boolean <&> Boolean
     ]
   ++ [ try valueConstructor ]
 
@@ -146,10 +146,10 @@ term = choice $
   ++
   map info
     [ symbol  "\\"  >> Lambda <$> pattern' <*> (arrow >> term)
+    , keyword "rec" >> Rec    <$> pattern' <*> (symbol "." >> term)
     , keyword "not" >> Not    <$> term
     , keyword "let" >> Let    <$> pattern' <*>
                        (symbol "=" >> term)  <*> (symbol "in" >> term)
-    -- , keyword "rec" >> Rec <$> identifier <*> term
     ]
 
 simpleTerm :: Parser (Term Info)
