@@ -12,7 +12,7 @@ import Data.SBV
 -- Export
 translateToFormula :: Term Type -> Formula SValue
 translateToFormula prop =
-  do (prop', bs) <- liftLambdaInputs prop
+  do (bs, prop') <- liftLambdaInputs prop
      local bs $ translate prop'
 
 
@@ -34,11 +34,11 @@ liftInput (List ps _) =
                           return (bs' . b)
             ) id ps
 
-liftLambdaInputs :: Term Type -> Formula (Term Type, Bindings -> Bindings)
+liftLambdaInputs :: Term Type -> Formula (Bindings -> Bindings, Term Type)
 liftLambdaInputs (Lambda p t _) =
   do bs <- liftInput p
-     return (t, bs)
-liftLambdaInputs t = return (t, id)
+     return (bs, t)
+liftLambdaInputs t = return (id, t)
 
 
 -- Constraint generation
