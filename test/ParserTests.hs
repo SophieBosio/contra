@@ -552,11 +552,11 @@ testFlattenProgram =
   ]
   ++
   -- Flattened
-  (map (\(file, p) -> testCase ("Parsing flattened program '" ++ file ++ "'") $
+  map (\(file, p) -> testCase ("Parsing flattened program '" ++ file ++ "'") $
        do src <- readFile file
           let ast = void <$> runParser program () file src
           let flat = flatten <$> ast
-          assertEqual "" (return p) flat))
+          assertEqual "" (return p) flat)
   [ ("examples/simple/multipleFunctionDefinitions.con",
      Signature "f" (Integer' :->: (Integer' :->: (Integer' :->: Integer'))) $
      Signature "and" (Boolean' :->: (Boolean' :->: Boolean')) $
@@ -587,31 +587,31 @@ testFlattenProgram =
                                , Variable "*c" ()
                                ] ()))
             [ (List [Value (Number 5 ()), Variable "y" (), Variable "z" ()] (),
-              (Plus
+               Plus
                (Plus
                 (Pattern (Value (Number 5 ())))
                 (Pattern (Variable "y" ()))
                 ())
                (Pattern (Variable "z" ()))
-               ()))
+               ())
             , (List [Variable "x" (), Value (Number 4 ()), Variable "z" ()] (),
-              (Minus
+               Minus
                (Minus
                 (Pattern (Variable "x" ()))
                 (Pattern (Value (Number 4 ())))
                 ())
                (Pattern (Variable "z" ()))
-               ()))
+               ())
             , (List [Variable "x" (), Variable "y" (), Value (Number 3 ())] (),
-              (Minus
+               Minus
                (Plus
                 (Pattern (Variable "x" ()))
                 (Pattern (Variable "y" ()))
                 ())
                (Pattern (Value (Number 3 ())))
-               ()))
+               ())
             , (List [Variable "x" (), Variable "y" (), Variable "z" ()] (),
-              (Plus
+               Plus
                (Plus
                 (Pattern (Variable "x" ()))
                 (Pattern (Variable "x" ()))
@@ -620,7 +620,7 @@ testFlattenProgram =
                 (Pattern (Variable "y" ()))
                 (Pattern (Variable "z" ()))
                 ())
-               ()))
+               ())
             ]
           ())
          ())
