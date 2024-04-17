@@ -47,6 +47,8 @@ translate (Pattern    p) = translatePattern p
 translate (Lambda p t _) =
   do bs <- liftInput p
      local bs $ translate t
+-- TODO: translate rec
+translate (Rec    p t _) = undefined
 translate (Application t1 t2 _) =
   do t2'        <- translate t2
      (bs, body) <- functionUnify t1 t2'
