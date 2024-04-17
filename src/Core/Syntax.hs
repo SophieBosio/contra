@@ -48,11 +48,11 @@ data Term a =
   -- Base terms:
     Pattern                     (Pattern a)
   | Lambda       (P0 a) (T0 a)            a
-  | Application         (T1 a) (T2 a)     a
+  | Rec          (P0 a) (T0 a)            a
   | Let          (P0 a) (T1 a) (T2 a)     a
+  | Application         (T1 a) (T2 a)     a
   | Case         (T0 a) [(Alt a, Body a)] a
   | TConstructor C      [Term a]          a
-  -- | Rec         X      (T0 a)            a -- Future work
   -- Utilities:
   | Plus         (T0 a) (T1 a)            a
   | Minus        (T0 a) (T1 a)            a
@@ -150,6 +150,7 @@ instance Annotated Term where
   annotations (Pattern           p) = annotations p
   annotations (TConstructor _ ts a) = a : concatMap annotations ts
   annotations (Lambda _ t        a) = a : annotations t
+  annotations (Rec    _ t        a) = a : annotations t
   annotations (Let    _    t1 t2 a) = a : ([t1, t2]     >>= annotations)
   annotations (Application t1 t2 a) = a : ([t1, t2]     >>= annotations)
   annotations (Case     t0 ts    a) = a : annotations t0
@@ -361,6 +362,7 @@ instance Show (Term a) where
   show (TConstructor c  ts    _) = c ++
     " {" ++ unwords (map show ts) ++ "}"
   show (Lambda       x  t     _) = parens $ "\\" ++ show x ++ " -> " ++ show t
+  show (Rec          x  t     _) = parens $ "rec " ++ show x ++ " . " ++ show t
   show (Let          x  t1 t2 _) = "let " ++ show x ++ " = " ++ show t1 ++
     " in " ++ show  t2
   show (Application     t1 t2 _) = show t1 ++ " " ++ parens (show t2)
@@ -406,14 +408,16 @@ programAST End = "End"
 
 termAST :: Term Type -> String
 termAST (Pattern              p) = "(Pattern " ++ patternAST p ++ ")"
-termAST (Lambda         p t tau) = "(Lambda " ++ patternAST p
+termAST (Lambda        p  t tau) = "(Lambda " ++ patternAST p
                                    ++ " " ++ termAST t
                                    ++ " " ++ typeAST tau ++ ")"
-termAST (Application  t1 t2 tau) = "(Application " ++ termAST t1
-                                   ++ " " ++ termAST t2
-                                   ++ " " ++ typeAST tau ++ ")"
+termAST (Rec           p  t tau) = "(Rec " ++ patternAST p ++ "(" ++ termAST t
+                                   ++ ") " ++ typeAST tau ++ ")"
 termAST (Let        p t1 t2 tau) = "(Let " ++ patternAST p
                                    ++ " " ++ termAST t1
+                                   ++ " " ++ termAST t2
+                                   ++ " " ++ typeAST tau ++ ")"
+termAST (Application  t1 t2 tau) = "(Application " ++ termAST t1
                                    ++ " " ++ termAST t2
                                    ++ " " ++ typeAST tau ++ ")"
 termAST (Case          t cs tau) = "(Case " ++ termAST t ++ " ["
