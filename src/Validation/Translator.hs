@@ -43,7 +43,7 @@ emptyBindings = error . (++ " is unbound!")
 liftInput :: Pattern Type -> Formula (Bindings -> Bindings)
 liftInput (Value _) = return id
 liftInput (Variable x tau) =
-  do sx <- createSymbolic x tau
+  do sx <- createSymbolic (Variable x tau)
      return (bind x sx)
 liftInput (PConstructor _ ps _) =
   do foldrM (\p bs' -> do b <- liftInput p

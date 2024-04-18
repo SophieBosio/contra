@@ -34,6 +34,7 @@ import Environment.Environment
 import Environment.ERSymbolic
 
 import Data.SBV
+import Data.Hashable
 
 
 -- Abbreviations
@@ -54,25 +55,36 @@ bind x tau look y = if x == y then tau else look y
 
 
 -- Create symbolic variables
-createSymbolic :: X -> Type -> Formula SValue
-createSymbolic _ Unit'    = return SUnit
-createSymbolic x Integer' =
+createSymbolic :: Pattern Type -> Formula SValue
+createSymbolic (Variable _ Unit')    = return SUnit
+createSymbolic (Variable x Integer') =
   do sx <- liftSymbolic $ sInteger x
      return $ SNumber sx
-createSymbolic x Boolean' =
+createSymbolic (Variable x Boolean') =
   do sx <- liftSymbolic $ sBool x
      return $ SBoolean sx
-createSymbolic x (Variable' _) =
+createSymbolic (Variable x (Variable' _)) =
   do sx <- liftSymbolic $ free x
      return $ SNumber sx
-createSymbolic x (Tuple ts) = undefined
--- Empty: SymTuple ()
--- Nested SymTuples
-createSymbolic x (t1 :->: t2) = undefined
+createSymbolic (Variable _ (Tuple [])) =
+  do return $ SList []
+createSymbolic (Variable x (Tuple ts)) =
+     -- Fabricate new name for each variable by hashing <x><type-name>
+     -- and appending the index of the variable type in the Tuple list
+  do let names = zipWith (\s i -> show (hash (x ++ show s)) ++ show i)
+                 ts
+                 [0..(length ts)]
+     let ps    = zipWith Variable names ts
+     sxs <- mapM createSymbolic ps
+     return $ SList sxs
+createSymbolic (Variable x (t1 :->: t2)) = undefined
 -- You have the name of the function and the program env
-createSymbolic x (ADT t) = undefined
+createSymbolic (Variable x (ADT t)) = undefined
 --   do env <- environment
 -- To generate an ADT variable, you could maybe generate a list of possible constructors + their args
+createSymbolic p = error $ "Unexpected request to create symbolic sub-pattern '"
+                        ++ show p ++ "'\nThis should have been handled in\n\
+                           \'liftInput', not in 'createSymbolic'"
 
 
 -- SValues are 'Mergeable', meaning we can use SBV's if-then-else, called 'ite'
