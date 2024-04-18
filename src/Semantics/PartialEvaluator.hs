@@ -78,7 +78,7 @@ partial ns (Let p t1 t2 a) =
 -- Specialise named function (denoted by a variable name)
 partial ns (Application t1@(Pattern (Variable x _)) t2 a) =
   do t2' <- partial ns t2
-     env <- ask
+     env <- get
      let x' = x ++ show t2'
      case lookup x' (functions env) of
        Just  s -> return s -- Already specialised
