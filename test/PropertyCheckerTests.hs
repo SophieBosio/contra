@@ -1,7 +1,6 @@
 module PropertyCheckerTests where
 
 import Core.Syntax
-import Semantics.PartialEvaluator
 import Validation.PropertyChecker
 
 import Test.Tasty
