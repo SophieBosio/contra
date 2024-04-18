@@ -12,8 +12,8 @@
   Partial evaluator for Contra, based on online partial evaluation.
 
   The PartialState monad keeps track of the following contexts:
-   - State  : Program Type, which is keeps track of specialised functions
-   - Reader : Program Type, which is the original, typed program text
+   - State  : Program a, which is keeps track of specialised functions
+   - Reader : Program a, which is the original program text
 
 -------------------------------------------------------------------------------}
 
@@ -29,32 +29,31 @@ import Data.Hashable
 
 
 -- Abbreviations
-type Environment  = Program Type
-type PartialState = StateT Environment (Reader Environment)
+type PartialState a = StateT (Program a) (Reader (Program a))
 
 
 -- Export
-partiallyEvaluate :: Program Type -> (Term Type -> (Term Type, Program Type))
+partiallyEvaluate :: (Show a, Eq a) => Program a -> (Term a -> (Term a, Program a))
 partiallyEvaluate p t =
   let (specialised, residual) = runReader (runStateT (partial [] t) p) p
   in  (specialised, residual)
 
 
 -- Memoisation
-addSpecialised :: F -> Term Type -> (Environment -> Environment)
+addSpecialised :: F -> Term a -> (Program a -> Program a)
 addSpecialised f t p =
   case lookup f (functions p ++ properties p) of
     Just  _ -> p
     Nothing -> Function f t End <> p
 
-bind :: F -> Term Type -> PartialState ()
+bind :: F -> Term a -> PartialState a ()
 bind f t = do
   newEnv <- lift $ local (addSpecialised f t) ask
   put newEnv
 
 
 -- Main functions
-partial :: [Name] -> Term Type -> PartialState (Term Type)
+partial :: (Show a, Eq a) => [Name] -> Term a -> PartialState a (Term a)
 partial ns (Pattern p) = partialPattern ns p
 partial ns (TConstructor c ts a) =
   do ts' <- mapM (partial ns) ts
@@ -155,8 +154,8 @@ partial ns (Not t0 a) =
        else return $ Not t0' a
 -- partial (Rec x t0 a) = -- future work
 
-partialPattern :: [Name] -> Pattern Type -> PartialState (Term Type)
-partialPattern _ (Value v) = partialValue v
+partialPattern :: (Show a, Eq a) => [Name] -> Pattern a -> PartialState a (Term a)
+partialPattern _  (Value      v) = partialValue v
 partialPattern ns (Variable x a) =
   do program <- ask
      case map snd $ filter ((== x) . fst) (functions program ++ properties program) of
@@ -171,7 +170,7 @@ partialPattern ns (PConstructor c ps a) =
   do ts  <- mapM (partialPattern ns) ps
      return $ strengthenIfPossible c ts a
 
-partialValue :: Value Type -> PartialState (Term Type)
+partialValue :: (Show a, Eq a) => Value a -> PartialState a (Term a)
 partialValue v = return $ Pattern $ Value v
 
 
@@ -235,13 +234,13 @@ eliminateUnreachable p =
 
 
 -- Utility
-function :: Show a => Term a -> PartialState (Term a -> Term a)
+function :: Show a => Term a -> PartialState a (Term a -> Term a)
 function (Lambda p t _) =
   do notAtTopLevel p
      return $ substitute p t
 function t = error $ "Expected a function, but got the term '" ++ show t ++ "'"
 
-notAtTopLevel :: Pattern a -> PartialState ()
+notAtTopLevel :: Pattern a -> PartialState a ()
 notAtTopLevel (Variable x _) =
   do program <- ask
      when (x `elem` (fst <$> functions program)) $
