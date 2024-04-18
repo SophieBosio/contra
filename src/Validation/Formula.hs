@@ -66,24 +66,25 @@ createSymbolic (Variable x Boolean') =
 createSymbolic (Variable x (Variable' _)) =
   do sx <- liftSymbolic $ free x
      return $ SNumber sx
-createSymbolic (Variable _ (Tuple [])) =
+createSymbolic (Variable _ (TypeList [])) =
   do return $ SList []
-createSymbolic (Variable x (Tuple ts)) =
+createSymbolic (Variable x (TypeList ts)) =
      -- Fabricate new name for each variable by hashing <x><type-name>
-     -- and appending the index of the variable type in the Tuple list
+     -- and appending the index of the variable type in the TypeList
   do let names = zipWith (\s i -> show (hash (x ++ show s)) ++ show i)
                  ts
                  [0..(length ts)]
      let ps    = zipWith Variable names ts
      sxs <- mapM createSymbolic ps
      return $ SList sxs
-createSymbolic (Variable x (t1 :->: t2)) = undefined
--- You have the name of the function and the program env
-createSymbolic (Variable x (ADT t)) = undefined
---   do env <- environment
+-- createSymbolic (Variable x (t1 :->: t2)) = undefined
+-- -- You have the name of the function and the program env
+-- createSymbolic (Variable x (ADT t)) = undefined
+-- --   do env <- environment
 -- To generate an ADT variable, you could maybe generate a list of possible constructors + their args
 createSymbolic p = error $ "Unexpected request to create symbolic sub-pattern '"
-                        ++ show p ++ "'\nThis should have been handled in\n\
+                        ++ show p ++ "' of type '" ++ show (annotation p) ++
+                           "'\nThis should have been handled in\n\
                            \'liftInput', not in 'createSymbolic'"
 
 

@@ -100,7 +100,7 @@ class HasSubstitution a where
 instance HasSubstitution Type where
   substitution t i (Variable' j) | i == j = t
   substitution t i (t0 :->:  t1) = substitution t i t0 :->: substitution t i t1
-  substitution t i (Tuple    ts) = Tuple $ map (substitution t i) ts
+  substitution t i (TypeList ts) = TypeList $ map (substitution t i) ts
   substitution _ _ t             = t
 
 instance HasSubstitution Constraint where
@@ -222,7 +222,7 @@ annotatePattern (Variable x _) =
 annotatePattern (List    ps _) =
   do ts  <- mapM annotatePattern ps
      let ps' = map strengthenToPattern ts
-     let tau = Tuple $ map annotation ps'
+     let tau = TypeList $ map annotation ps'
      return $ Pattern $ List ps' tau
 annotatePattern (PConstructor c ps _) =
   do env <- environment
@@ -250,16 +250,16 @@ solve :: [Constraint] -> Either TypeError TypeSubstitution
 solve [                 ] = Right mempty
 solve (constraint : rest) =
   case constraint of
-    Unit'         :=: Unit'         -> solve rest
-    Integer'      :=: Integer'      -> solve rest
-    Boolean'      :=: Boolean'      -> solve rest
-    (t0 :->: t1)  :=: (t2 :->: t3)  -> solve $ (t0 :=: t2) : (t1 :=: t3) : rest
-    (Tuple   ts)  :=: (Tuple   ss)  -> solve $ zipWith (:=:) ts ss ++ rest
-    (ADT     x1)  :=: (ADT     x2)  ->
+    Unit'          :=: Unit'         -> solve rest
+    Integer'       :=: Integer'      -> solve rest
+    Boolean'       :=: Boolean'      -> solve rest
+    (t0 :->:  t1)  :=: (t2 :->: t3)  -> solve $ (t0 :=: t2) : (t1 :=: t3) : rest
+    (TypeList ts)  :=: (TypeList ss) -> solve $ zipWith (:=:) ts ss ++ rest
+    (ADT      x1)  :=: (ADT      x2) ->
       if   x1 /= x2
       then Left $ typeError (ADT x1) (ADT x2)
       else solve rest
-    (Variable' i) :=: t1            ->
+    (Variable' i) :=: t1             ->
       if   i `elem` indices t1
       then (if Variable' i /= t1
                then Left $ typeError (Variable' i) t1
@@ -273,7 +273,7 @@ solve (constraint : rest) =
                else solve rest)
       else do c <- solve (substitution t0 i <$> rest)
               return $ (i, t0) : c
-    (t0 :=: t1)                     -> Left $ typeError t0 t1
+    (t0 :=: t1)                      -> Left $ typeError t0 t1
 
 refine :: TypeSubstitution -> (Type -> Type)
 refine [            ] t                      = t
@@ -284,7 +284,7 @@ refine _              Integer'               = Integer'
 refine _              Boolean'               = Boolean'
 refine s              (tau0 :->: tau1)       = refine s tau0 :->: refine s tau1
 refine _              (ADT name)             = ADT name
-refine s              (Tuple ts)             = Tuple $ map (refine s) ts
+refine s              (TypeList ts)          = TypeList $ map (refine s) ts
 
 
 -- Lifting (binding) variables
@@ -305,7 +305,7 @@ liftPattern (PConstructor c ps _, tau) =
 liftPattern (List ps _, tau) =
   do xs <- replicateM (length ps) fresh
      (ps', bs) <- foldrM liftMany ([], id) (zip ps xs)
-     tell [tau :=: Tuple xs]
+     tell [tau :=: TypeList xs]
      return (List ps' tau, bs)
 
 liftMany :: (Pattern a, Type) -> ([Pattern Type], Bindings -> Bindings)
@@ -331,7 +331,7 @@ alpha i t =
     increment :: Type -> Type
     increment (Variable'    j) = Variable' (i + j)
     increment (tau1 :->: tau2) = increment tau1 :->: increment tau2
-    increment (Tuple       ts) = Tuple $ map increment ts
+    increment (TypeList       ts) = TypeList $ map increment ts
     increment t'               = t'
 
 alphaADT :: Index -> [Constructor] -> (Index, [Constructor])
@@ -347,7 +347,7 @@ alphaDef i (Constructor c cs) = second (Constructor c)
 indices :: Type -> [Index]
 indices (Variable' i) = return i
 indices (t0  :->: t1) = indices t0 ++ indices t1
-indices (Tuple    ts) = concatMap indices ts
+indices (TypeList ts) = concatMap indices ts
 indices _             = mempty
 
 returnType :: Type -> Type
