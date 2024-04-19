@@ -36,31 +36,6 @@ translateToFormula prop =
      local bs $ translate prop'
 
 
--- Create symbolic input variables
-emptyBindings :: Bindings
-emptyBindings = error . (++ " is unbound!")
-
-liftInput :: Pattern Type -> Formula (Bindings -> Bindings)
-liftInput (Value _) = return id
-liftInput (Variable x tau) =
-  do sx <- createSymbolic (Variable x tau)
-     return (bind x sx)
-liftInput (PConstructor _ ps _) =
-  do foldrM (\p bs' -> do b <- liftInput p
-                          return (bs' . b)
-            ) id ps
-liftInput (List ps _) =
-  do foldrM (\p bs' -> do b <- liftInput p
-                          return (bs' . b)
-            ) id ps
-
-liftLambdaInputs :: Term Type -> Formula (Bindings -> Bindings, Term Type)
-liftLambdaInputs (Lambda p t _) =
-  do bs <- liftInput p
-     return (bs, t)
-liftLambdaInputs t = return (id, t)
-
-
 -- Constraint generation
 translate :: Term Type -> Formula SValue
 translate (Pattern    p) = translatePattern p
@@ -128,6 +103,67 @@ translateValue (Boolean b _) = return $ SBoolean $ literal b
 translateValue (VConstructor c vs _) =
   do svs <- mapM translateValue vs
      return $ SCtr c svs
+
+
+-- Create symbolic input variables
+emptyBindings :: Bindings
+emptyBindings = error . (++ " is unbound!")
+
+liftInput :: Pattern Type -> Formula (Bindings -> Bindings)
+liftInput (Value _) = return id
+liftInput (Variable x tau) =
+  do sx <- createSymbolic (Variable x tau)
+     return (bind x sx)
+liftInput (PConstructor _ ps _) =
+  do foldrM (\p bs' -> do b <- liftInput p
+                          return (bs' . b)
+            ) id ps
+liftInput (List ps _) =
+  do foldrM (\p bs' -> do b <- liftInput p
+                          return (bs' . b)
+            ) id ps
+
+liftLambdaInputs :: Term Type -> Formula (Bindings -> Bindings, Term Type)
+liftLambdaInputs (Lambda p t _) =
+  do bs <- liftInput p
+     return (bs, t)
+liftLambdaInputs t = return (id, t)
+
+
+-- Create symbolic variables
+createSymbolic :: Pattern Type -> Formula SValue
+createSymbolic (Variable _ Unit')    = return SUnit
+createSymbolic (Variable x Integer') =
+  do sx <- liftSymbolic $ sInteger x
+     return $ SNumber sx
+createSymbolic (Variable x Boolean') =
+  do sx <- liftSymbolic $ sBool x
+     return $ SBoolean sx
+createSymbolic (Variable x (Variable' _)) =
+  do sx <- liftSymbolic $ free x
+     return $ SNumber sx
+createSymbolic (Variable _ (TypeList [])) =
+  do return $ SList []
+createSymbolic (Variable x (TypeList ts)) =
+     -- Fabricate new name for each variable by hashing <x><type-name>
+     -- and appending the index of the variable type in the TypeList
+  do let names = zipWith (\s i -> show (hash (x ++ show s)) ++ show i)
+                 ts
+                 [0..(length ts)]
+     let ps    = zipWith Variable names ts
+     sxs <- mapM createSymbolic ps
+     return $ SList sxs
+-- createSymbolic (Variable x (t1 :->: t2)) = undefined
+-- -- You have the name of the function and the program env
+createSymbolic (Variable x (ADT t)) = undefined
+  do env <- environment
+     
+-- To generate an ADT variable, you could maybe generate a list of possible constructors + their args
+createSymbolic p = error $ "Unexpected request to create symbolic sub-pattern '"
+                        ++ show p ++ "' of type '" ++ show (annotation p) ++
+                           "'\nThis should have been handled in\n\
+                           \'liftInput', not in 'createSymbolic'"
+
 
 
 -- Translation helpers

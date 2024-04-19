@@ -13,9 +13,9 @@
 
   This file contains:
    - Definition of SValue - middle layer between SBV and Contra values
+   - Bindings, which is a mapping from variable names to SValues
    - The Formula monad
-   - 'bind' for creating/updating bindings from variable names to SValues
-   - 'createSymbolic' for creating a symbolic variable from a Contra variable
+   - Function 'bind' to create or update Bindings
    - `Mergeable` instance for SValues
    - Helper function 'sEqual' for comparing SValues
 
@@ -48,44 +48,9 @@ data SValue =
 type Bindings   = Mapping X SValue
 type Formula  a = ERSymbolic Type Bindings a
 
-
--- Bind names to symbolic values
 bind :: X -> SValue -> X `MapsTo` SValue
 bind x tau look y = if x == y then tau else look y
 
-
--- Create symbolic variables
-createSymbolic :: Pattern Type -> Formula SValue
-createSymbolic (Variable _ Unit')    = return SUnit
-createSymbolic (Variable x Integer') =
-  do sx <- liftSymbolic $ sInteger x
-     return $ SNumber sx
-createSymbolic (Variable x Boolean') =
-  do sx <- liftSymbolic $ sBool x
-     return $ SBoolean sx
-createSymbolic (Variable x (Variable' _)) =
-  do sx <- liftSymbolic $ free x
-     return $ SNumber sx
-createSymbolic (Variable _ (TypeList [])) =
-  do return $ SList []
-createSymbolic (Variable x (TypeList ts)) =
-     -- Fabricate new name for each variable by hashing <x><type-name>
-     -- and appending the index of the variable type in the TypeList
-  do let names = zipWith (\s i -> show (hash (x ++ show s)) ++ show i)
-                 ts
-                 [0..(length ts)]
-     let ps    = zipWith Variable names ts
-     sxs <- mapM createSymbolic ps
-     return $ SList sxs
--- createSymbolic (Variable x (t1 :->: t2)) = undefined
--- -- You have the name of the function and the program env
--- createSymbolic (Variable x (ADT t)) = undefined
--- --   do env <- environment
--- To generate an ADT variable, you could maybe generate a list of possible constructors + their args
-createSymbolic p = error $ "Unexpected request to create symbolic sub-pattern '"
-                        ++ show p ++ "' of type '" ++ show (annotation p) ++
-                           "'\nThis should have been handled in\n\
-                           \'liftInput', not in 'createSymbolic'"
 
 
 -- SValues are 'Mergeable', meaning we can use SBV's if-then-else, called 'ite'
