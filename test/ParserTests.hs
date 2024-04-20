@@ -636,10 +636,10 @@ testParseErrorsPrograms =
          case result of
            Right _ -> assertFailure "Should have produced a parsing error."
            Left es -> assertEqual "" err (report es))
-  [ ("examples/errors/MultipleSignatures.con"
+  [ ("examples/errors/multipleSignatures.con"
     , "Multiple type signatures declared for function/property with name 'clone'\n")
-  , ("examples/errors/MultipleADTs.con"
+  , ("examples/errors/multipleADTs.con"
     , "Multiple ADTs declared with name 'MyADT'\n")
-  , ("examples/errors/MultipleProperties.con"
-    , "Multiple properties declared with name 'clone'\n beginning at \n\"examples/errors/MultipleProperties.con\" (line 1, column 7)\n and ending at\n\"examples/errors/MultipleProperties.con\" (line 1, column 9)\n")
+  , ("examples/errors/multipleProperties.con"
+    , "Multiple properties declared with name 'clone'\n beginning at \n\"examples/errors/multipleProperties.con\" (line 1, column 7)\n and ending at\n\"examples/errors/multipleProperties.con\" (line 1, column 9)\n")
   ]
