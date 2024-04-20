@@ -106,7 +106,7 @@ partial ns (Case t0 ts a) =
                bodies <- mapM (partial ns . snd) ts
                let alts' = map strengthenToPattern alts
                let cases = zip alts' bodies
-               let ts'   = eliminateUnreachable (strengthenToPattern v) cases
+               let ts'   = eliminateUnreachable v cases
                return $ Case v ts' a
 partial ns (Plus t1 t2 a) =
   do t1' <- partial ns t1
@@ -225,12 +225,13 @@ replaceWithIn' _ _ p = p
 
 
 -- Eliminating unreachable paths in case statement
-eliminateUnreachable :: Show a => Pattern a -> [(Pattern a, Term a)] -> [(Pattern a, Term a)]
-eliminateUnreachable p =
+eliminateUnreachable :: Show a => Term a -> [(Pattern a, Term a)] -> [(Pattern a, Term a)]
+eliminateUnreachable (Pattern p) =
   foldr (\(alt, body) ts' -> case patternMatch p (Pattern alt) of
           NoMatch   -> ts'
           MatchBy _ -> ts' ++ [(alt, body)]
         ) []
+eliminateUnreachable _ = id
 
 
 -- Utility
