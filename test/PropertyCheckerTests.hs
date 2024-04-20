@@ -12,8 +12,9 @@ import Data.SBV
 simple :: TestTree
 simple =
   testGroup "Checking simple properties: " $
-       simpleSatisfiableProps
-    ++ simpleUnsatisfiableProps
+       commutativity
+    ++ associativity
+    ++ congruence
 
 
 -- Helpers
@@ -34,12 +35,10 @@ unsatisfiable prop =
        _                 -> assertFailure "Should be unsatisfiable."
 
 
--- Tests
-simpleSatisfiableProps :: [TestTree]
-simpleSatisfiableProps =
-  map (\p -> testCase ("Checking property '" ++ show p ++ "'")
-             (satisfiable p))
-    -- commutativity
+-- Simple tests
+commutativity :: [TestTree]
+commutativity =
+  map (testCase "Checking commutativity: " . satisfiable)
   [ Lambda (Variable "x" Integer')
     (Lambda (Variable "y" Integer')
       (Equal
@@ -53,9 +52,13 @@ simpleSatisfiableProps =
           Integer')
         Boolean')
       (Integer' :->: Boolean'))
-    (Integer' :->: (Integer' :->: Boolean'))
+    (Integer' :->: (Integer' :->: Boolean')) ]
+
+associativity :: [TestTree]
+associativity =
+  map (testCase "Checking associativity: " . satisfiable)
     -- associativity
-  , Lambda (Variable "x" Integer')
+  [ Lambda (Variable "x" Integer')
     (Lambda (Variable "y" Integer')
       (Lambda (Variable "z" Integer')
         (Equal
@@ -92,5 +95,5 @@ simpleSatisfiableProps =
     (Integer' :->: Boolean')
   ]
 
-simpleUnsatisfiableProps :: [TestTree]
-simpleUnsatisfiableProps = []
+congruence :: [TestTree]
+congruence = []
