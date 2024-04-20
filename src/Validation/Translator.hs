@@ -166,11 +166,9 @@ createSymbolic (Variable x (TypeList ts)) =
 -- TODO: Create symbolic variables for functions
 -- createSymbolic (Variable x (t1 :->: t2)) = undefined
 -- -- You have the name of the function and the program env
--- Create symbolic variables for ADTs
-createSymbolic (Variable x (ADT t)) =
-  do sx <- liftSymbolic $ sInteger x
-     return $ SNumber sx
--- To generate an ADT variable, you could maybe generate a list of possible constructors + their args
+-- TODO: Create symbolic variables for ADTs
+-- createSymbolic (Variable x (ADT t)) = undefined
+-- To generate a random ADT, you could enumerate its constructors with an index
 createSymbolic p = error $ "Unexpected request to create symbolic sub-pattern '"
                         ++ show p ++ "' of type '" ++ show (annotation p) ++ "'"
 
