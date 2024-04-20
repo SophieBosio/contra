@@ -14,6 +14,9 @@
   This type inference algorithm is based on De Bruijn indices and constraint
   solving.
 
+  We type-annotate the program by annotating each program statement, and in
+  turn, annotating each of their terms.
+
   Terms are annotated with a type, which is either a concrete type or
   a unification variable denoted by an index.
   Values (literals/canonical terms) are type-annotated directly with their
@@ -30,10 +33,10 @@
   The Annotation monad is an instantiation of the ERWS monad and keeps track
   of the following contexts:
    - Environment: Type, which is the typed program text - including definitions
-     of algebraic data types)
+     of algebraic data types
    - Reader: Bindings, which is a mapping from variable names to types
    - Writer: [Constraint], a list of type equality constraints
-   - State: Index, the latest unification variable index
+   - State: Index, a fresh unification variable index
 
 -------------------------------------------------------------------------------}
 
@@ -81,8 +84,8 @@ inferTerm t =
 
 -- Setup
 fresh :: Annotation a Type
-fresh = Variable' <$> (get >>= \i ->     -- Get current index (state)
-                          put (i + 1) >> -- Increment
+fresh = Variable' <$> (get >>= \i ->     -- Get current, fresh index (state)
+                          put (i + 1) >> -- Increment to create next index
                           return i)      -- Return fresh
 
 bind :: Eq x => x -> a -> x `MapsTo` a
@@ -107,7 +110,7 @@ instance HasSubstitution Constraint where
   substitution t i (t0 :=: t1) = substitution t i t0 :=: substitution t i t1
 
 emptyBindings :: Bindings
-emptyBindings = error . (++ " is unbound or impossible to type-infer!")
+emptyBindings = error . (++ " is unbound or ambiguously typed!")
 
 
 -- Annotate program

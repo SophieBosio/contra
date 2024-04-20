@@ -37,7 +37,7 @@ check program =
 
 checkProperty :: Program Type -> (P, Term Type) -> IO (Program Type)
 checkProperty prog (propName, prop) =
-  do putStr $ "Testing " ++ propName ++ " ❯ "
+  do putStr $ "Checking '" ++ propName ++ "' ❯ "
      let (prop', residual) = partiallyEvaluate prog prop
      let f = generateFormula residual prop'
      proveFormula f
@@ -51,8 +51,7 @@ proveFormula f =
      case result of
        Unsatisfiable _ _ -> putStrLnGreen  " ✓ OK "
        Satisfiable   _ _ -> do putStrLnRed " ✱ FAIL "
-                               putStrLn "\tCounterexample: "
-                               putStr "\t"
+                               putStr " "
                                print r
                                -- TODO: printCounterExample m
        _                 -> do putStrLnYellow " ● Unexpected result: "

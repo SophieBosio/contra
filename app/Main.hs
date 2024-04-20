@@ -11,11 +11,10 @@ import Core.Parser
 import Analysis.TypeInferrer      (inferProgram)
 import Semantics.Interpreter      (runMain)
 import Semantics.REPL             (evalLoop)
-import Validation.PropertyChecker (check, putStrLnRed, putStrLnGreen, redStr)
+import Validation.PropertyChecker (check, redStr)
 
 import System.Environment (getArgs)
 import System.Exit        (die)
--- import System.IO          (hFlush, stdout)
 
 
 -- Abbreviations
@@ -64,28 +63,31 @@ parse :: String -> IO (Program Info)
 parse file =
   do result <- parseProgram file
      case result of
-       Left  problems -> putStrLnRed >> die $ redStr $ report problems
+       Left  problems -> die $ redStr $ report problems
        Right program  -> return program
 
 typecheck :: Program Info -> IO (Program Type)
 typecheck program =
   case inferProgram program of
-    Left err -> die err
+    Left err -> die $ redStr err
     Right tp -> return tp
 
 ast :: Program Type -> IO ()
 ast program = print $ programAST program
 
 repl :: Program Type -> IO ()
-repl program = putStrLnGreen "-*- Contra: Fired up the REPL! -*-" >>
-               evalLoop program
+repl program =
+  do putStrLn "-*- Contra: Fired up the REPL! -*-\n"
+     evalLoop program
 
 execute :: Program Type -> IO ()
-execute program = print $ runMain program
+execute program =
+  do putStrLn "-*- Contra: Execute main -*-\n"
+     print (runMain program)
 
 checkProperties :: Program Type -> IO ()
 checkProperties program =
-  do putStrLn "-*- Contra: Checking properties -*-"
+  do putStrLn "-*- Contra: Checking properties -*-\n"
      check program
 
 

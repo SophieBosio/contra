@@ -132,14 +132,14 @@ strengthenToPattern (TConstructor c ts a)
   | all isPattern ts = PConstructor c (map strengthenToPattern ts) a
 strengthenToPattern (Pattern p) = p
 strengthenToPattern t           = error $
-  "expected pattern, but was given the non-canonical term " ++ show t
+  "Expected pattern, but was given the non-canonical term '" ++ show t ++ "'"
 
 strengthenToValue :: Show a => Pattern a -> Value a
 strengthenToValue (PConstructor c ps a)
   | all canonical ps = VConstructor c (map strengthenToValue ps) a
 strengthenToValue (Value v) = v
 strengthenToValue p         = error $
-  "expected value, but was given the non-canonical term " ++ show p
+  "Expected value, but was given the non-canonical term '" ++ show p ++ "'"
 
 weakenToPattern :: Value a -> Pattern a
 weakenToPattern (VConstructor c vs a) = PConstructor c (map weakenToPattern vs) a
