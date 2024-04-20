@@ -1,9 +1,3 @@
-num1 :: Integer
-num1 = 5
-
-num2 :: Integer
-num2 = 3
-
 addCommutative :: Integer -> Integer -> Boolean
 addCommutative a b =*= (a + b) == (b + a)
 
