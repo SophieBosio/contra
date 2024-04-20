@@ -57,24 +57,35 @@ data Constraint = Type :=: Type
 type Bindings         = Mapping Name Type
 type Annotation     a = ERWS a Bindings [Constraint] Index
 type TypeSubstitution = [(Index, Type)]
-type TypeError        = String
+type ConstraintError  = String
 
 
 -- Export
-inferProgram :: Program a -> Either TypeError (Program Type)
+inferProgram :: Program a -> Either ConstraintError (Program Type)
 inferProgram program =
   case solve constraints of
     Left err -> Left  err
     Right cs -> Right $ addSignatures [] $ refine cs <$> annotatedProgram
   where
     definitions prog = functions prog ++ properties prog
-    constraints = annotationConstraints ++ signatureDefinitionAccord
+    constraints =    annotationConstraints
+                  ++ signatureDefinitionAccord
+                  ++ propertiesReturnBooleans
     (annotatedProgram, _, annotationConstraints) =
       runERWS (annotateProgram program) program emptyBindings 0
     signatureDefinitionAccord =
-      [ t' :=: annotation t'' | (x, t')  <- signatures  annotatedProgram
-                              , (y, t'') <- definitions annotatedProgram
-                              , x == y ]
+      [ tau :=: annotation t
+      | (sig, tau) <- signatures  annotatedProgram
+      , (def, t)   <- definitions annotatedProgram
+      , sig == def ]
+    propertiesReturnBooleans =
+      concat
+      [ [ returnType tau            :=: Boolean'
+        , returnType (annotation t) :=: Boolean'
+        ]
+      | (sig, tau) <- signatures annotatedProgram
+      , (prop, t)  <- properties annotatedProgram
+      , sig == prop ]
 
 inferTerm :: Term a -> Term Type
 inferTerm t =
@@ -134,7 +145,6 @@ annotateProgram (Function f def rest) =
 annotateProgram (Property p def rest) =
   do def'  <- annotate def
      rest' <- annotateProgram rest
-     mustReturnBool p def'
      return $ Property p def' rest'
 annotateProgram End = return End
 
@@ -249,7 +259,7 @@ annotateValue (VConstructor c vs _) =
 
 
 -- Resolve constraints
-solve :: [Constraint] -> Either TypeError TypeSubstitution
+solve :: [Constraint] -> Either ConstraintError TypeSubstitution
 solve [                 ] = Right mempty
 solve (constraint : rest) =
   case constraint of
@@ -357,14 +367,6 @@ returnType :: Type -> Type
 returnType (_ :->: t2) = returnType t2
 returnType t           = t
 
-mustReturnBool :: P -> Term Type -> Annotation a ()
-mustReturnBool p t =
-  case returnType (annotation t) of
-    Boolean' -> return ()
-    _        -> error $
-      "Type error: Property '" ++ show p ++ "'must return Boolean."
-
-
 addSignatures :: [Name] -> Program Type -> Program Type
 addSignatures sigs p@(Function f t rest) =
   case lookup f (signatures p) of
@@ -386,6 +388,6 @@ addSignatures sigs (Signature x t rest) = Signature x t $ addSignatures (x : sig
 addSignatures sigs (Data      x t rest) = Data      x t $ addSignatures sigs rest
 addSignatures _ End = End
 
-typeError :: Type -> Type -> TypeError
+typeError :: Type -> Type -> ConstraintError
 typeError t1 t2 = "Type error: Expected term of type '" ++ show t2
                   ++ "' but got term of type '" ++ show t1 ++ "'"
