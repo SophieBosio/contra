@@ -1,0 +1,3 @@
+-- Properties must return a Boolean
+nonProp :: Integer -> Integer .
+nonProp x =*= x .

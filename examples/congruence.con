@@ -1,0 +1,39 @@
+-- Helper function
+and :: Boolean -> Boolean -> Boolean .
+and True True = True .
+and x    y    = False .
+
+-- Variations on addition
+additionIsCongruent :: Integer -> Integer -> Integer -> Integer -> Boolean .
+additionIsCongruent x y xx yy =*=
+  if (x == xx)
+     then if (y == yy)
+             then (x + y) == (xx + yy)
+             else True
+     else True .
+
+plus :: Integer -> Integer -> Integer .
+plus x y = x + y .
+
+-- plusIsCongruent x y xx yy =*=
+--   if (and (x == xx) (y == yy))
+--      then (x + y) == (xx + yy)
+--      else True .
+
+
+-- Variations on incrementing
+plusOneIsCongruent :: Integer -> Integer -> Boolean .
+plusOneIsCongruent x y =*=
+  if (x == y)
+     then (x + 1) == (y + 1)
+     else True .
+
+inc :: Integer -> Integer .
+inc x = x + 1 .
+
+incIsCongruent :: Integer -> Integer -> Boolean .
+incIsCongruent x y =*=
+  if (x == y)
+     then (inc x) == (inc y)
+     else True .
+
