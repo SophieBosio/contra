@@ -16,7 +16,16 @@ module Validation.Translator where
 
   It uses the Formula monad, defined in Validation.Formula.
 
-  -- TODO: Finish Translator description
+  It first lifts all the input variables of the property into the Formula monad
+  (and consequently into the Symbolic monad). After partial evaluation of the
+  property in the context of the program, these *should* be all the input that
+  the SMT solver has to generate for us. Then it translates the rest of the
+  term, which is the property body.
+
+  The function 'liftPropertyInputPatterns' is responsible for lifting all the
+  property's input patterns. It, in turn, calls 'createSymbolic', translates
+  each input variable to its SValue equivalent and binds them, by using the
+  underlying Symbolic monad to create symbolic variables.
 
 -------------------------------------------------------------------------------}
 
@@ -26,13 +35,14 @@ import Validation.Formula
 import Validation.SymUnifier
 
 import Data.Foldable (foldrM)
+import Data.Hashable (hash)
 import Data.SBV
 
 
 -- Export
 translateToFormula :: Term Type -> Formula SValue
 translateToFormula prop =
-  do (bs, prop') <- liftLambdaInputs prop
+  do (bs, prop') <- liftPropertyInputPatterns prop
      local bs $ translate prop'
 
 
@@ -40,7 +50,7 @@ translateToFormula prop =
 translate :: Term Type -> Formula SValue
 translate (Pattern    p) = translatePattern p
 translate (Lambda p t _) =
-  do bs <- liftInput p
+  do bs <- liftPattern p
      local bs $ translate t
 translate (Application t1 t2 _) =
   do t2'        <- translate t2
@@ -109,25 +119,25 @@ translateValue (VConstructor c vs _) =
 emptyBindings :: Bindings
 emptyBindings = error . (++ " is unbound!")
 
-liftInput :: Pattern Type -> Formula (Bindings -> Bindings)
-liftInput (Value _) = return id
-liftInput (Variable x tau) =
+liftPattern :: Pattern Type -> Formula (Bindings -> Bindings)
+liftPattern (Value _) = return id
+liftPattern (Variable x tau) =
   do sx <- createSymbolic (Variable x tau)
      return (bind x sx)
-liftInput (PConstructor _ ps _) =
-  do foldrM (\p bs' -> do b <- liftInput p
+liftPattern (PConstructor _ ps _) =
+  do foldrM (\p bs' -> do b <- liftPattern p
                           return (bs' . b)
             ) id ps
-liftInput (List ps _) =
-  do foldrM (\p bs' -> do b <- liftInput p
+liftPattern (List ps _) =
+  do foldrM (\p bs' -> do b <- liftPattern p
                           return (bs' . b)
             ) id ps
 
-liftLambdaInputs :: Term Type -> Formula (Bindings -> Bindings, Term Type)
-liftLambdaInputs (Lambda p t _) =
-  do bs <- liftInput p
+liftPropertyInputPatterns :: Term Type -> Formula (Bindings -> Bindings, Term Type)
+liftPropertyInputPatterns (Lambda p t _) =
+  do bs <- liftPattern p
      return (bs, t)
-liftLambdaInputs t = return (id, t)
+liftPropertyInputPatterns t = return (id, t)
 
 
 -- Create symbolic variables
@@ -153,16 +163,16 @@ createSymbolic (Variable x (TypeList ts)) =
      let ps    = zipWith Variable names ts
      sxs <- mapM createSymbolic ps
      return $ SList sxs
+-- TODO: Create symbolic variables for functions
 -- createSymbolic (Variable x (t1 :->: t2)) = undefined
 -- -- You have the name of the function and the program env
-createSymbolic (Variable x (ADT t)) = undefined
-  do env <- environment
-     
+-- Create symbolic variables for ADTs
+createSymbolic (Variable x (ADT t)) =
+  do sx <- liftSymbolic $ sInteger x
+     return $ SNumber sx
 -- To generate an ADT variable, you could maybe generate a list of possible constructors + their args
 createSymbolic p = error $ "Unexpected request to create symbolic sub-pattern '"
-                        ++ show p ++ "' of type '" ++ show (annotation p) ++
-                           "'\nThis should have been handled in\n\
-                           \'liftInput', not in 'createSymbolic'"
+                        ++ show p ++ "' of type '" ++ show (annotation p) ++ "'"
 
 
 
