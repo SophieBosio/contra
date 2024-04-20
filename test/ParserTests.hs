@@ -342,7 +342,7 @@ testParsePrograms =
       do src <- readFile file
          let ast = void <$> runParser program () file src
          assertEqual "" (return p) ast)
-  [ ("examples/simple/basicStatements.con",
+  [ ("examples/test/basicStatements.con",
      Data "MyADT" [Constructor "YES" [], Constructor "NO" []] $
      Signature "id" (ADT "MyADT" :->: ADT "MyADT") $
      Function "id" (Lambda (Variable "x" ()) (Pattern (Variable "x" ())) ()) $
@@ -351,7 +351,7 @@ testParsePrograms =
                         (Equal (Pattern (Variable "x" ()))
                                (Pattern (Variable "x" ())) ()) ())
      End)
-  , ("examples/simple/simpleAdd.con",
+  , ("examples/test/simpleAdd.con",
      Signature "simpleAdd" (Integer' :->: (Integer' :->: Integer')) $
      Function "simpleAdd"
       (Lambda (Variable "x" ())
@@ -462,7 +462,7 @@ testFlattenProgram =
       do src <- readFile file
          let ast = void <$> runParser program () file src
          assertEqual "" (return p) ast)
-  [ ("examples/simple/multipleFunctionDefinitions.con",
+  [ ("examples/test/multipleFunctionDefinitions.con",
      Signature "f" (Integer' :->: (Integer' :->: (Integer' :->: Integer'))) $
      Function "f"
       (Lambda (Value (Number 5 ()))
@@ -557,7 +557,7 @@ testFlattenProgram =
           let ast = void <$> runParser program () file src
           let flat = flatten <$> ast
           assertEqual "" (return p) flat)
-  [ ("examples/simple/multipleFunctionDefinitions.con",
+  [ ("examples/test/multipleFunctionDefinitions.con",
      Signature "f" (Integer' :->: (Integer' :->: (Integer' :->: Integer'))) $
      Signature "and" (Boolean' :->: (Boolean' :->: Boolean')) $
      Function "and"
