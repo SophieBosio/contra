@@ -12,7 +12,7 @@
   Interpreter for the functional language Contra.
 
   Mostly, variables are bound directly, as in function application or
-  let-statements. Then, we can simply subsitute the variable name(s) in the
+  let-statements. Then, we can simply substitute the variable name(s) in the
   relevant term with the terms they are bound to.
 
   However, we cannot do this directly for top-level bindings. That's why the
@@ -89,7 +89,7 @@ evaluate (Equal t0 t1 a) =
 evaluate (Not t0 a) =
   do b <- evaluate t0 >>= boolean
      return $ Pattern $ Value $ Boolean (not b) a
--- evaluate (Rec x t0 a) = -- future work
+-- evaluate (Rec p t a) = -- future work
 
 evaluatePattern :: (Show a, Eq a) => Pattern a -> Runtime a (Term a)
 evaluatePattern (Value v) = evaluateValue v

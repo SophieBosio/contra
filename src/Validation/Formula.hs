@@ -34,7 +34,6 @@ import Environment.Environment
 import Environment.ERSymbolic
 
 import Data.SBV
-import Data.Hashable
 
 
 -- Abbreviations
