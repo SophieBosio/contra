@@ -77,17 +77,17 @@ ast program = print $ programAST program
 
 repl :: Program Type -> IO ()
 repl program =
-  do putStrLn "-*- Contra: Fired up the REPL! -*-\n"
+  do putStrLn "✦ Contra REPL! ✦\n"
      evalLoop program
 
 execute :: Program Type -> IO ()
 execute program =
-  do putStrLn "-*- Contra: Execute main -*-\n"
+  do putStrLn "✦ Contra ✦\n"
      print (runMain program)
 
 checkProperties :: Program Type -> IO ()
 checkProperties program =
-  do putStrLn "-*- Contra: Checking properties -*-\n"
+  do putStrLn "✦ Contra: Checking properties ✦\n"
      check program
 
 
