@@ -52,7 +52,6 @@ or x     y     = True  .
 adt Example = C Integer | D Boolean Boolean .
 adt Num     = E Integer .
 
--- caseOfADT :: Example -> Integer . -- TODO: Detect conflicts between signatures and implementation
 caseOfADT :: Example -> Boolean .
 caseOfADT x = case x of
   ; (C {y})    -> False

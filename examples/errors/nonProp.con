@@ -1,3 +1,9 @@
 -- Properties must return a Boolean
 nonProp :: Integer -> Integer .
 nonProp x =*= x .
+
+adt Example = C Integer | D Boolean .
+
+nonProp2 :: Example -> Example .
+nonProp2 x =*= x .
+

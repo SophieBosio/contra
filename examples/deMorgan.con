@@ -8,6 +8,7 @@ or True y     = True  .
 or x    True  = True  .
 or x    y     = False .
 
+
 -- De Morgan's Laws
 negatedDisjunction :: Boolean -> Boolean -> Boolean .
 negatedDisjunction p q =*= (not (or p q)) == (and (not p) (not q)) .
@@ -21,3 +22,7 @@ substitutionConjunction p q =*= (and p q) == (not (or (not p) (not q))) .
 
 substitutionDisjunction :: Boolean -> Boolean -> Boolean .
 substitutionDisjunction p q =*= (or p q) == (not (and (not p) (not q))) .
+
+
+-- Test execution by running REPL or by changing the values in 'main':
+main = (and (not True) (not False)) .
