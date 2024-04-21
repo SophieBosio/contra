@@ -1,0 +1,11 @@
+eqReflexive :: Integer -> Boolean .
+eqReflexive x =*= x == x .
+
+eqFalsifiable :: Integer -> Integer -> Boolean .
+eqFalsifiable x y =*= x == y .
+
+gtFalsifiable :: Integer -> Integer -> Boolean .
+gtFalsifiable x y =*= x > y .
+
+ltFalsifiable x y =*= x < y .
+

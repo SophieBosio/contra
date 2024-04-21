@@ -1,0 +1,5 @@
+addAssociative :: Integer -> Integer -> Integer -> Boolean .
+addAssociative a b c =*= ((a + b) + c) == (a + (b + c)) .
+
+subAssociative :: Integer -> Integer -> Integer -> Boolean .
+subAssociative a b c =*= ((a - b) - c) == (a - (b - c)) .

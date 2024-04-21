@@ -1,11 +1,5 @@
-addCommutative :: Integer -> Integer -> Boolean
-addCommutative a b =*= (a + b) == (b + a)
+addCommutative :: Integer -> Integer -> Boolean .
+addCommutative a b =*= (a + b) == (b + a) .
 
-addAssociative :: Integer -> Integer -> Integer -> Boolean
-addAssociative a b c =*= ((a + b) + c) == (a + (b + c))
-
-subCommutative :: Integer -> Integer -> Boolean
-subCommutative a b =*= (a - b) == (b - a)
-
-subAssociative :: Integer -> Integer -> Integer -> Boolean
-subAssociative a b c =*= ((a - b) - c) == (a - (b - c))
+subCommutative :: Integer -> Integer -> Boolean .
+subCommutative a b =*= (a - b) == (b - a) .
