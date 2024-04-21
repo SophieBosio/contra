@@ -1,0 +1,14 @@
+plusOne :: Integer -> Integer .
+plusOne x = x + 1 .
+
+plusOneGt :: Integer -> Boolean .
+plusOneGt x =*= (plusOne x) > x .
+
+plusOneTwiceGt :: Integer -> Boolean .
+plusOneTwiceGt x =*= (plusOne (plusOne x)) > x .
+
+plus :: Integer -> Integer -> Integer .
+plus x y = x + y .
+
+plusCommutative :: Integer -> Integer -> Boolean .
+plusCommutative x y =*= (plus x y) > (plus y x) .
