@@ -1,4 +1,4 @@
-{-------------------------------------------------------------------------------
+{-
 
   Module      : Core.Parser
   Description : The parser for Contra.
@@ -15,9 +15,17 @@
   of Haskell.
 
   The parser is implemented with the monadic parser
-  combinator library Parsec. It is available on Hackage.
+  combinator library Parsec.
 
--------------------------------------------------------------------------------}
+  Besides strict parsing, the parser is responsible for "flattening" function
+  definitions s.t. functions defined over different pattern-match cases are
+  collapsed into a single function definition with a case statement representing
+  the different pattern-matches defined.
+
+  It also keeps track of the source position of each term so we can provide the
+  user with more helpful type error messages.
+
+-}
 
 module Core.Parser where
 
@@ -36,10 +44,10 @@ type Parser = Parsec Source ()
 type Info   = (SourcePos, SourcePos)
 
 data ParsingError =
-    MultipleSignatures           X
-  | MultipleADTs                 X
-  | MultipleProperties          (X, Info)
-  | ParsingFailed               ParseError
+    MultipleSignatures  X
+  | MultipleADTs        X
+  | MultipleProperties (X, Info)
+  | ParsingFailed      ParseError
   deriving Show
 
 

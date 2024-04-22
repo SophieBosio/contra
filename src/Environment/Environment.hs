@@ -1,4 +1,4 @@
-{-------------------------------------------------------------------------------
+{-
 
   Module      : Environment.Environment
   Description : Program environment definition.
@@ -9,9 +9,17 @@
   Stability   : experimental
   Portability : POSIX
 
-  -- TODO: Description of Environment
+  This file contains the type `Mapping` and the type-level operator `MapsTo`,
+  which are used in:
+   * Analysis.TypeInferrer
+   * Environment.ERSymbolic
+   * Validation.Formula
 
--------------------------------------------------------------------------------}
+  It also contains the Program Environment, which is used in the monads in
+  Environment.ERWS and Environment.ERSymbolic for convenient access to parts of
+  the program text.
+
+-}
 
 module Environment.Environment where
 

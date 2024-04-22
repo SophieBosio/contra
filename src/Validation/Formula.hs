@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts, ScopedTypeVariables, TypeOperators #-}
 
-{-------------------------------------------------------------------------------
+{-
 
   Module      : Validation.Formula
   Description : Formula monad and SValue definition.
@@ -11,21 +11,24 @@
   Stability   : experimental
   Portability : POSIX
 
+  The Formula file defines the abbreviations and the monad that is used in the
+  PropertyChecker, Translator, and SymUnifier.
+
   This file contains:
-   - Definition of SValue - middle layer between SBV and Contra values
-   - Bindings, which is a mapping from variable names to SValues
-   - The Formula monad
-   - Function 'bind' to create or update Bindings
-   - `Mergeable` instance for SValues
-   - Helper function 'sEqual' for comparing SValues
+   * Definition of SValue - middle layer between SBV and Contra values
+   * Bindings, which is a mapping from variable names to SValues
+   * The Formula monad
+   * Function 'bind' to create or update Bindings
+   * `Mergeable` instance for SValues
+   * Helper function 'sEqual' for comparing SValues
 
   The Formula monad is an instantiation of the ERSymbolic monad and keeps track
   of the following contexts:
-   - Environment : Type, which is the typed program text
-   - Reader      : Bindings, which are mappings from variable names to SValues
-   - Symbolic    : SBV's Symbolic monad, which keeps track of solver state
+   * Environment : Type, which is the typed program text
+   * Reader      : Bindings, which are mappings from variable names to SValues
+   * Symbolic    : SBV's Symbolic monad, which keeps track of solver state
 
--------------------------------------------------------------------------------}
+-}
 
 module Validation.Formula where
 

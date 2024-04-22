@@ -1,4 +1,4 @@
-{-------------------------------------------------------------------------------
+{-
 
   Module      : Semantics.PartialEvaluator
   Description : Partial evaluator for Contra.
@@ -9,13 +9,14 @@
   Stability   : experimental
   Portability : POSIX
 
-  Partial evaluator for Contra, based on online partial evaluation.
+  Partial evaluator for Contra, based on online partial evaluation in the style
+  of the paper 'Tutorial on Online Partial Evaluation' by Cook & Lämmel (2011).
 
   The PartialState monad keeps track of the following contexts:
    - State  : Program a, which is keeps track of specialised functions
    - Reader : Program a, which is the original program text
 
--------------------------------------------------------------------------------}
+-}
 
 module Semantics.PartialEvaluator where
 

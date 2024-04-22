@@ -1,4 +1,4 @@
-{-------------------------------------------------------------------------------
+{-
 
   Module      : Analysis.Unifier
   Description : Unification algorithm for Contra.
@@ -23,7 +23,7 @@
 
   If this Unifier exists, that constitutes our Transformation.
 
--------------------------------------------------------------------------------}
+-}
 
 
 module Analysis.Unifier where

@@ -1,6 +1,6 @@
 module Validation.SymUnifier where
 
-{-------------------------------------------------------------------------------
+{-
 
   Module      : Validation.SymUnifier
   Description : Symbolic unification algorithm for Contra.
@@ -11,9 +11,10 @@ module Validation.SymUnifier where
   Stability   : experimental
   Portability : POSIX
 
-  -- TODO: Description of SymUnifier
+  SymUnifier acts as a pseudo-mapping between Patterns and SValues, allowing
+  us to "unify" them - e.g., in Case-statements, Let-Statements and Lambdas.
 
--------------------------------------------------------------------------------}
+-}
 
 import Core.Syntax
 import Validation.Formula

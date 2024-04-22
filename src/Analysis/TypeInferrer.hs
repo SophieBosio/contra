@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeOperators #-}
 
-{-------------------------------------------------------------------------------
+{-
 
   Module      : Analysis.TypeInferrer
   Description : Type inference algorithm for Contra.
@@ -14,32 +14,37 @@
   This type inference algorithm is based on De Bruijn indices and constraint
   solving.
 
-  We type-annotate the program by annotating each program statement, and in
-  turn, annotating each of their terms.
+  A constraint consists of two types that should be equal, and a string
+  with the source code position of the relevant term(s) for error messages.
 
-  Terms are annotated with a type, which is either a concrete type or
-  a unification variable denoted by an index.
-  Values (literals/canonical terms) are type-annotated directly with their
-  concrete type, while Patterns and general Terms are annotated indirectly.
+  Type-inference is done by annotating terms with concrete types or with
+  unification variables and then adding constraints to these types. When we are
+  done annotating, we solve the constraints and signal any errors.
+  
+  The Annotation monad is an instantiation of the ERWS monad and keeps track
+  of the following contexts:
+   * Environment: Type, which is the typed program text - including definitions
+     of algebraic data types
+   * Reader: Bindings, which is a mapping from variable names to types
+   * Writer: [Constraint], a list of type equality constraints
+   * State: Index, a fresh unification variable index
 
   Either a term's type judgement rule let us decide their type by the type of
   their subterms, or we generate fresh unification variables and add constraints
   to them according to the type judgement rules.
 
+  Values (literals/canonical terms) are type-annotated directly with their
+  concrete type, while Patterns and general Terms are annotated indirectly.
+
   Finally, we solve the constraints and replace each unification
   variable with a concrete type. If the constraints cannot be solved,
   we throw an error with a description of the unsatisfiable constraint.
 
-  The Annotation monad is an instantiation of the ERWS monad and keeps track
-  of the following contexts:
-   - Environment: Type, which is the typed program text - including definitions
-     of algebraic data types
-   - Reader: Bindings, which is a mapping from variable names to types
-   - Writer: [Constraint], a list of type equality constraints
-   - State: Index, a fresh unification variable index
+  When inferring a program, we add constraints to enforce accordance between
+  function/property signatures and their implementation. Additionally, we
+  require that properties *must* return a Boolean value.
 
--------------------------------------------------------------------------------}
--- TODO: Update TypeInferrer description
+-}
 
 module Analysis.TypeInferrer where
 

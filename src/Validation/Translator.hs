@@ -1,6 +1,6 @@
 module Validation.Translator where
 
-{-------------------------------------------------------------------------------
+{-
 
   Module      : Validation.Translator
   Description : Symbolic formula translator for Contra.
@@ -12,7 +12,15 @@ module Validation.Translator where
   Portability : POSIX
 
   The Translator is responsible for translating Contra terms into SBV formulae,
-  via SValues.
+  by translating them to intermediary SValue formulae.
+
+  Its main functions are:
+   * 'translateFormula'
+   * 'translate'
+   * 'liftPattern'
+   * 'createSymbolic'
+
+  'translateFormula' takes a property (as a Contra term) and translates it 
 
   It uses the Formula monad, defined in Validation.Formula.
 
@@ -27,7 +35,7 @@ module Validation.Translator where
   each input variable to its SValue equivalent and binds them, by using the
   underlying Symbolic monad to create symbolic variables.
 
--------------------------------------------------------------------------------}
+-}
 
 import Core.Syntax
 import Environment.ERSymbolic

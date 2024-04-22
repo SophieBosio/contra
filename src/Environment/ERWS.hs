@@ -1,17 +1,22 @@
-{-------------------------------------------------------------------------------
+{-
 
   Module      : Environment.ERWS
   Description : Environment Reader Writer State monad.
-  Copyright   : (c) 2022 Joachim Tilsted Kristensen, 2024 Sophie Adeline Solheim Bosio
+  Copyright   : (c) 2022 Joachim Tilsted Kristensen
   License     : GLP-3.0
 
   Maintainer  : sophie.bosio@outlook.com
   Stability   : experimental
   Portability : POSIX
 
-  -- TODO: Description of ERWS monad
+  This implementation is by Joachim Tilsted Kristensen.
 
--------------------------------------------------------------------------------}
+  The Environment Reader Writer State monad transforms the usual RWS monad
+  and adds a program environment (Environment.Environment), which gives us
+  convenient access to parts of the user-written program text. Importantly,
+  we can access the user's ADT definitions.
+
+-}
 
 module Environment.ERWS where
 

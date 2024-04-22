@@ -1,4 +1,4 @@
-{-------------------------------------------------------------------------------
+{-
 
   Module      : Semantics.REPL
   Description : Rudimentary REPL for Contra.
@@ -15,7 +15,7 @@
   in a program text. Load a program in the terminal using the
   '--load <program-name>.con' option and call functions interactively.
 
--------------------------------------------------------------------------------}
+-}
 
 module Semantics.REPL where
 

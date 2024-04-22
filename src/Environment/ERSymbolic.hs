@@ -1,4 +1,4 @@
-{-------------------------------------------------------------------------------
+{-
 
   Module      : Environment.ERSymbolic
   Description : Environment Reader Symbolic monad.
@@ -9,9 +9,16 @@
   Stability   : experimental
   Portability : POSIX
 
-  -- TODO: Description of ERSymbolic monad
+  The ERSymbolic monad is reworked from Joachim Tilsted Kristensen's
+  implementation of the ERWS monad (found in Environment.ERWS). We use the same
+  approach used to create an Environment Reader Writer State monad, to make
+  an Environment Reader Symbolic monad.
 
--------------------------------------------------------------------------------}
+  Symbolic is the innermost monad. Besides it, we have access to a program
+  environment (i.e., the user's program text) and a Reader environment.
+  Through the Environment, we can access the user's ADT definitions.
+
+-}
 
 module Environment.ERSymbolic where
 

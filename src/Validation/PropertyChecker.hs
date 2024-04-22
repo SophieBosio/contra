@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts, ScopedTypeVariables, LambdaCase #-}
 
-{-------------------------------------------------------------------------------
+{-
 
   Module      : Validation.PropertyChecker
   Description : PropertyChecker for Contra.
@@ -11,9 +11,35 @@
   Stability   : experimental
   Portability : POSIX
 
-  -- TODO: Description of PropertyChecker
+  The PropertyChecker is the driver for the property-checking code, which is
+  primarily the Translator.
 
--------------------------------------------------------------------------------}
+  Its main functions are:
+   * 'check'
+   * 'checkProperty'
+   * 'generateFormula'
+   * 'realise'
+   * 'proveFormula'
+
+  'check' checks all the properties in a program by calling 'checkProperty'
+  on each property and collecting the residual (partially evaluated) program
+  for each call.
+
+  'checkProperty' checks a single property by partially evaluating the property
+  wrt. the program text, generating an SValue formula, converting it back to
+  an SBV formula, proving the formula, and returning the partially evaluated
+  program.
+
+  'generateFormula' calls 'translateToFormula' from Validation.Translator to
+  generate an SValue formula.
+
+  'realise' turns that SValue formula into an SBV formula.
+
+  'proveFormula' asks the SMT solver, via the SBV bindings, to prove the
+  generated formula, which succeeds, returns a counterexample, or produces
+  an unknown result.
+
+-}
 
 module Validation.PropertyChecker where
 

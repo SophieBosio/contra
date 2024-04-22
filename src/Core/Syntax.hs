@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveFunctor #-}
 
-{-------------------------------------------------------------------------------
+{-
 
   Module      : Core.Syntax
   Description : Abstract syntax of Contra.
@@ -18,13 +18,13 @@
 
   Besides the abstract syntax, this file also contains functions and
   typeclass instances pertaining to:
-   - Term & program equality
-   - Term canonicity (literals)
-   - Term annotations
-   - Pretty printing
-   - Other utility functions
+   * Term & program equality
+   * Term canonicity (literals)
+   * Term annotations - used in program analysis
+   * Pretty printing
+   * Other utility functions
 
--------------------------------------------------------------------------------}
+-}
 
 module Core.Syntax where
 

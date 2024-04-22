@@ -1,4 +1,4 @@
-{-------------------------------------------------------------------------------
+{-
 
   Module      : Semantics.Interpreter
   Description : Interpreter for Contra.
@@ -11,16 +11,18 @@
 
   Interpreter for the functional language Contra.
 
-  Mostly, variables are bound directly, as in function application or
-  let-statements. Then, we can simply substitute the variable name(s) in the
-  relevant term with the terms they are bound to.
+  'evaluate' evaluates a term in the conventional way. It is either a value
+  and can be evaluated directly, or it can be evaluated by the evaluation of its
+  composite subterms.
 
-  However, we cannot do this directly for top-level bindings. That's why the
-  interpreter uses the Reader monad to access the program text.
-  With it, we can find the function/property definition bound by that name in
-  the program text and substitute the variable name for the definition.
+  Variables are mostly bound directly, as in function application or
+  let-statements, and we can simply substitute the variable name(s) for their
+  bound term in the relevant scope.
 
--------------------------------------------------------------------------------}
+  We use a Reader monad to access top-level bindings in the program text - i.e.,
+  function definitions outside the current program statement.
+
+-}
 
 module Semantics.Interpreter where
 
