@@ -25,9 +25,9 @@ import Core.Syntax hiding (parens)
 
 import Text.Parsec
 import Text.Parsec.Pos (newPos)
-import Control.Monad (void, when)
-import Data.Functor ((<&>))
-import Data.List (nub, (\\), groupBy, sortBy)
+import Control.Monad   (void, when)
+import Data.Functor    ((<&>))
+import Data.List       (nub, (\\), groupBy, sortBy)
 
 
 -- Abbreviations
@@ -44,7 +44,7 @@ data ParsingError =
 
 
 -- Export
-parseProgram :: Source -> IO (Either [ParsingError] (Program Info))
+parseProgram :: Source -> IO (Either [ParsingError] (Program String))
 parseProgram path =
   do src <- readFile path
      return $
@@ -52,7 +52,7 @@ parseProgram path =
          (Left   err) -> Left $ return $ ParsingFailed err
          (Right code) ->
            case reportErrors code of
-             [ ]  -> return (flatten code)
+             [ ]  -> return $ prettySourcePositions $ flatten code
              errs -> Left errs
 
 parseString :: Parser a -> String -> Either ParseError a
@@ -456,7 +456,8 @@ reportErrors p =
 report :: [ParsingError] -> String
 report [] = ""
 report ((MultipleSignatures n) : rest) =
-  ("Multiple type signatures declared for function/property with name '" ++ n ++ "'\n")
+  ("Multiple type signatures declared for function/property with name '"
+   ++ n ++ "'\n")
   ++ report rest
 report ((MultipleADTs n) : rest) =
   ("Multiple ADTs declared with name '" ++ n ++ "'\n")
@@ -464,9 +465,57 @@ report ((MultipleADTs n) : rest) =
 report ((MultipleProperties (n, i) : rest)) =
   let (start, end) = i
   in ("Multiple properties declared with name '" ++ n ++
-      "'\n beginning at \n" ++ show start ++ "\n and ending at\n" ++ show end ++ "\n")
+      "'\n beginning at \n" ++ show start ++ "\n and ending at\n"
+      ++ show end ++ "\n")
      ++ report rest
 report ((ParsingFailed err) : rest) =
   ("Parsing failed: " ++ show err ++ "\n")
   ++ report rest
+
+prettyPrintInfo :: Info -> String
+prettyPrintInfo (start, end) =
+  "in file '" ++ sourceName start ++ "'\
+  \ between " ++ showLineCol start ++ " and " ++ showLineCol end
+  where
+    showLineCol pos = "(line " ++ show (sourceLine pos) ++
+                      ", column " ++ show (sourceColumn pos) ++ ")"
+
+prettySourcePositions :: Program Info -> Program String
+prettySourcePositions (Function  f t rest) =
+  Function  f (pp t) $ prettySourcePositions rest
+prettySourcePositions (Property  p t rest) =
+  Property  p (pp t) $ prettySourcePositions rest
+prettySourcePositions (Signature s t rest) =
+  Signature s     t $ prettySourcePositions rest
+prettySourcePositions (Data      d t rest) =
+  Data      d     t  $ prettySourcePositions rest
+prettySourcePositions End = End
+
+pp :: Term Info -> Term String
+pp (Pattern               p) = Pattern $ pp' p
+pp (TConstructor c  ts    a) = TConstructor c (map pp ts)  (prettyPrintInfo a)
+pp (Lambda       p  t     a) = Lambda      (pp' p) (pp t)  (prettyPrintInfo a)
+pp (Let          p  t1 t2 a) = Let (pp' p) (pp t1) (pp t2) (prettyPrintInfo a)
+pp (Application     t1 t2 a) = Application (pp t1) (pp t2) (prettyPrintInfo a)
+pp (Case         t0 ts    a) = Case (pp t0)
+                               (zip (map (pp' . fst) ts) (map (pp . snd) ts))
+                               (prettyPrintInfo a)
+pp (Plus         t0 t1    a) = Plus  (pp t0) (pp t1) (prettyPrintInfo a)
+pp (Minus        t0 t1    a) = Minus (pp t0) (pp t1) (prettyPrintInfo a)
+pp (Lt           t0 t1    a) = Lt    (pp t0) (pp t1) (prettyPrintInfo a)
+pp (Gt           t0 t1    a) = Gt    (pp t0) (pp t1) (prettyPrintInfo a)
+pp (Equal        t0 t1    a) = Equal (pp t0) (pp t1) (prettyPrintInfo a)
+pp (Not          t0       a) = Not   (pp t0)         (prettyPrintInfo a)
+
+pp' :: Pattern Info -> Pattern String
+pp' (Value             v) = Value $ pp'' v
+pp' (Variable     x    a) = Variable x (prettyPrintInfo a)
+pp' (List           ps a) = List (map pp' ps) (prettyPrintInfo a)
+pp' (PConstructor c ps a) = PConstructor c (map pp' ps) (prettyPrintInfo a)
+
+pp'' :: Value Info -> Value String
+pp'' (Unit              a) = Unit                         (prettyPrintInfo a)
+pp'' (Number       n    a) = Number       n               (prettyPrintInfo a)
+pp'' (Boolean      b    a) = Boolean      b               (prettyPrintInfo a)
+pp'' (VConstructor c vs a) = VConstructor c (map pp'' vs) (prettyPrintInfo a)
 

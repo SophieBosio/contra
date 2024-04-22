@@ -6,6 +6,7 @@ adt IntList = Nil | Cons Integer IntList .
 list :: IntList .
 list = Const { True, Cons { False, Nil } } .
 
-  
 malformed :: IntList .
 malformed = Const { True, Cons { False, Cons { Nil } } } .
+
+expectedDifferent = 5 + True .

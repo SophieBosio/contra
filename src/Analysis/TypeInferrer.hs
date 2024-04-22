@@ -105,13 +105,13 @@ addEquality :: Type -> Type -> String -> Annotation a ()
 addEquality tau1 tau2 msg = tell [newConstraint tau1 tau2 msg]
 
 addConstraint :: Term Type -> Type -> String -> Annotation a ()
-addConstraint t0 tau msg = addEquality (annotation t0) tau msg
+addConstraint t0 = addEquality (annotation t0)
 
 addConstraints :: [Term Type] -> [Type] -> [String] -> Annotation a ()
 addConstraints ts taus msgs = sequenceA_ (zipWith3 addConstraint ts taus msgs)
 
 haveSameType :: Term Type -> Term Type -> String -> Annotation a ()
-haveSameType t0 t1 msg = addConstraint t0 (annotation t1) msg
+haveSameType t0 t1 = addConstraint t0 (annotation t1)
 
 
 class HasSubstitution a where
@@ -296,16 +296,16 @@ solve :: [Constraint] -> Either ConstraintError TypeSubstitution
 solve [                 ] = Right mempty
 solve (constraint : rest) =
   case (type1 constraint, type2 constraint) of
-    (Unit'          , Unit'        ) -> solve rest
-    (Integer'       , Integer'     ) -> solve rest
-    (Boolean'       , Boolean'     ) -> solve rest
-    ((t0 :->:  t1)  , (t2 :->: t3) ) -> solve $
-                                        newConstraint t0 t2 (info constraint) :
-                                        newConstraint t1 t3 (info constraint) :
-                                        rest
-    ((TypeList ts)  , (TypeList ss)) ->
+    (Unit'      , Unit'      ) -> solve rest
+    (Integer'   , Integer'   ) -> solve rest
+    (Boolean'   , Boolean'   ) -> solve rest
+    (t0 :->:  t1, t2 :->: t3 ) -> solve $
+                                  newConstraint t0 t2 (info constraint) :
+                                  newConstraint t1 t3 (info constraint) :
+                                  rest
+    (TypeList ts, TypeList ss) ->
       solve $ zipWith (\t s -> newConstraint t s (info constraint)) ts ss ++ rest
-    ((ADT      x1)  , (ADT      x2)) ->
+    (ADT x1     , ADT x2     ) ->
       if   x1 /= x2
       then Left $ typeError (ADT x1) (ADT x2) (info constraint)
       else solve rest
@@ -323,7 +323,7 @@ solve (constraint : rest) =
                else solve rest)
       else do c <- solve (substitution t0 i <$> rest)
               return $ (i, t0) : c
-    (_, _) -> Left $ info constraint
+    (tau1, tau2) -> Left $ typeError tau1 tau2 (info constraint)
 
 refine :: TypeSubstitution -> (Type -> Type)
 refine [            ] t                      = t
@@ -434,4 +434,8 @@ addSignatures _ End = End
 typeError :: Type -> Type -> String -> ConstraintError
 typeError t1 t2 msg =    "Type error: Expected term of type '" ++ show t2
                       ++ "' but got term of type '" ++ show t1 ++ "'\n"
-                      ++ msg
+                      ++ unquote msg
+  where
+    unquote ""            = ""
+    unquote ('\"' : rest) = unquote rest
+    unquote (x    : rest) = x : unquote rest

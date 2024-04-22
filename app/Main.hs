@@ -6,7 +6,6 @@ import Core.Syntax
 import Core.Parser
   ( parseProgram
   , report
-  , Info
   )
 import Analysis.TypeInferrer      (inferProgram)
 import Semantics.Interpreter      (runMain)
@@ -25,7 +24,7 @@ data Action =
     REPL          (Program Type)
   | Execute       (Program Type)
   | PropertyCheck (Program Type)
-  | TypeCheck     (Program Info)
+  | TypeCheck     (Program String)
   | AST           (Program Type)
   | Version       VersionInfo
   | Fail          ErrorMessage
@@ -59,14 +58,14 @@ action _                 = return $ Fail     useInfo
 
 
 -- Main functions
-parse :: String -> IO (Program Info)
+parse :: String -> IO (Program String)
 parse file =
   do result <- parseProgram file
      case result of
        Left  problems -> die $ redStr $ report problems
        Right program  -> return program
 
-typecheck :: Program Info -> IO (Program Type)
+typecheck :: Program String -> IO (Program Type)
 typecheck program =
   case inferProgram program of
     Left err -> die $ redStr err

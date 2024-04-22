@@ -21,16 +21,16 @@ partialEvaluatorTests =
 -- Helpers
 evaluateToSameTerm :: Program Type -> Term Type -> Assertion
 evaluateToSameTerm p t =
-  let ti       = normalise         p  t  in
-  let (tp, pp) = partiallyEvaluate p  t  in
-  let tip      = normalise         pp tp in
+  let ti        = normalise         p   t  in
+  let (tp, tp') = partiallyEvaluate p   t  in
+  let tip       = normalise         tp' tp in
     assertBool "Should have evaluated to same term" (ti == tip)
 
 evaluateToDifferentTerm :: Program Type -> Term Type -> Assertion
 evaluateToDifferentTerm p t =
-  let ti       = normalise         p  t  in
-  let (tp, pp) = partiallyEvaluate p  t  in
-  let tip      = normalise         pp tp in
+  let ti       = normalise          p   t  in
+  let (tp, tp') = partiallyEvaluate p   t  in
+  let tip      = normalise          tp' tp in
     assertBool "Should *not* have evaluated to same term" (ti /= tip)
 
 parseAndStrip :: String -> IO (Program ())
