@@ -52,7 +52,7 @@ parseLine input =
     Left  err -> error $ "Parse error: " ++ show err
     Right t   -> return t
 
-typeCheck :: Term a -> IO (Term Type)
+typeCheck :: Show a => Term a -> IO (Term Type)
 typeCheck t = return $ inferTerm t
 
 eval :: Program Type -> Term Type -> (Term Type, Program Type)

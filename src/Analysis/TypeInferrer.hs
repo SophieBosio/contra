@@ -39,6 +39,7 @@
    - State: Index, a fresh unification variable index
 
 -------------------------------------------------------------------------------}
+-- TODO: Update TypeInferrer description
 
 module Analysis.TypeInferrer where
 
@@ -46,48 +47,38 @@ import Core.Syntax
 import Environment.Environment
 import Environment.ERWS
 
-import Control.Monad (zipWithM_, replicateM)
+import Control.Monad (replicateM)
 import Control.Arrow (second)
-import Data.Foldable (foldrM)
+import Data.Foldable (foldrM, sequenceA_)
 
 -- Abbreviations
-data Constraint = Type :=: Type
-  deriving Show
+type ConstraintError  = String
+data Constraint       =
+  Constraint
+    { type1 :: Type
+    , type2 :: Type
+    , info :: ConstraintError
+    }
 
 type Bindings         = Mapping Name Type
 type Annotation     a = ERWS a Bindings [Constraint] Index
 type TypeSubstitution = [(Index, Type)]
-type ConstraintError  = String
 
 
 -- Export
-inferProgram :: Program a -> Either ConstraintError (Program Type)
+inferProgram :: Show a => Program a -> Either ConstraintError (Program Type)
 inferProgram program =
   case solve constraints of
     Left err -> Left  err
     Right cs -> Right $ addSignatures [] $ refine cs <$> annotatedProgram
   where
-    definitions prog = functions prog ++ properties prog
-    constraints =    annotationConstraints
-                  ++ signatureDefinitionAccord
-                  ++ propertiesReturnBooleans
     (annotatedProgram, _, annotationConstraints) =
       runERWS (annotateProgram program) program emptyBindings 0
-    signatureDefinitionAccord =
-      [ tau :=: annotation t
-      | (sig, tau) <- signatures  annotatedProgram
-      , (def, t)   <- definitions annotatedProgram
-      , sig == def ]
-    propertiesReturnBooleans =
-      concat
-      [ [ returnType tau            :=: Boolean'
-        , returnType (annotation t) :=: Boolean'
-        ]
-      | (sig, tau) <- signatures annotatedProgram
-      , (prop, t)  <- properties annotatedProgram
-      , sig == prop ]
+    constraints =    annotationConstraints
+                  ++ signatureDefinitionAccord annotatedProgram
+                  ++ propertiesReturnBoolean   annotatedProgram
 
-inferTerm :: Term a -> Term Type
+inferTerm :: Show a => Term a -> Term Type
 inferTerm t =
   let (t', _, _) = runERWS (annotate t) End emptyBindings 0
   in  t'
@@ -102,11 +93,26 @@ fresh = Variable' <$> (get >>= \i ->     -- Get current, fresh index (state)
 bind :: Eq x => x -> a -> x `MapsTo` a
 bind x a look y = if x == y then a else look y
 
-hasSameTypeAs :: Term Type -> Term Type -> Annotation a ()
-t0 `hasSameTypeAs` t1 = tell [annotation t0 :=: annotation t1]
+newConstraint :: Type -> Type -> String -> Constraint
+newConstraint t1 t2 msg =
+  Constraint -- tau1 should be equal to tau2
+    { type1 = t1
+    , type2 = t2
+    , info = msg
+    }
 
-hasType :: Term Type -> Type -> Annotation a ()
-t0 `hasType` tau = tell [annotation t0 :=: tau]
+addEquality :: Type -> Type -> String -> Annotation a ()
+addEquality tau1 tau2 msg = tell [newConstraint tau1 tau2 msg]
+
+addConstraint :: Term Type -> Type -> String -> Annotation a ()
+addConstraint t0 tau msg = addEquality (annotation t0) tau msg
+
+addConstraints :: [Term Type] -> [Type] -> [String] -> Annotation a ()
+addConstraints ts taus msgs = sequenceA_ (zipWith3 addConstraint ts taus msgs)
+
+haveSameType :: Term Type -> Term Type -> String -> Annotation a ()
+haveSameType t0 t1 msg = addConstraint t0 (annotation t1) msg
+
 
 class HasSubstitution a where
   substitution :: Type -> Index -> (a -> a)
@@ -118,14 +124,17 @@ instance HasSubstitution Type where
   substitution _ _ t             = t
 
 instance HasSubstitution Constraint where
-  substitution t i (t0 :=: t1) = substitution t i t0 :=: substitution t i t1
+  substitution t i c =
+    newConstraint (substitution t i (type1 c))
+                  (substitution t i (type2 c))
+                  (info c)
 
 emptyBindings :: Bindings
 emptyBindings = error . (++ " is unbound or ambiguously typed!")
 
 
 -- Annotate program
-annotateProgram :: Program a -> Annotation a (Program Type)
+annotateProgram ::Show a => Program a -> Annotation a (Program Type)
 annotateProgram (Signature x def rest) =
   do i <- get
      let (j, tau) = alpha i def
@@ -150,14 +159,14 @@ annotateProgram End = return End
 
 
 -- Annotate terms
-annotate :: Term a -> Annotation a (Term Type)
+annotate :: Show a => Term a -> Annotation a (Term Type)
 annotate (Pattern p) = annotatePattern p
 annotate (TConstructor c ts _) =
   do env <- environment
      adt <- datatype env c
      ts' <- mapM annotate ts
      cs  <- constructorTypes env c
-     zipWithM_ hasType ts' cs
+     addConstraints ts' cs (map (show . annotation) ts)
      return $ strengthenIfPossible c ts' (ADT adt)
 annotate (Lambda p t _) =
   do tau <- fresh
@@ -175,59 +184,59 @@ annotate (Application t1 t2 _) =
      tau2 <- fresh
      t1'  <- annotate t1
      t2'  <- annotate t2
-     t1' `hasType` (tau1 :->: tau2)
-     t2' `hasType` tau1
+     addConstraint t1' (tau1 :->: tau2) (show $ annotation t1)
+     addConstraint t2' tau1             (show $ annotation t2)
      return $ Application t1' t2' tau2
 annotate (Case t0 ts _) =
   do tau0 <- fresh
      tau1 <- fresh
      t0'  <- annotate t0
-     t0' `hasType` tau0
+     addConstraint t0' tau0 (show $ annotation t0)
      ts'  <- mapM (\(alt, body) -> do (alt', bs) <- liftPattern (alt, tau0)
                                       body'      <- local bs $ annotate body
-                                      body' `hasType` tau1
+                                      addConstraint body' tau1 (show $ annotation body)
                                       return (alt', body')
                   ) ts
      return $ Case t0' ts' tau1
 annotate (Plus t0 t1 _) =
   do t0' <- annotate t0
      t1' <- annotate t1
-     t0' `hasType` Integer'
-     t1' `hasType` Integer'
+     addConstraint t0' Integer' (show $ annotation t0)
+     addConstraint t1' Integer' (show $ annotation t1)
      return $ Plus t0' t1' Integer'
 annotate (Minus t0 t1 _) =
   do t0' <- annotate t0
      t1' <- annotate t1
-     t0' `hasType` Integer'
-     t1' `hasType` Integer'
+     addConstraint t0' Integer' (show $ annotation t0)
+     addConstraint t1' Integer' (show $ annotation t1)
      return $ Minus t0' t1' Integer'
 annotate (Lt t0 t1 _) =
   do t0' <- annotate t0
      t1' <- annotate t1
-     t0' `hasType` Integer'
-     t1' `hasType` Integer'
+     addConstraint t0' Integer' (show $ annotation t0)
+     addConstraint t1' Integer' (show $ annotation t1)
      return $ Lt t0' t1' Boolean'
 annotate (Gt t0 t1 _) =
   do t0' <- annotate t0
      t1' <- annotate t1
-     t0' `hasType` Integer'
-     t1' `hasType` Integer'
+     addConstraint t0' Integer' (show $ annotation t0)
+     addConstraint t1' Integer' (show $ annotation t1)
      return $ Gt t0' t1' Boolean'
 annotate (Equal t0 t1 _) =
   do t0' <- annotate t0
      t1' <- annotate t1
-     t0' `hasSameTypeAs` t1'
+     haveSameType t0' t1' (show $ annotation t0)
      return $ Equal t0' t1' Boolean'
 annotate (Not t0 _) =
   do t0' <- annotate t0
-     t0' `hasType` Boolean'
+     addConstraint t0' Boolean' (show $ annotation t0)
      return $ Not t0' Boolean'
 -- annotate (Rec x t0 _) =
 --   do tau <- fresh
 --      t0' <- local (bind x tau) $ annotate t0
 --      return $ Rec x t0' $ annotation t0'
 
-annotatePattern :: Pattern a -> Annotation a (Term Type)
+annotatePattern :: Show a => Pattern a -> Annotation a (Term Type)
 annotatePattern (Value      v) = annotateValue v
 annotatePattern (Variable x _) =
   do bindings <- ask
@@ -242,10 +251,10 @@ annotatePattern (PConstructor c ps _) =
      adt <- datatype env c
      ts' <- mapM annotatePattern ps
      cs  <- constructorTypes env c
-     zipWithM_ hasType ts' cs
+     addConstraints ts' cs (map (show . annotation) ps)
      return $ strengthenIfPossible c ts' (ADT adt)
 
-annotateValue :: Value a -> Annotation a (Term Type)
+annotateValue :: Show a => Value a -> Annotation a (Term Type)
 annotateValue (Unit        _) = return $ Pattern $ Value $ Unit Unit'
 annotateValue (Number    n _) = return $ Pattern $ Value $ Number n Integer'
 annotateValue (Boolean   b _) = return $ Pattern $ Value $ Boolean b Boolean'
@@ -254,39 +263,67 @@ annotateValue (VConstructor c vs _) =
      adt <- datatype env c
      ts' <- mapM annotateValue vs
      cs  <- constructorTypes env c
-     zipWithM_ hasType ts' cs
+     addConstraints ts' cs (map (show . annotation) vs)
      return $ strengthenIfPossible c ts' (ADT adt)
+
+
+-- Additional contstraints
+signatureDefinitionAccord :: Program Type -> [Constraint]
+signatureDefinitionAccord annotatedProgram =
+  [ newConstraint tau (annotation t)
+        ("Mismatch between type signature and implementation for '" ++ sig ++ "'")
+      | (sig, tau) <- signatures  annotatedProgram
+      , (def, t)   <- definitions annotatedProgram
+      , sig == def ]
+  where
+    definitions program = functions program ++ properties program
+
+propertiesReturnBoolean :: Program Type -> [Constraint]
+propertiesReturnBoolean annotatedProgram =
+  concat
+      [ [ newConstraint (returnType tau) Boolean'
+          ("Property signature for '" ++ sig ++ "' must have return type Boolean")
+        , newConstraint (returnType (annotation t)) Boolean'
+          ("Property '" ++ prop ++ "' must return a Boolean")
+        ]
+      | (sig, tau) <- signatures annotatedProgram
+      , (prop, t)  <- properties annotatedProgram
+      , sig == prop ]
 
 
 -- Resolve constraints
 solve :: [Constraint] -> Either ConstraintError TypeSubstitution
 solve [                 ] = Right mempty
 solve (constraint : rest) =
-  case constraint of
-    Unit'          :=: Unit'         -> solve rest
-    Integer'       :=: Integer'      -> solve rest
-    Boolean'       :=: Boolean'      -> solve rest
-    (t0 :->:  t1)  :=: (t2 :->: t3)  -> solve $ (t0 :=: t2) : (t1 :=: t3) : rest
-    (TypeList ts)  :=: (TypeList ss) -> solve $ zipWith (:=:) ts ss ++ rest
-    (ADT      x1)  :=: (ADT      x2) ->
+  case (type1 constraint, type2 constraint) of
+    (Unit'          , Unit'        ) -> solve rest
+    (Integer'       , Integer'     ) -> solve rest
+    (Boolean'       , Boolean'     ) -> solve rest
+    ((t0 :->:  t1)  , (t2 :->: t3) ) -> solve $
+                                        newConstraint t0 t2 (info constraint) :
+                                        newConstraint t1 t3 (info constraint) :
+                                        rest
+    ((TypeList ts)  , (TypeList ss)) ->
+      solve $ zipWith (\t s -> newConstraint t s (info constraint)) ts ss ++ rest
+    ((ADT      x1)  , (ADT      x2)) ->
       if   x1 /= x2
-      then Left $ typeError (ADT x1) (ADT x2)
+      then Left $ typeError (ADT x1) (ADT x2) (info constraint)
       else solve rest
-    (Variable' i) :=: t1             ->
+    (Variable' i,  t1) ->
       if   i `elem` indices t1
       then (if Variable' i /= t1
-               then Left $ typeError (Variable' i) t1
+               then Left $ typeError (Variable' i) t1 (info constraint)
                else solve rest)
       else do c <- solve (substitution t1 i <$> rest)
               return $ (i, t1) : c
-    t0 :=: Variable' i ->
+    (t0, Variable' i) ->
       if   i `elem` indices t0
       then (if Variable' i /= t0
-               then Left $ typeError t0 (Variable' i)
+               then Left $ typeError t0 (Variable' i) (info constraint)
                else solve rest)
       else do c <- solve (substitution t0 i <$> rest)
               return $ (i, t0) : c
-    (t0 :=: t1)                      -> Left $ typeError t0 t1
+    (_, _) -> Left $ info constraint
 
 refine :: TypeSubstitution -> (Type -> Type)
 refine [            ] t                      = t
@@ -301,28 +338,32 @@ refine s              (TypeList ts)          = TypeList $ map (refine s) ts
 
 
 -- Lifting (binding) variables
-liftPattern :: (Pattern a, Type) -> Annotation a (Pattern Type, Bindings -> Bindings)
+liftPattern :: Show a =>
+               (Pattern a, Type) ->
+               Annotation a (Pattern Type, Bindings -> Bindings)
 liftPattern (Variable x _, tau) = return (Variable x tau, bind x tau)
 liftPattern (Value v, tau) =
   do t' <- annotateValue v
-     t' `hasType` tau
+     addConstraint t' tau (show $ annotation v)
      let p' = strengthenToPattern t'
      return (p', id)
-liftPattern (PConstructor c ps _, tau) =
+liftPattern (PConstructor c ps a, tau) =
   do env <- environment
      adt <- datatype env c
      cs  <- constructorTypes env c
-     tell [tau :=: ADT adt]
+     addEquality tau (ADT adt) (show a)
      (ps', bs) <- foldrM liftMany ([], id) (zip ps cs)
      return (PConstructor c ps' tau, bs)
-liftPattern (List ps _, tau) =
+liftPattern (List ps a, tau) =
   do xs <- replicateM (length ps) fresh
      (ps', bs) <- foldrM liftMany ([], id) (zip ps xs)
-     tell [tau :=: TypeList xs]
+     addEquality tau (TypeList xs) (show a)
      return (List ps' tau, bs)
 
-liftMany :: (Pattern a, Type) -> ([Pattern Type], Bindings -> Bindings)
-         -> Annotation a ([Pattern Type], Bindings -> Bindings)
+liftMany :: Show a =>
+            (Pattern a, Type) ->
+            ([Pattern Type], Bindings -> Bindings) ->
+            Annotation a ([Pattern Type], Bindings -> Bindings)
 liftMany (p, tau) (ps, bs) =
   do (p', b) <- liftPattern (p, tau)
      return (ps ++ [p'], bs . b)
@@ -388,6 +429,9 @@ addSignatures sigs (Signature x t rest) = Signature x t $ addSignatures (x : sig
 addSignatures sigs (Data      x t rest) = Data      x t $ addSignatures sigs rest
 addSignatures _ End = End
 
-typeError :: Type -> Type -> ConstraintError
-typeError t1 t2 = "Type error: Expected term of type '" ++ show t2
-                  ++ "' but got term of type '" ++ show t1 ++ "'"
+
+-- Error messages
+typeError :: Type -> Type -> String -> ConstraintError
+typeError t1 t2 msg =    "Type error: Expected term of type '" ++ show t2
+                      ++ "' but got term of type '" ++ show t1 ++ "'\n"
+                      ++ msg

@@ -53,6 +53,8 @@ translate (Lambda p t _) =
   do bs <- liftPattern p
      local bs $ translate t
 translate (Application t1 t2 _) =
+  -- TODO: Fix symbolic function application
+  -- do t1'        <- translate t1
   do t2'        <- translate t2
      (bs, body) <- functionUnify t1 t2'
      local bs $ translate body
