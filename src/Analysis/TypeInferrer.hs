@@ -20,7 +20,7 @@
   Type-inference is done by annotating terms with concrete types or with
   unification variables and then adding constraints to these types. When we are
   done annotating, we solve the constraints and signal any errors.
-  
+
   The Annotation monad is an instantiation of the ERWS monad and keeps track
   of the following contexts:
    * Environment: Type, which is the typed program text - including definitions

@@ -20,7 +20,8 @@ module Validation.Translator where
    * 'liftPattern'
    * 'createSymbolic'
 
-  'translateFormula' takes a property (as a Contra term) and translates it 
+  'translateFormula' takes a property (as a Contra term) and translates it into
+  a symbolic term, represented by SValues, which in turn hold symbolic variables.
 
   It uses the Formula monad, defined in Validation.Formula.
 
