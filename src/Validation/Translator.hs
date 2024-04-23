@@ -58,15 +58,13 @@ translateToFormula prop =
 -- Constraint generation
 translate :: Term Type -> Formula SValue
 translate (Pattern    p) = translatePattern p
-translate (Lambda p t _) =
-  do bs <- liftPattern p
-     local bs $ translate t
 translate (Application t1 t2 _) =
-  -- TODO: Fix symbolic function application
-  -- do t1'        <- translate t1
   do t2'        <- translate t2
      (bs, body) <- functionUnify t1 t2'
      local bs $ translate body
+translate (Lambda p t _) =
+  do bs <- liftPattern p
+     local bs $ translate t
 translate (Let p t1 t2 _) =
   do t1' <- translate t1
      bs  <- symUnify p t1'
@@ -193,3 +191,20 @@ numeric sv          = error  $ "Expected a numeric symval, but got " ++ show sv
 boolean :: SValue -> Formula SBool
 boolean (SBoolean b) = return b
 boolean sv           = error  $ "Expected a boolean symval, but got " ++ show sv
+
+-- Unify the function's input pattern against the symbolic argument
+-- If there's a match, return the bindings and the body so we can translate
+-- the body wrt. the new bindings
+functionUnify :: Term Type -> SValue -> Formula (Transformation, Term Type)
+functionUnify (Lambda p t1 _) sv =
+  case sUnify p sv of
+    Right bs  -> return (bs, t1)
+    Left  err -> error err
+functionUnify (Application t1 t2 _) sv =
+  do t2'         <- translate t2
+     (bs,  f   ) <- functionUnify t1 t2'
+     (bs', body) <- functionUnify f sv
+     return (bs' . bs, body)
+functionUnify t1 t2 = error $ "Error when translating the application of term '"
+                           ++ show t1 ++ "' to symbolic value '" ++ show t2
+                           ++ "'\n'" ++ show t1 ++ "' is not a function."

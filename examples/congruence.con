@@ -15,10 +15,10 @@ additionIsCongruent x y xx yy =*=
 plus :: Integer -> Integer -> Integer .
 plus x y = x + y .
 
--- plusIsCongruent x y xx yy =*=
---   if (and (x == xx) (y == yy))
---      then (plus x y) == (plus xx yy)
---      else True .
+plusIsCongruent x y xx yy =*=
+  if (and (x == xx) (y == yy))
+     then (plus x y) == (plus xx yy)
+     else True .
 
 
 -- Variations on incrementing

@@ -66,19 +66,6 @@ sUnifyMany =
          ) id
 
 
--- Unify the function's input pattern against the symbolic argument
--- If there's a match, return the bindings and the body so we can translate
--- the body wrt. the new bindings
-functionUnify :: Term a -> SValue -> Formula (Transformation, Term a)
-functionUnify (Lambda p t1 _) sv =
-  case sUnify p sv of
-    Right bs  -> return (bs, t1)
-    Left  err -> error err
-functionUnify t1 t2 = error $ "Error when translating the application of term '"
-                           ++ show t1 ++ "' to symbolic value '" ++ show t2
-                           ++ "'\n'" ++ show t1 ++ "' is not a function."
-
-
 -- Find the first match between a (symbolic) selector value and concrete patterns
 -- in a series of case branches on the form [(Pattern a, Term a)]
 firstMatch :: SValue -> [(Pattern a, Term a)] -> Formula (Transformation, Term a)
