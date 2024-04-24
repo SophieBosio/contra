@@ -23,16 +23,16 @@ satisfiable prop =
   do let f = generateFormula End prop
      (ThmResult result) <- prove f
      case result of
-       Satisfiable _ _ -> return ()
-       _               -> assertFailure "Should be satisfiable."
+       Unsatisfiable _ _ -> return ()
+       _                 -> assertFailure "Should be satisfiable."
 
 unsatisfiable :: Term Type -> Assertion
 unsatisfiable prop =
   do let f = generateFormula End prop
      (ThmResult result) <- prove f
      case result of
-       Unsatisfiable _ _ -> return ()
-       _                 -> assertFailure "Should be unsatisfiable."
+       Satisfiable _ _ -> return ()
+       _               -> assertFailure "Should be unsatisfiable."
 
 
 -- Simple tests
