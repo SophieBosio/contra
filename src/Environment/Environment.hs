@@ -36,8 +36,8 @@ data Environment m a =
     { function     :: F -> m (Term a)
     , property     :: P -> m (Term a)
     , datatype     :: C -> m D
-    , constructors :: D -> m [Constructor]
     , fieldTypes   :: C -> m [Type]
+    , constructors :: D -> m [Constructor]
     }
 
 programEnvironment :: Monad m => Program a -> Environment m a
@@ -46,7 +46,7 @@ programEnvironment p =
     { function     = return . \f -> fromJust $ lookup f (functions         p)
     , property     = return . \q -> fromJust $ lookup q (properties        p)
     , datatype     = return . \c -> fromJust $ lookup c (constructorNames  p)
-    , constructors = return . \t -> fromJust $ lookup t (datatypes         p)
     , fieldTypes   = return . \c -> fromJust $ lookup c (constructorFields p)
+    , constructors = return . \t -> fromJust $ lookup t (datatypes         p)
     }
 
