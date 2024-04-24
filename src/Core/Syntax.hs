@@ -39,7 +39,7 @@ type X    = Name     -- Variable name
 type F    = Name     -- Function name
 type P    = Name     -- Property name
 type C    = Name     -- Data constructor name
-type T    = Name     -- Data type name
+type D    = Name     -- Data type name
 
 type T0   a = Term    a
 type T1   a = Term    a
@@ -53,7 +53,7 @@ type Body a = Term    a  -- Case alternative body
 -- Abstract Syntax
 data Program a =
     Signature X  Type         (Program a)  -- Type signature declaration
-  | Data      T [Constructor] (Program a)  -- Algebraic data type declaration
+  | Data      D [Constructor] (Program a)  -- Algebraic data type declaration
   | Function  F (Term a)      (Program a)  -- Function declaration
   | Property  P (Term a)      (Program a)  -- Property declaration
   | End
@@ -65,7 +65,7 @@ data Type =
   | Boolean'
   | Variable' Index
   | Type :->: Type
-  | ADT  T
+  | ADT  D
   | TypeList [Type] -- Only used internally
 
 data Constructor = Constructor C [Type]
@@ -326,24 +326,24 @@ properties (Property  p x rest) = (p, x) : properties rest
 properties (Data      _ _ rest) = properties rest
 properties _                    = mempty
 
-datatypes :: Program a -> [(T, [Constructor])]
+datatypes :: Program a -> [(D, [Constructor])]
 datatypes (Signature _ _ rest) = datatypes rest
 datatypes (Function  _ _ rest) = datatypes rest
 datatypes (Property  _ _ rest) = datatypes rest
 datatypes (Data      x c rest) = (x, c) : datatypes rest
 datatypes _                    = mempty
 
-dataConstructors :: Program a -> [(Constructor, T)]
+dataConstructors :: Program a -> [(Constructor, D)]
 dataConstructors p = concatMap (fromConstructor . swap) (datatypes p)
   where
-    fromConstructor :: ([Constructor], T) -> [(Constructor, T)]
+    fromConstructor :: ([Constructor], D) -> [(Constructor, D)]
     fromConstructor (ctrs, t) = [ (c, t) | c <- ctrs ]
 
-constructorNames :: Program a -> [(C, T)]
+constructorNames :: Program a -> [(C, D)]
 constructorNames p = map (\(Constructor c _, t) -> (c, t)) (dataConstructors p)
 
-constructorArgs :: Program a -> [(C, [Type])]
-constructorArgs p = map (\(Constructor c ts) -> (c, ts)) constructors
+constructorFields :: Program a -> [(C, [Type])]
+constructorFields p = map (\(Constructor c ts) -> (c, ts)) constructors
   where
     constructors = map fst (dataConstructors p)
 

@@ -170,7 +170,7 @@ annotate (TConstructor c ts _) =
   do env <- environment
      adt <- datatype env c
      ts' <- mapM annotate ts
-     cs  <- constructorTypes env c
+     cs  <- fieldTypes env c
      addConstraints ts' cs (map (show . annotation) ts)
      return $ strengthenIfPossible c ts' (ADT adt)
 annotate (Lambda p t _) =
@@ -255,7 +255,7 @@ annotatePattern (PConstructor c ps _) =
   do env <- environment
      adt <- datatype env c
      ts' <- mapM annotatePattern ps
-     cs  <- constructorTypes env c
+     cs  <- fieldTypes env c
      addConstraints ts' cs (map (show . annotation) ps)
      return $ strengthenIfPossible c ts' (ADT adt)
 
@@ -267,7 +267,7 @@ annotateValue (VConstructor c vs _) =
   do env <- environment
      adt <- datatype env c
      ts' <- mapM annotateValue vs
-     cs  <- constructorTypes env c
+     cs  <- fieldTypes env c
      addConstraints ts' cs (map (show . annotation) vs)
      return $ strengthenIfPossible c ts' (ADT adt)
 
@@ -355,7 +355,7 @@ liftPattern (Value v, tau) =
 liftPattern (PConstructor c ps a, tau) =
   do env <- environment
      adt <- datatype env c
-     cs  <- constructorTypes env c
+     cs  <- fieldTypes env c
      addEquality tau (ADT adt) (show a)
      (ps', bs) <- foldrM liftMany ([], id) (zip ps cs)
      return (PConstructor c ps' tau, bs)
