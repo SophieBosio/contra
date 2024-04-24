@@ -45,7 +45,7 @@ symUnify p sv =
 sUnify :: Pattern a -> SValue -> Unifier
 sUnify (Value             _) _            = Right id
 sUnify (Variable     x    _) sx           = Right $ bind x sx
-sUnify (List           ps _) (SList  svs) = sUnifyMany $ zip ps svs
+sUnify (List           ps _) (SArgs  svs) = sUnifyMany $ zip ps svs
 sUnify (PConstructor c ps _) (SCtr d svs)
   | c == d    = sUnifyMany $ zip ps svs
   | otherwise = Left $

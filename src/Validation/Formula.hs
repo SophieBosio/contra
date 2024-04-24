@@ -45,7 +45,9 @@ data SValue =
   | SBoolean SBool
   | SNumber  SInteger
   | SCtr     String [SValue]
-  | SList    [SValue]
+  | SArgs    [SValue]
+  -- SArgs represents the fabricated argument list we create when flattening
+  -- function definitions into a Case-statement
   deriving Show
 type Bindings   = Mapping X SValue
 type Formula  a = ERSymbolic Type Bindings a
@@ -67,7 +69,7 @@ merge b (SCtr  x xs) (SCtr  y ys)
   | x == y    = SCtr x $ mergeList b xs ys
   | otherwise = error $ "Type mismatch between data type constructors '"
                 ++ show x ++ "' and '" ++ show y ++ "'"
-merge b (SList   xs) (SList   ys) = SList $ mergeList b xs ys
+merge b (SArgs   xs) (SArgs   ys) = SArgs $ mergeList b xs ys
 merge _ x y = error $ "Type mismatch between symbolic values '"
               ++ show x ++ "' and '" ++ show y ++ "'"
 
@@ -85,7 +87,7 @@ sEqual (SBoolean  b) (SBoolean  c) = SBoolean (b .== c)
 sEqual (SNumber   n) (SNumber   m) = SBoolean (n .== m)
 sEqual (SCtr   x xs) (SCtr   y ys) = SBoolean $ sAnd $ fromBool (x == y)
                                      : map truthy (zipWith sEqual xs ys)
-sEqual (SList    xs) (SList    ys) = SBoolean $ sAnd $ map truthy $
+sEqual (SArgs    xs) (SArgs    ys) = SBoolean $ sAnd $ map truthy $
                                                 zipWith sEqual xs ys
 sEqual _             _             = SBoolean sFalse
 

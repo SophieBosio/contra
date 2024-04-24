@@ -113,7 +113,7 @@ translatePattern (PConstructor c ps _) =
      return $ SCtr c sps
 translatePattern (List ps _) =
   do sps <- mapM translatePattern ps
-     return $ SList sps
+     return $ SArgs sps
 
 translateValue :: Value a -> Formula SValue
 translateValue (Unit      _) = return SUnit
@@ -162,7 +162,7 @@ createSymbolic (Variable x (Variable' _)) =
   do sx <- liftSymbolic $ free x
      return $ SNumber sx
 createSymbolic (Variable _ (TypeList [])) =
-  do return $ SList []
+  do return $ SArgs []
 createSymbolic (Variable x (TypeList ts)) =
      -- Fabricate new name for each variable by hashing <x><type-name>
      -- and appending the index of the variable type in the TypeList
@@ -171,7 +171,7 @@ createSymbolic (Variable x (TypeList ts)) =
                  [0..(length ts)]
      let ps    = zipWith Variable names ts
      sxs <- mapM createSymbolic ps
-     return $ SList sxs
+     return $ SArgs sxs
 -- TODO: Create symbolic variables for functions
 -- createSymbolic (Variable x (t1 :->: t2)) = undefined
 -- -- You have the name of the function and the program env
