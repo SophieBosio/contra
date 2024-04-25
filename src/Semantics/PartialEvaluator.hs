@@ -183,6 +183,17 @@ attemptReduction t1@(Lambda p body _) t2 a =
 attemptReduction t1 t2 a = return $ Application t1 t2 a
 
 
+-- Eliminating unreachable paths in case statement
+eliminateUnreachable :: Show a => Term a -> [(Pattern a, Term a)] -> [(Pattern a, Term a)]
+eliminateUnreachable (Pattern p) =
+  foldr (\(alt, body) ts' ->
+           case patternMatch p (Pattern alt) of
+             NoMatch   -> ts'
+             MatchBy _ -> (alt, body) : ts'
+        ) []
+eliminateUnreachable _ = id
+
+
 -- Alpha renaming
 alpha :: Show a => [Name] -> [Name] -> Pattern a -> Term a
       -> ([Name], Pattern a, Term a)
@@ -231,16 +242,6 @@ replaceWithIn' x x' (List ps a) =
   let ps' = map (manipulateWith (replaceWithIn x x')) ps
   in  List ps' a
 replaceWithIn' _ _ p = p
-
-
--- Eliminating unreachable paths in case statement
-eliminateUnreachable :: Show a => Term a -> [(Pattern a, Term a)] -> [(Pattern a, Term a)]
-eliminateUnreachable (Pattern p) =
-  foldr (\(alt, body) ts' -> case patternMatch p (Pattern alt) of
-          NoMatch   -> ts'
-          MatchBy _ -> ts' ++ [(alt, body)]
-        ) []
-eliminateUnreachable _ = id
 
 
 -- Utility
