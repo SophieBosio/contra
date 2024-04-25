@@ -83,13 +83,12 @@ partial ns (Application t1@(Pattern (Variable x _)) t2 a) =
      case lookup x' (functions env) of
        Just  s -> return s -- Already specialised
        Nothing -> if canonical t2'
-                     then do t1' <- partial ns t1
-                             f   <- function t1'
+                     then do f   <- partial ns t1 >>= function
                              specialised <- partial ns (f t2')
                              bind x' specialised
                              return specialised
                      else do t1' <- partial ns t1
-                             return $ Application t1' t2' a
+                             attemptReduction t1' t2' a
 -- Specialise anonymous function
 partial ns (Application t1 t2 a) =
   do t1' <- partial ns t1
@@ -97,7 +96,7 @@ partial ns (Application t1 t2 a) =
      if canonical t2'
        then do f <- function t1'
                partial ns (f t2')
-       else return $ Application t1' t2' a
+       else attemptReduction t1' t2' a
 partial ns (Case t0 ts a) =
   do v <- partial ns t0
      if canonical v
@@ -173,6 +172,15 @@ partialPattern ns (PConstructor c ps a) =
 
 partialValue :: (Show a, Eq a) => Value a -> PartialState a (Term a)
 partialValue v = return $ Pattern $ Value v
+
+
+-- Attempt to reduce an application by eliminating matching input and argument
+attemptReduction :: (Show a, Eq a) => Term a -> Term a -> a -> PartialState a (Term a)
+attemptReduction t1@(Lambda p body _) t2 a =
+  if weakenToTerm p == t2
+     then return body
+     else return $ Application t1 t2 a
+attemptReduction t1 t2 a = return $ Application t1 t2 a
 
 
 -- Alpha renaming
