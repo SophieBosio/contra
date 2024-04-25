@@ -19,59 +19,81 @@ module Validation.SymUnifier where
 import Core.Syntax
 import Validation.Formula
 
-import Data.Foldable (foldrM)
+import Data.List     (intercalate)
 
 
 -- Abbreviations
-type SymUnificationError = String
+type SymUnificationError = [String]
 type Transformation      = (Bindings -> Bindings)
 
-data PatternMatch a =
+data PatternMatch =
     NoMatch SymUnificationError
-  | MatchBy a
+  | MatchBy Transformation
 
-type Unifier = Either String Transformation
+type Unifier = Either SymUnificationError Transformation
+
+newtype Substitution = Substitution { unifier :: Unifier }
 
 
--- SValue unification
+-- Subsitution is a (hacky) semigroup and a monoid.
+-- The semigroup instance for Either forgets information,
+-- so we can't use that directly.
+instance Semigroup Substitution where
+  s <> s' = Substitution $
+    case unifier s of
+      Right  u ->
+        case unifier s' of
+          Left err -> Left err
+          Right u' -> Right $ u' . u
+      Left err ->
+        case unifier s' of
+          Left err' -> Left $ err <> err'
+          Right   _ -> Left err
+
+instance Monoid Substitution where
+  mempty  = Substitution $ Right id
+  mappend = (<>)
+
+substError :: String -> Substitution
+substError = Substitution . Left . return
+
+substitution :: Transformation -> Substitution
+substitution = Substitution . Right
+
+
+-- Export
 symUnify :: Pattern a -> SValue -> Formula Transformation
 symUnify p sv =
-  case sUnify p sv of
-    Right bs -> return bs
-    Left err -> error err
+  case unifier $ sUnify p sv of
+       Right bs -> return bs
+       Left err -> error $ intercalate "\n" err
+
+firstMatch :: SValue -> [(Pattern a, Term a)] -> (Transformation, Term a)
+firstMatch sv [] = error $ "Non-exhaustive patterns in case statement - "
+                        ++ "no match for '" ++ show sv ++ "'"
+firstMatch sv ((p, t) : rest) =
+  case unifier $ sUnify p sv of
+    Right bs -> (bs, t)
+    Left  _  -> firstMatch sv rest
 
 
--- Unify a regular pattern against a symbolic value and return the new bindings
-sUnify :: Pattern a -> SValue -> Unifier
-sUnify (Value             _) _            = Right id
-sUnify (Variable     x    _) sx           = Right $ bind x sx
+-- Main functions
+sUnify :: Pattern a -> SValue -> Substitution
+sUnify (Value             _) _            = mempty
+sUnify (Variable     x    _) sv           = substitution $ bind x sv
 sUnify (List           ps _) (SArgs  svs) = sUnifyMany $ zip ps svs
 sUnify (PConstructor c ps _) (SCtr d svs)
   | c == d    = sUnifyMany $ zip ps svs
-  | otherwise = Left $
+  | otherwise = substError $
     "Type mismatch occurred when trying to unify\n\
     \pattern with constructor '" ++ c ++
     "' against symbolic value with constructor '" ++ d ++ "'"
-sUnify p sv = Left $
+sUnify p sv = substError $
   "Unexpected type error occurred\n\
   \trying to unify concrete pattern '"
   ++ show p  ++ "' against symbolic value '"
   ++ show sv ++ "'"
 
-sUnifyMany :: [(Pattern a, SValue)] -> Unifier
+sUnifyMany :: [(Pattern a, SValue)] -> Substitution
 sUnifyMany =
-  foldrM (\(p, sv) bs -> case sUnify p sv of
-                           Right  b -> Right (bs . b)
-                           Left err -> Left err
-         ) id
-
-
--- Find the first match between a (symbolic) selector value and concrete patterns
--- in a series of case branches on the form [(Pattern a, Term a)]
-firstMatch :: SValue -> [(Pattern a, Term a)] -> Formula (Transformation, Term a)
-firstMatch sv [] = error $ "Non-exhaustive patterns in case statement - "
-                        ++ "no match for '" ++ show sv ++ "'"
-firstMatch sv ((p, t) : rest) =
-  case sUnify p sv of
-    Right bs -> return (bs, t)
-    Left  _  -> firstMatch sv rest
+  foldr (\(p, sv) u -> u <> sUnify p sv) mempty
