@@ -10,13 +10,20 @@
   Portability : POSIX
 
   The ERSymbolic monad is reworked from Joachim Tilsted Kristensen's
-  implementation of the ERWS monad (found in Environment.ERWS). We use the same
-  approach used to create an Environment Reader Writer State monad, to make
-  an Environment Reader Symbolic monad.
+  implementation of the ERWS monad (found in Environment.ERWS).
 
-  Symbolic is the innermost monad. Besides it, we have access to a program
-  environment (i.e., the user's program text) and a Reader environment.
-  Through the Environment, we can access the user's ADT definitions.
+  We use the same approach used to create an Environment Reader Writer State
+  monad, to make an Environment Reader Symbolic monad: Wrap the inner symbolic
+  monad with a ReaderT monad transformer, and put the a tuple, consisting of the
+  environment and the regular Reader value, as the Reader value of ReaderT.
+
+  That gives us a Monad on this form:
+  ReaderT (Environment, Reader) (Symbolic a).
+
+  Through the Environment, we can access the user's ADT definitions, and
+  through the Reader, we keep track of the bindings of variables to symbolic
+  SValues. The Symbolic monad keeps track of the symbolic variables that SBV
+  has created for us (the inputs to the property) and constraints on these.
 
 -}
 
