@@ -48,8 +48,22 @@ type Unifier a = Maybe [(a, a)]
 newtype Substitution meta a = Substitution { unifier :: Unifier (meta a) }
   deriving Show
 
+
+-- Substitution is, conveniently, a semigroup and a monoid!
+instance Semigroup (Substitution meta a) where
+  s <> s' = Substitution $ unifier s <> unifier s'
+
+instance Monoid (Substitution meta a) where
+  mempty  = Substitution $ return []
+  mappend = (<>)
+
+
+-- Helpers
 mapsTo :: Pattern a -> Pattern a -> Transformation Pattern a
 mapsTo p q = return (p, q)
+
+replaces :: Pattern a -> Pattern a -> Substitution Pattern a
+replaces p q = Substitution $ return $ q `mapsTo` p
 
 
 -- Exports
@@ -68,10 +82,10 @@ firstMatch v ((p, t) : rest) =
        NoMatch   -> firstMatch v rest
        MatchBy u -> return (u, t)
 
+substitute :: Show a => Pattern a -> Term a -> (Term a -> Term a)
 -- 'substitute p t s' computes t[s/p]
 -- I.e., substitute all occurrences of pattern p in term t with term s
 -- TODO: The three 'substitute' cases for Constructors should be pretty easy to refactor
-substitute :: Show a => Pattern a -> Term a -> (Term a -> Term a)
 substitute (Variable     x    _) t s = substituteName x t s
 substitute (PConstructor p cs _) t (Pattern (Value (VConstructor q ds _)))
   | p == q    = foldr (\(x, s) t' -> substitute x t' s) t
@@ -105,6 +119,7 @@ unifyPattern v@(Variable x _) w@(Variable y _)
   | x == y    = mempty
   | otherwise = v `replaces` w
 unifyPattern v@(Variable x _) p                | not $ p `contains` x = p `replaces` v
+-- unifyPattern (Variable {}) _ = Substitution Nothing
 unifyPattern p                v@(Variable x _) | not $ p `contains` x = p `replaces` v
 unifyPattern (List      ps _) (List     ps' _) =
   case validateUnifiers (zipWith unifyPattern ps ps') of
@@ -139,18 +154,6 @@ unifyValue (VConstructor c vs _) (VConstructor c' vs' _)
       Just us -> us
       Nothing -> Substitution Nothing
 unifyValue _             _                 = Substitution Nothing
-
-
--- Substitution
-instance Semigroup (Substitution meta a) where
-  s <> s' = Substitution $ unifier s <> unifier s'
-
-instance Monoid (Substitution meta a) where
-  mempty  = Substitution $ return []
-  mappend = (<>)
-
-replaces :: Pattern a -> Pattern a -> Substitution Pattern a
-replaces p q = Substitution $ return $ q `mapsTo` p
 
 
 -- Subsitution helpers
