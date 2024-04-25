@@ -39,7 +39,7 @@ import Environment.ERSymbolic
 import Data.SBV
 
 
--- Abbreviations
+-- Custom symbolic variables
 data SValue =
     SUnit
   | SBoolean SBool
@@ -49,12 +49,14 @@ data SValue =
   -- SArgs represents the fabricated argument list we create when flattening
   -- function definitions into a Case-statement
   deriving Show
+
+
+-- The Formula monad
 type Bindings   = Mapping X SValue
 type Formula  a = ERSymbolic Type Bindings a
 
 bind :: X -> SValue -> X `MapsTo` SValue
 bind x tau look y = if x == y then tau else look y
-
 
 
 -- SValues are 'Mergeable', meaning we can use SBV's if-then-else, called 'ite'

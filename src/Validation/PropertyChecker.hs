@@ -80,7 +80,7 @@ proveFormula f =
                                putStr " "
                                print r
                                -- TODO: printCounterExample m
-       _                 -> do putStrLnYellow " ● Unexpected result: "
+       _                 -> do putStrLnYellow " ● Unknown result: "
                                print r
 
 generateFormula :: Program Type -> Term Type -> Symbolic SBool
@@ -95,14 +95,12 @@ realise sv =
   sv >>= \case
     (SBoolean b) -> return b
     other        -> error $
-                    "Property should translate to a Boolean formula, but was a "
-                    ++ show other
+                    "Unexpected error: Property should translate to a\
+                    \Boolean formula, but was a " ++ show other
 
 
 -- Pretty printing
 -- printCounterExample :: SMTModel -> IO ()
--- https://hackage.haskell.org/package/sbv-10.5/docs/Data-SBV.html#g:58
--- TODO: printCounterExample = undefined
 
 redStr :: String -> String
 redStr s = "\ESC[31m\STX" ++ s ++ "\ESC[m\STX"
