@@ -356,7 +356,7 @@ brackets :: String -> String
 brackets = ("[" ++) . (++ "]")
 
 caseArrow :: (Pattern a, Term a) -> String
-caseArrow (p, t) = " | " ++ show p ++ " -> " ++ show t
+caseArrow (p, t) = " ; " ++ show p ++ " -> " ++ show t
 
 instance Show a => Show (Program a) where
   show (Signature x t  rest) =
