@@ -149,17 +149,17 @@ liftPropertyInputPatterns (Lambda p t _) =
 liftPropertyInputPatterns t = return (id, t)
 
 
--- Create symbolic variables
+-- Create symbolic variables for SBV to instantiate during solving
 createSymbolic :: Pattern Type -> Formula SValue
 createSymbolic (Variable _ Unit')    = return SUnit
 createSymbolic (Variable x Integer') =
-  do sx <- liftSymbolic $ sInteger x
+  do sx <- lift $ sInteger x
      return $ SNumber sx
 createSymbolic (Variable x Boolean') =
-  do sx <- liftSymbolic $ sBool x
+  do sx <- lift $ sBool x
      return $ SBoolean sx
 createSymbolic (Variable x (Variable' _)) =
-  do sx <- liftSymbolic $ free x
+  do sx <- lift $ free x
      return $ SNumber sx
 createSymbolic (Variable _ (TypeList [])) =
   do return $ SArgs []

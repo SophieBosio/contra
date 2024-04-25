@@ -70,5 +70,5 @@ ask = ERSymbolic $ Reader.asks snd
 
 
 -- Symbolic
-liftSymbolic :: Symbolic a -> ERSymbolic e r a
-liftSymbolic = ERSymbolic . Reader.lift
+lift :: Symbolic a -> ERSymbolic e r a
+lift = ERSymbolic . Reader.lift
