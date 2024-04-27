@@ -39,12 +39,14 @@ module Validation.Translator where
 -}
 
 import Core.Syntax
+import Environment.Environment
 import Environment.ERSymbolic
 import Validation.Formula
 import Validation.SymUnifier
 
 import Data.Foldable (foldrM)
 import Data.Hashable (hash)
+import Data.List
 import Data.SBV
 
 
@@ -60,19 +62,18 @@ translate :: Term Type -> Formula SValue
 translate (Pattern    p) = translatePattern p
 translate (Application t1 t2 _) =
   do t2'        <- translate t2
-     (bs, body) <- functionUnify t1 t2'
+     (bs, body) <- unifyAndBind t1 t2'
      local bs $ translate body
 translate (Lambda p t _) =
   do bs <- liftPattern p
      local bs $ translate t
 translate (Let p t1 t2 _) =
   do t1' <- translate t1
-     bs  <- symUnify p t1'
+     bs  <- unifyOrFail p t1'
      local bs $ translate t2
 translate (Case t0 ts _) =
   do sp      <- translate t0
-     (bs, t) <- firstMatch sp ts
-     local bs $ translate t
+     translateBranches sp ts
 translate (TConstructor c ts _) =
   do sts <- mapM translate ts
      return $ SCtr c sts
@@ -101,7 +102,7 @@ translate (Not t0 _) =
      return $ SBoolean $ sNot t0'
 -- translate (Rec x t0 a) -- future work
 
-translatePattern :: Pattern a -> Formula SValue
+translatePattern :: Pattern Type -> Formula SValue
 translatePattern (Value v) = translateValue v
 -- All input variables are bound at this point,
 -- so if a variable is not in the bindings, that's an error
@@ -115,13 +116,28 @@ translatePattern (List ps _) =
   do sps <- mapM translatePattern ps
      return $ SArgs sps
 
-translateValue :: Value a -> Formula SValue
+translateValue :: Value Type -> Formula SValue
 translateValue (Unit      _) = return SUnit
 translateValue (Number  n _) = return $ SNumber  $ literal n
 translateValue (Boolean b _) = return $ SBoolean $ literal b
 translateValue (VConstructor c vs _) =
   do svs <- mapM translateValue vs
      return $ SCtr c svs
+
+translateBranches :: SValue -> [(Pattern Type, Term Type)] -> Formula SValue
+translateBranches _  [] = error "Non-exhaustive patterns in case statement."
+translateBranches sv [(alt, body)] =
+  case symUnify alt sv of
+    NoMatch _  -> error "Non-exhaustive patterns in case statement."
+    MatchBy bs -> local bs $ translate body
+translateBranches sv ((alt, body) : rest) =
+  case symUnify alt sv of
+    NoMatch _  -> translateBranches sv rest
+    MatchBy bs -> do alt' <- local bs $ translatePattern alt
+                     let cond = truthy $ sEqual alt' sv
+                     body' <- local bs $ translate body
+                     next  <- translateBranches sv rest
+                     return $ merge cond body' next
 
 
 -- Create symbolic input variables
@@ -134,12 +150,12 @@ liftPattern (Variable x tau) =
   do sx <- createSymbolic (Variable x tau)
      return (bind x sx)
 liftPattern (PConstructor _ ps _) =
-  do foldrM (\p bs' -> do b <- liftPattern p
-                          return (bs' . b)
+  do foldrM (\p bs -> do b <- liftPattern p
+                         return (bs . b)
             ) id ps
 liftPattern (List ps _) =
-  do foldrM (\p bs' -> do b <- liftPattern p
-                          return (bs' . b)
+  do foldrM (\p bs -> do b <- liftPattern p
+                         return (bs . b)
             ) id ps
 
 liftPropertyInputPatterns :: Term Type -> Formula (Bindings -> Bindings, Term Type)
@@ -172,15 +188,52 @@ createSymbolic (Variable x (TypeList ts)) =
      let ps    = zipWith Variable names ts
      sxs <- mapM createSymbolic ps
      return $ SArgs sxs
--- TODO: Create symbolic variables for functions
--- createSymbolic (Variable x (t1 :->: t2)) = undefined
--- -- You have the name of the function and the program env
--- TODO: Create symbolic variables for ADTs
--- createSymbolic (Variable x (ADT t)) = undefined
--- To generate a random ADT, you could enumerate its constructors with an index
-createSymbolic p = error $ "Unexpected request to create symbolic sub-pattern '"
-                        ++ show p ++ "' of type '" ++ show (annotation p) ++ "'"
+-- createSymbolic (Variable x (ADT t)) =
+--   do env  <- environment
+--      ctrs <- constructors env t
+--      s    <- lift $ sInteger "selector"
+--      let cardinality = literal (toInteger (length ctrs))
+--      let slist = literal ctrs
+--      lift $ constrain $
+--        (s .>= 0) .&& (s .< cardinality)
+--      (Constructor ctr fields) <- selectCtr s ctrs
+--      -- sFields <- mapM ()
+--      -- return $ SCtr ctr sFields
+     
+--      return SUnit
+createSymbolic p = error $
+     "Unexpected request to create symbolic sub-pattern '"
+  ++ show p ++ "' of type '" ++ show (annotation p) ++ "'"
+  ++ "\nPlease note that generating arbitrary functions is not supported."
 
+
+-- Symbolic "unification" and unification constraint generation
+
+unifyOrFail :: Pattern a -> SValue -> Formula Transformation
+unifyOrFail p sv =
+  case symUnify p sv of
+    MatchBy  bs -> return bs
+    NoMatch err -> error err
+
+-- A function is either a Lambda that can be applied directly
+-- or it's an Application that will (eventually) return a Lambda.
+-- Applying a Lambda symbolically means unifying the input pattern against the
+-- symbolic argument and binding the free variables from the input accordingly.
+unifyAndBind :: Term Type -> SValue -> Formula (Transformation, Term Type)
+unifyAndBind (Lambda p t1 _) sv =
+  do bs <- unifyOrFail p sv
+     return (bs, t1)
+  -- case sUnify p sv of
+  --   Right bs  -> return (bs, t1)
+  --   Left  err -> error err
+unifyAndBind (Application t1 t2 _) sv =
+  do t2'         <- translate t2
+     (bs,  f   ) <- unifyAndBind t1 t2'
+     (bs', body) <- unifyAndBind f sv
+     return (bs' . bs, body)
+unifyAndBind t1 t2 = error $ "Error when translating the application of term '"
+                           ++ show t1 ++ "' to symbolic value '" ++ show t2
+                           ++ "'\n'" ++ show t1 ++ "' is not a function."
 
 
 -- Translation helpers
@@ -191,20 +244,3 @@ numeric sv          = error  $ "Expected a numeric symval, but got " ++ show sv
 boolean :: SValue -> Formula SBool
 boolean (SBoolean b) = return b
 boolean sv           = error  $ "Expected a boolean symval, but got " ++ show sv
-
--- Unify the function's input pattern against the symbolic argument
--- If there's a match, return the bindings and the body so we can translate
--- the body wrt. the new bindings
-functionUnify :: Term Type -> SValue -> Formula (Transformation, Term Type)
-functionUnify (Lambda p t1 _) sv =
-  case sUnify p sv of
-    Right bs  -> return (bs, t1)
-    Left  err -> error err
-functionUnify (Application t1 t2 _) sv =
-  do t2'         <- translate t2
-     (bs,  f   ) <- functionUnify t1 t2'
-     (bs', body) <- functionUnify f sv
-     return (bs' . bs, body)
-functionUnify t1 t2 = error $ "Error when translating the application of term '"
-                           ++ show t1 ++ "' to symbolic value '" ++ show t2
-                           ++ "'\n'" ++ show t1 ++ "' is not a function."

@@ -23,14 +23,15 @@ import Data.List     (intercalate)
 
 
 -- Abbreviations
-type SymUnificationError = [String]
-type Transformation      = (Bindings -> Bindings)
+type SymUnificationErrors = [String]
+type ErrorMessage         = String
+type Transformation       = (Bindings -> Bindings)
 
 data PatternMatch =
-    NoMatch SymUnificationError
-  | MatchBy Transformation
+    MatchBy Transformation
+  | NoMatch ErrorMessage
 
-type Unifier = Either SymUnificationError Transformation
+type Unifier = Either SymUnificationErrors Transformation
 
 newtype Substitution = Substitution { unifier :: Unifier }
 
@@ -62,38 +63,25 @@ substitution = Substitution . Right
 
 
 -- Export
-symUnify :: Pattern a -> SValue -> Formula Transformation
+symUnify :: Pattern a -> SValue -> PatternMatch
 symUnify p sv =
   case unifier $ sUnify p sv of
-       Right bs -> return bs
-       Left err -> error $ intercalate "\n" err
+       Right bs -> MatchBy bs
+       Left err -> NoMatch $ intercalate "\n" err
 
-firstMatch :: SValue -> [(Pattern a, Term a)] -> (Transformation, Term a)
-firstMatch sv [] = error $ "Non-exhaustive patterns in case statement - "
-                        ++ "no match for '" ++ show sv ++ "'"
-firstMatch sv ((p, t) : rest) =
-  case unifier $ sUnify p sv of
-    Right bs -> (bs, t)
-    Left  _  -> firstMatch sv rest
-
-
--- Main functions
 sUnify :: Pattern a -> SValue -> Substitution
 sUnify (Value             _) _            = mempty
 sUnify (Variable     x    _) sv           = substitution $ bind x sv
-sUnify (List           ps _) (SArgs  svs) = sUnifyMany $ zip ps svs
+sUnify (List           ps _) (SArgs  svs) =
+  foldr (\(p, sv) u -> u <> sUnify p sv) mempty $ zip ps svs
 sUnify (PConstructor c ps _) (SCtr d svs)
-  | c == d    = sUnifyMany $ zip ps svs
+  | c == d    = foldr (\(p, sv) u -> u <> sUnify p sv) mempty $ zip ps svs
   | otherwise = substError $
-    "Type mismatch occurred when trying to unify\n\
-    \pattern with constructor '" ++ c ++
+    "Unexpected type occurred when trying to unify\n\
+    \concrete pattern with constructor '" ++ c ++
     "' against symbolic value with constructor '" ++ d ++ "'"
 sUnify p sv = substError $
   "Unexpected type error occurred\n\
   \trying to unify concrete pattern '"
   ++ show p  ++ "' against symbolic value '"
   ++ show sv ++ "'"
-
-sUnifyMany :: [(Pattern a, SValue)] -> Substitution
-sUnifyMany =
-  foldr (\(p, sv) u -> u <> sUnify p sv) mempty
