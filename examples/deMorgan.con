@@ -24,5 +24,10 @@ substitutionDisjunction :: Boolean -> Boolean -> Boolean .
 substitutionDisjunction p q =*= (or p q) == (not (and (not p) (not q))) .
 
 
+-- Law of the excluded middle
+exMiddle :: Boolean -> Boolean .
+exMiddle p =*= (or p (not p)) .
+
+
 -- Test execution by running REPL or by changing the values in 'main':
 main = (and (not True) (not False)) .

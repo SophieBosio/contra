@@ -12,3 +12,4 @@ plus x y = x + y .
 
 plusCommutative :: Integer -> Integer -> Boolean .
 plusCommutative x y =*= (plus x y) > (plus y x) .
+

@@ -3,6 +3,7 @@ and :: Boolean -> Boolean -> Boolean .
 and True True = True .
 and x    y    = False .
 
+
 -- Variations on addition
 additionIsCongruent :: Integer -> Integer -> Integer -> Integer -> Boolean .
 additionIsCongruent x y xx yy =*=
@@ -15,6 +16,7 @@ additionIsCongruent x y xx yy =*=
 plus :: Integer -> Integer -> Integer .
 plus x y = x + y .
 
+plusIsCongruent :: Integer -> Integer -> Integer -> Integer -> Boolean .
 plusIsCongruent x y xx yy =*=
   if (and (x == xx) (y == yy))
      then (plus x y) == (plus xx yy)
@@ -36,4 +38,19 @@ incIsCongruent x y =*=
   if (x == y)
      then (inc x) == (inc y)
      else True .
+
+
+-- Less than & greater than
+ltIsCongruent :: Integer -> Integer -> Boolean .
+ltIsCongruent x y =*=
+  case (x < y) of
+    ; True -> (x < y)
+    ; False -> True .
+
+
+gtIsCongruent :: Integer -> Integer -> Boolean .
+gtIsCongruent x y =*=
+  case (x > y) of
+    ; True -> (x > y)
+    ; False -> True .
 
