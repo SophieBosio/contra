@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleContexts, ScopedTypeVariables, LambdaCase #-}
-
 {-
 
   Module      : Validation.PropertyChecker
@@ -40,6 +38,8 @@
   an unknown result.
 
 -}
+
+{-# LANGUAGE FlexibleContexts, ScopedTypeVariables, LambdaCase #-}
 
 module Validation.PropertyChecker where
 

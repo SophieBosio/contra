@@ -1,5 +1,3 @@
-{-# LANGUAGE DeriveFunctor #-}
-
 {-
 
   Module      : Core.Syntax
@@ -25,6 +23,8 @@
    * Other utility functions
 
 -}
+
+{-# LANGUAGE DeriveFunctor #-}
 
 module Core.Syntax where
 

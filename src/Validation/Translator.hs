@@ -1,5 +1,3 @@
-module Validation.Translator where
-
 {-
 
   Module      : Validation.Translator
@@ -37,6 +35,8 @@ module Validation.Translator where
   underlying Symbolic monad to create symbolic variables.
 
 -}
+
+module Validation.Translator where
 
 import Core.Syntax
 import Environment.Environment

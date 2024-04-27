@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeOperators #-}
-
 {-
 
   Module      : Analysis.TypeInferrer
@@ -45,6 +43,8 @@
   require that properties *must* return a Boolean value.
 
 -}
+
+{-# LANGUAGE TypeOperators #-}
 
 module Analysis.TypeInferrer where
 

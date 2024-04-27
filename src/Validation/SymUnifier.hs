@@ -1,5 +1,3 @@
-module Validation.SymUnifier where
-
 {-
 
   Module      : Validation.SymUnifier
@@ -15,6 +13,8 @@ module Validation.SymUnifier where
   us to "unify" them - e.g., in Case-statements, Let-Statements and Lambdas.
 
 -}
+
+module Validation.SymUnifier where
 
 import Core.Syntax
 import Validation.Formula

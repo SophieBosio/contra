@@ -25,7 +25,6 @@
 
 -}
 
-
 module Analysis.Unifier where
 
 import Core.Syntax

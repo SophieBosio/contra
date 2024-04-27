@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleContexts, ScopedTypeVariables, TypeOperators #-}
-
 {-
 
   Module      : Validation.Formula
@@ -29,6 +27,8 @@
    * Symbolic    : SBV's Symbolic monad, which keeps track of solver state
 
 -}
+
+{-# LANGUAGE FlexibleContexts, ScopedTypeVariables, TypeOperators #-}
 
 module Validation.Formula where
 
