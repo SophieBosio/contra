@@ -74,12 +74,12 @@ sUnify (Value             _) _            = mempty
 sUnify (Variable     x    _) sv           = substitution $ bind x sv
 sUnify (List           ps _) (SArgs  svs) =
   foldr (\(p, sv) u -> u <> sUnify p sv) mempty $ zip ps svs
-sUnify (PConstructor c ps (ADT t)) (SCtr d i svs)
+sUnify (PConstructor c ps (ADT t)) (SCtr d _ svs)
   | t == d     = foldr (\(p, sv) u -> u <> sUnify p sv) mempty $ zip ps svs
   | otherwise  = substError $
     "Unexpected type occurred when trying to unify\n\
-    \concrete pattern with constructor '" ++ c ++
-    "' against symbolic value with constructor '" ++ d ++ "'"
+    \concrete pattern with constructor '" ++ c ++ "' and type '" ++ show t
+    ++ "' against symbolic value of type '" ++ d ++ "'"
 sUnify p sv = substError $
   "Unexpected type error occurred\n\
   \trying to unify concrete pattern '"

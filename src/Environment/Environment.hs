@@ -38,7 +38,7 @@ data Environment m a =
     , datatype     :: C -> m D
     , fieldTypes   :: C -> m [Type]
     , constructors :: D -> m [Constructor]
-    , selector     :: D -> C -> m Int
+    , selector     :: D -> C -> m Integer
     }
 
 programEnvironment :: Monad m => Program a -> Environment m a
@@ -56,7 +56,7 @@ programEnvironment p =
 matches :: C -> Constructor -> Bool
 matches c (Constructor d _) = c == d
 
-findSelector :: Int -> C -> [Constructor] -> Maybe Int
+findSelector :: Integer -> C -> [Constructor] -> Maybe Integer
 findSelector _ _ [] = Nothing
 findSelector i c (ctr : ctrs)
   | c `matches` ctr = Just i

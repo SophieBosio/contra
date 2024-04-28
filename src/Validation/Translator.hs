@@ -49,6 +49,13 @@ import Data.Hashable (hash)
 import Data.SBV
 
 
+-- Recursion depth for ADTs
+type RecursionDepth = Integer
+
+defaultRecDepth :: RecursionDepth
+defaultRecDepth = 20
+
+
 -- Export
 translateToFormula :: Term Type -> Formula SValue
 translateToFormula prop =
@@ -130,7 +137,7 @@ translateBranches :: SValue -> [(Pattern Type, Term Type)] -> Formula SValue
 translateBranches _  [] = error "Non-exhaustive patterns in case statement."
 translateBranches sv [(alt, body)] =
   case symUnify alt sv of
-    NoMatch _  -> error "Non-exhaustive patterns in case statement."
+    NoMatch _  -> translateBranches sv []
     MatchBy bs -> local bs $ translate body
 translateBranches sv ((alt, body) : rest) =
   case symUnify alt sv of
@@ -149,7 +156,7 @@ emptyBindings = error . (++ " is unbound!")
 liftPattern :: Pattern Type -> Formula (Bindings -> Bindings)
 liftPattern (Value _) = return id
 liftPattern (Variable x tau) =
-  do sx <- createSymbolic (Variable x tau)
+  do sx <- createSymbolic defaultRecDepth (Variable x tau)
      return (bind x sx)
 liftPattern (PConstructor _ ps _) =
   do foldrM (\p bs -> do b <- liftPattern p
@@ -168,68 +175,93 @@ liftPropertyInputPatterns t = return (id, t)
 
 
 -- Create symbolic variables for SBV to instantiate during solving
-createSymbolic :: Pattern Type -> Formula SValue
-createSymbolic (Variable _ Unit')    = return SUnit
-createSymbolic (Variable x Integer') =
+createSymbolic :: RecursionDepth -> Pattern Type -> Formula SValue
+createSymbolic _ (Variable _ Unit')    = return SUnit
+createSymbolic _ (Variable x Integer') =
   do sx <- lift $ sInteger x
      return $ SNumber sx
-createSymbolic (Variable x Boolean') =
+createSymbolic _ (Variable x Boolean') =
   do sx <- lift $ sBool x
      return $ SBoolean sx
-createSymbolic (Variable x (Variable' _)) =
+createSymbolic _ (Variable x (Variable' _)) =
   do sx <- lift $ free x
      return $ SNumber sx
-createSymbolic (Variable _ (TypeList [])) =
+createSymbolic _ (Variable _ (TypeList [])) =
   do return $ SArgs []
-createSymbolic (Variable x (TypeList ts)) =
+createSymbolic depth (Variable x (TypeList ts)) =
      -- We should never be asked to create input for this type, since it's
      -- interal and not exposed to the user. However, we are able to do so.
      -- Fabricate new name for each variable by hashing <x><type-name>
      -- and appending the index of the variable type in the TypeList.
-  do let names = zipWith (\s i -> show (hash (x ++ show s)) ++ show i)
+  do let names = zipWith (\tau i -> show (hash (x ++ show tau)) ++ show i)
                  ts
-                 [0..(length ts)]
+                 ([0..] :: [Integer])
      let ps    = zipWith Variable names ts
-     sxs <- mapM createSymbolic ps
+     sxs <- mapM (createSymbolic depth) ps
      return $ SArgs sxs
--- createSymbolic (Variable x (ADT t)) =
---   do env  <- environment
---      ctrs <- constructors env t
---      s    <- lift $ sInteger "selector"
---      let cardinality = literal (toInteger (length ctrs))
---      let slist = literal ctrs
---      lift $ constrain $
---        (s .>= 0) .&& (s .< cardinality)
---      (Constructor ctr fields) <- selectCtr s ctrs
---      -- sFields <- mapM ()
---      -- return $ SCtr ctr sFields
-     
---      return SUnit
-createSymbolic p = error $
+-- createSymbolic 0     (Variable x (ADT t)) =
+  
+createSymbolic depth (Variable x (ADT adt)) =
+  do env  <- environment
+     ctrs <- constructors env adt
+     s    <- lift $ sInteger "selector"
+     let cardinality = literal (toInteger (length ctrs))
+     lift $ constrain $
+       (s .>= 0) .&& (s .< cardinality)
+     types <- symSelect s adt ctrs
+     let names = zipWith (\tau i -> show (hash (x ++ show tau)) ++ show i)
+                 types
+                 ([0..] :: [Integer])
+     let fields = zipWith Variable names types
+     sFields <- mapM (createSymbolic (depth - 1)) fields
+     return $ SCtr adt s sFields
+createSymbolic _ p = error $
      "Unexpected request to create symbolic sub-pattern '"
   ++ show p ++ "' of type '" ++ show (annotation p) ++ "'"
   ++ "\nPlease note that generating arbitrary functions is not supported."
 
 
--- Symbolic "unification" and unification constraint generation
+-- Symbolically selecting a constructor, returning its field types
+symSelect :: SInteger -> D -> [Constructor] -> Formula [Type]
+symSelect _  adt [   ] = error $ "Fatal: Failed to create input variable for ADT '"
+                        ++ show adt ++ "'"
+symSelect si adt [ctr] =
+  do env <- environment
+     i   <- selector env adt (nameOf ctr)
+     return $ ite (si .== literal i)
+                  (fieldsOf ctr)
+                  (error $ "Fatal: Failed to create input variable for ADT '"
+                        ++ show adt ++ "'")
+symSelect si adt (ctr : ctrs) =
+  do env  <- environment
+     i    <- selector env adt (nameOf ctr)
+     next <- symSelect si adt ctrs
+     return $ ite (si .== literal i)
+                  (fieldsOf ctr)
+                  next
+ 
+nameOf :: Constructor -> C
+nameOf (Constructor c _) = c
 
+fieldsOf :: Constructor -> [Type]
+fieldsOf (Constructor _ taus) = taus
+
+
+-- Symbolic "unification" and unification constraint generation
 unifyOrFail :: Pattern Type -> SValue -> Formula Transformation
 unifyOrFail p sv =
   case symUnify p sv of
     MatchBy  bs -> return bs
     NoMatch err -> error err
 
+unifyAndBind :: Term Type -> SValue -> Formula (Transformation, Term Type)
 -- A function is either a Lambda that can be applied directly
 -- or it's an Application that will (eventually) return a Lambda.
 -- Applying a Lambda symbolically means unifying the input pattern against the
 -- symbolic argument and binding the free variables from the input accordingly.
-unifyAndBind :: Term Type -> SValue -> Formula (Transformation, Term Type)
 unifyAndBind (Lambda p t1 _) sv =
   do bs <- unifyOrFail p sv
      return (bs, t1)
-  -- case sUnify p sv of
-  --   Right bs  -> return (bs, t1)
-  --   Left  err -> error err
 unifyAndBind (Application t1 t2 _) sv =
   do t2'         <- translate t2
      (bs,  f   ) <- unifyAndBind t1 t2'
@@ -253,7 +285,7 @@ symSelector :: Type -> C -> Formula SInteger
 symSelector (ADT t) c =
   do env <- environment
      sel <- selector env t c
-     let si = literal (toInteger sel)
+     let si = literal sel
      return si
 symSelector tau c = error $ "Type error: Constructor '" ++ show c ++
                             "' typed with non-ADT type '" ++ show tau ++ "'"

@@ -59,7 +59,27 @@ bind :: X -> SValue -> X `MapsTo` SValue
 bind x tau look y = if x == y then tau else look y
 
 
--- SValues are 'Mergeable', meaning we can use SBV's if-then-else, called 'ite'
+-- SValue (symbolic) equality
+sEqual :: SValue -> SValue -> SValue
+sEqual  SUnit          SUnit         = SBoolean sTrue
+sEqual (SBoolean   b) (SBoolean   c) = SBoolean (b .== c)
+sEqual (SNumber    n) (SNumber    m) = SBoolean (n .== m)
+sEqual (SCtr x si xs) (SCtr y sj ys) = SBoolean $ sAnd $
+                                        fromBool (x == y)
+                                      : (si .== sj)
+                                      : map truthy (zipWith sEqual xs ys)
+sEqual (SArgs     xs) (SArgs     ys) = SBoolean $ sAnd $ map truthy $
+                                                  zipWith sEqual xs ys
+sEqual _             _               = SBoolean sFalse
+
+truthy :: SValue -> SBool
+truthy (SBoolean b) = b
+truthy  SUnit       = sTrue
+truthy v = error $ "Expected a symbolic boolean value, but got " ++ show v
+
+
+-- SValues are 'Mergeable', meaning we can use SBV's if-then-else, called 'ite'.
+-- Contra Types are also Mergeable -- declared in Core.Syntax.
 instance Mergeable SValue where
   symbolicMerge = const merge
 
@@ -81,24 +101,3 @@ mergeList sb xs ys
   | Just b <- unliteral sb = if b then xs else ys
   | otherwise              = error $ "Unable to merge arguments '"
                              ++ show xs ++ "' with '" ++ show ys ++ "'"
-
-
--- SValue (symbolic) equality
-sEqual :: SValue -> SValue -> SValue
-sEqual  SUnit          SUnit         = SBoolean sTrue
-sEqual (SBoolean   b) (SBoolean   c) = SBoolean (b .== c)
-sEqual (SNumber    n) (SNumber    m) = SBoolean (n .== m)
-sEqual (SCtr x si xs) (SCtr y sj ys) = SBoolean $ sAnd $
-                                        fromBool (x == y)
-                                      : (si .== sj)
-                                      : map truthy (zipWith sEqual xs ys)
-sEqual (SArgs     xs) (SArgs     ys) = SBoolean $ sAnd $ map truthy $
-                                                  zipWith sEqual xs ys
-sEqual _             _               = SBoolean sFalse
-
-
--- Utility functions
-truthy :: SValue -> SBool
-truthy (SBoolean b) = b
-truthy  SUnit       = sTrue
-truthy v = error $ "Expected a symbolic boolean value, but got " ++ show v
