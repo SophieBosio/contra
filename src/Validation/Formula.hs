@@ -40,11 +40,13 @@ import Data.SBV
 
 
 -- Custom symbolic variables
+type RecursionDepth = Integer
 data SValue =
     SUnit
   | SBoolean SBool
   | SNumber  SInteger
-  | SCtr     String SInteger [SValue]
+  | SCtr     C [SValue]
+  | SADT     D SInteger RecursionDepth
   | SArgs    [SValue]
   -- SArgs represents the fabricated argument list we create when flattening
   -- function definitions into a Case-statement
@@ -64,9 +66,8 @@ sEqual :: SValue -> SValue -> SValue
 sEqual  SUnit          SUnit         = SBoolean sTrue
 sEqual (SBoolean   b) (SBoolean   c) = SBoolean (b .== c)
 sEqual (SNumber    n) (SNumber    m) = SBoolean (n .== m)
-sEqual (SCtr x si xs) (SCtr y sj ys) = SBoolean $ sAnd $
+sEqual (SCtr    x xs) (SCtr    y ys) = SBoolean $ sAnd $
                                         fromBool (x == y)
-                                      : (si .== sj)
                                       : map truthy (zipWith sEqual xs ys)
 sEqual (SArgs     xs) (SArgs     ys) = SBoolean $ sAnd $ map truthy $
                                                   zipWith sEqual xs ys
@@ -87,8 +88,8 @@ merge :: SBool -> SValue -> SValue -> SValue
 merge _  SUnit        SUnit       = SUnit
 merge b (SNumber  x) (SNumber  y) = SNumber  $ ite b x y
 merge b (SBoolean x) (SBoolean y) = SBoolean $ ite b x y
-merge b (SCtr  x si xs) (SCtr  y sj ys)
-  | x == y     = SCtr x (ite b si sj) (mergeList b xs ys)
+merge b (SCtr  x xs) (SCtr  y ys)
+  | x == y     = SCtr x (mergeList b xs ys)
   | otherwise  = error $
     "Type mismatch between data type constructors '"
     ++ show x ++ "' and '" ++ show y ++ "'"

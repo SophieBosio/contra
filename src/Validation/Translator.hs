@@ -50,8 +50,6 @@ import Data.SBV
 
 
 -- Recursion depth for ADTs
-type RecursionDepth = Integer
-
 defaultRecDepth :: RecursionDepth
 defaultRecDepth = 20
 
@@ -80,10 +78,9 @@ translate (Let p t1 t2 _) =
 translate (Case t0 ts _) =
   do sp      <- translate t0
      translateBranches sp ts
-translate (TConstructor c ts adt) =
+translate (TConstructor c ts _) =
   do sts <- mapM translate ts
-     sel <- symSelector adt c
-     return $ SCtr c sel sts
+     return $ SCtr c sts
 translate (Plus t0 t1 _) =
   do t0' <- translate t0 >>= numeric
      t1' <- translate t1 >>= numeric
@@ -109,29 +106,27 @@ translate (Not t0 _) =
      return $ SBoolean $ sNot t0'
 -- translate (Rec x t0 a) -- future work
 
-translatePattern :: Pattern Type -> Formula SValue
+translatePattern :: Pattern a -> Formula SValue
 translatePattern (Value v) = translateValue v
 -- All input variables are bound at this point,
 -- so if a variable is not in the bindings, that's an error
 translatePattern (Variable x _) =
   do bindings <- ask
      return $ bindings x
-translatePattern (PConstructor c ps adt) =
+translatePattern (PConstructor c ps _) =
   do sps <- mapM translatePattern ps
-     sel <- symSelector adt c
-     return $ SCtr c sel sps
+     return $ SCtr c sps
 translatePattern (List ps _) =
   do sps <- mapM translatePattern ps
      return $ SArgs sps
 
-translateValue :: Value Type -> Formula SValue
+translateValue :: Value a -> Formula SValue
 translateValue (Unit      _) = return SUnit
 translateValue (Number  n _) = return $ SNumber  $ literal n
 translateValue (Boolean b _) = return $ SBoolean $ literal b
-translateValue (VConstructor c vs adt) =
+translateValue (VConstructor c vs _) =
   do svs <- mapM translateValue vs
-     sel <- symSelector adt c
-     return $ SCtr c sel svs
+     return $ SCtr c svs
 
 translateBranches :: SValue -> [(Pattern Type, Term Type)] -> Formula SValue
 translateBranches _  [] = error "Non-exhaustive patterns in case statement."
@@ -199,20 +194,20 @@ createSymbolic depth (Variable x (TypeList ts)) =
      let ps    = zipWith Variable names ts
      sxs <- mapM (createSymbolic depth) ps
      return $ SArgs sxs
-createSymbolic 0     (Variable x (ADT adt)) =
-  do env  <- environment
-     ctrs <- constructors env adt
-     case removeRecursiveCtrs ctrs of
-       []    -> error $
-         "Fatal: Maxed out recursion depth when creating symbolic ADT '"
-         ++ show adt ++ "'"
-       ctrs' -> do (si, sFields) <- symFields 0 adt ctrs'
-                   return $ SCtr adt si sFields
-createSymbolic depth (Variable x (ADT adt)) =
-  do env  <- environment
-     ctrs <- constructors env adt
-     (si, sFields) <- symFields (depth - 1) adt ctrs
-     return $ SCtr adt si sFields
+-- createSymbolic 0     (Variable x (ADT adt)) =
+--   do env  <- environment
+--      ctrs <- constructors env adt
+--      case removeRecursiveCtrs ctrs of
+--        []    -> error $
+--          "Fatal: Maxed out recursion depth when creating symbolic ADT '"
+--          ++ show adt ++ "'"
+--        ctrs' -> do (si, sFields) <- symFields 0 adt ctrs'
+--                    return $ SCtr adt si sFields
+-- createSymbolic depth (Variable x (ADT adt)) =
+--   do env  <- environment
+--      ctrs <- constructors env adt
+--      (si, sFields) <- symFields (depth - 1) adt ctrs
+--      return $ SCtr adt si sFields
 createSymbolic _ p = error $
      "Unexpected request to create symbolic sub-pattern '"
   ++ show p ++ "' of type '" ++ show (annotation p) ++ "'"
