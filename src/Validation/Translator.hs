@@ -100,7 +100,7 @@ translate (Gt t0 t1 _) =
 translate (Equal t0 t1 _) =
   do t0' <- translate t0
      t1' <- translate t1
-     return $ t0' `sEqual` t1'
+     t0' `sEqual` t1'
 translate (Not t0 _) =
   do t0' <- translate t0 >>= boolean
      return $ SBoolean $ sNot t0'
@@ -138,10 +138,11 @@ translateBranches sv ((alt, body) : rest) =
   case symUnify alt sv of
     NoMatch _  -> translateBranches sv rest
     MatchBy bs -> do alt' <- local bs $ translatePattern alt
-                     let cond = truthy $ sEqual alt' sv
+                     cond <- alt' `sEqual` sv
+                     -- let cond = truthy $ sEqual alt' sv
                      body' <- local bs $ translate body
                      next  <- translateBranches sv rest
-                     return $ merge cond body' next
+                     return $ merge (truthy cond) body' next
 
 
 -- Create symbolic input variables
@@ -195,13 +196,13 @@ createSymbolic depth (Variable x (TypeList ts)) =
      sxs <- mapM (createSymbolic depth) ps
      return $ SArgs sxs
 -- createSymbolic 0     (Variable x (ADT adt)) =
---   do env  <- environment
---      ctrs <- constructors env adt
---      case removeRecursiveCtrs ctrs of
---        []    -> error $
---          "Fatal: Maxed out recursion depth when creating symbolic ADT '"
---          ++ show adt ++ "'"
---        ctrs' -> do (si, sFields) <- symFields 0 adt ctrs'
+  -- do env  <- environment
+     -- ctrs <- constructors env adt
+     -- case removeRecursiveCtrs ctrs of
+       -- []    -> error $
+         -- "Fatal: Maxed out recursion depth when creating symbolic ADT '"
+         -- ++ show adt ++ "'"
+       -- ctrs' -> do (si, sFields) <- symFields 0 adt ctrs'
 --                    return $ SCtr adt si sFields
 -- createSymbolic depth (Variable x (ADT adt)) =
 --   do env  <- environment

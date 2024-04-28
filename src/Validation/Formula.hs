@@ -37,6 +37,7 @@ import Environment.Environment
 import Environment.ERSymbolic
 
 import Data.SBV
+import Control.Monad (zipWithM)
 
 
 -- Custom symbolic variables
@@ -62,16 +63,27 @@ bind x tau look y = if x == y then tau else look y
 
 
 -- SValue (symbolic) equality
-sEqual :: SValue -> SValue -> SValue
-sEqual  SUnit          SUnit         = SBoolean sTrue
-sEqual (SBoolean   b) (SBoolean   c) = SBoolean (b .== c)
-sEqual (SNumber    n) (SNumber    m) = SBoolean (n .== m)
-sEqual (SCtr    x xs) (SCtr    y ys) = SBoolean $ sAnd $
-                                        fromBool (x == y)
-                                      : map truthy (zipWith sEqual xs ys)
-sEqual (SArgs     xs) (SArgs     ys) = SBoolean $ sAnd $ map truthy $
-                                                  zipWith sEqual xs ys
-sEqual _             _               = SBoolean sFalse
+sEqual :: SValue -> SValue -> Formula SValue
+sEqual  SUnit          SUnit         = return $ SBoolean sTrue
+sEqual (SBoolean   b) (SBoolean   c) = return $ SBoolean (b .== c)
+sEqual (SNumber    n) (SNumber    m) = return $ SBoolean (n .== m)
+sEqual (SCtr    x xs) (SCtr    y ys) =
+  do eqs <- zipWithM sEqual xs ys
+     return $ SBoolean $ sAnd $
+         fromBool (x == y)
+       : map truthy eqs
+sEqual (SADT  x si r) (SADT y sj r') = return $ SBoolean $ sAnd
+                                         [ fromBool (x == y)
+                                         , si .== sj
+                                         , literal r  .== literal r'
+                                         ]
+-- TODO: sEqual (SCtr  c  svs) (SADT  d si r) =
+--   do 
+-- sEqual (SADT  d si r) (SCtr  c  svs) = undefined
+sEqual (SArgs     xs) (SArgs     ys) =
+  do eqs <- zipWithM sEqual xs ys
+     return $ SBoolean $ sAnd $ map truthy eqs
+sEqual _             _               = return $ SBoolean sFalse
 
 truthy :: SValue -> SBool
 truthy (SBoolean b) = b
@@ -89,9 +101,14 @@ merge _  SUnit        SUnit       = SUnit
 merge b (SNumber  x) (SNumber  y) = SNumber  $ ite b x y
 merge b (SBoolean x) (SBoolean y) = SBoolean $ ite b x y
 merge b (SCtr  x xs) (SCtr  y ys)
-  | x == y     = SCtr x (mergeList b xs ys)
-  | otherwise  = error $
+  | x == y    = SCtr x (mergeList b xs ys)
+  | otherwise = error $
     "Type mismatch between data type constructors '"
+    ++ show x ++ "' and '" ++ show y ++ "'"
+merge b (SADT x si r) (SADT y sj r')
+  | x == y    = SADT x (ite b si sj) (min r r')
+  | otherwise = error $
+    "Type mismatch between data types '"
     ++ show x ++ "' and '" ++ show y ++ "'"
 merge b (SArgs   xs) (SArgs   ys) = SArgs $ mergeList b xs ys
 merge _ x y = error $ "Type mismatch between symbolic values '"
