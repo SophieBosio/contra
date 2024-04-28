@@ -10,3 +10,8 @@ myList :: List .
 myList = Cons { 1, Cons { 2, Cons { 3,  Nil } } } .
 
 inferredList = Cons { 1, Cons { 2, Cons { 3,  Nil } } } .
+
+
+-- Dead simple prop -- all that's required is that an ADT instance is *created*
+please :: Single -> Boolean .
+please x =*= True .

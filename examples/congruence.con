@@ -65,3 +65,5 @@ exampleCongruent x y =*=
                 let (C {yy}) = y in
                   (xx == yy)
     ; False -> True .
+
+main = exampleCongruent (C {5}) (C {5}) .
