@@ -88,7 +88,7 @@ partial ns (Application t1@(Pattern (Variable x _)) t2 a) =
                              bind x' specialised
                              return specialised
                      else do t1' <- partial ns t1
-                             attemptReduction t1' t2' a
+                             return $ Application t1' t2' a
 -- Specialise anonymous function
 partial ns (Application t1 t2 a) =
   do t1' <- partial ns t1
@@ -96,7 +96,7 @@ partial ns (Application t1 t2 a) =
      if canonical t2'
        then do f <- function t1'
                partial ns (f t2')
-       else attemptReduction t1' t2' a
+       else return $ Application t1' t2' a
 partial ns (Case t0 ts a) =
   do v <- partial ns t0
      if canonical v
@@ -172,15 +172,6 @@ partialPattern ns (PConstructor c ps a) =
 
 partialValue :: (Show a, Eq a) => Value a -> PartialState a (Term a)
 partialValue v = return $ Pattern $ Value v
-
-
--- Attempt to reduce an application by eliminating matching input and argument
-attemptReduction :: (Show a, Eq a) => Term a -> Term a -> a -> PartialState a (Term a)
-attemptReduction t1@(Lambda p body _) t2 a =
-  if weakenToTerm p == t2
-     then return body
-     else return $ Application t1 t2 a
-attemptReduction t1 t2 a = return $ Application t1 t2 a
 
 
 -- Eliminating unreachable paths in case statement
