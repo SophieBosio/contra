@@ -96,14 +96,11 @@ contra --load <program-name>.con
 
 ### Other
 
-You can ask Contra to parse and type-check a program and print out the representation that Contra uses under the hood. You can also ask to see the corresponding abstract syntax tree (AST).
+You can ask Contra to parse and type-check a program and print out the syntax-desugared version of your program.
 
 ```shell
 # parse, type-check and print program
 contra --type <program-name>.con
-
-# parse, type-check and print AST
-contra --ast  <program-name>.con
 ```
 
 See version info.
