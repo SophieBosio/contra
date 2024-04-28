@@ -38,6 +38,7 @@ data Environment m a =
     , datatype     :: C -> m D
     , fieldTypes   :: C -> m [Type]
     , constructors :: D -> m [Constructor]
+    , selector     :: D -> C -> m Int
     }
 
 programEnvironment :: Monad m => Program a -> Environment m a
@@ -47,6 +48,17 @@ programEnvironment p =
     , property     = return . \q -> fromJust $ lookup q (properties        p)
     , datatype     = return . \c -> fromJust $ lookup c (constructorNames  p)
     , fieldTypes   = return . \c -> fromJust $ lookup c (constructorFields p)
-    , constructors = return . \t -> fromJust $ lookup t (datatypes         p)
+    , constructors = return . \d -> fromJust $ lookup d (datatypes         p)
+    , selector     = \d c -> return $ fromJust $ findSelector 0 c $
+                                      fromJust $ lookup d (datatypes p)
     }
+
+matches :: C -> Constructor -> Bool
+matches c (Constructor d _) = c == d
+
+findSelector :: Int -> C -> [Constructor] -> Maybe Int
+findSelector _ _ [] = Nothing
+findSelector i c (ctr : ctrs)
+  | c `matches` ctr = Just i
+  | otherwise       = findSelector (i + 1) c ctrs
 

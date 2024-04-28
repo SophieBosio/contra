@@ -46,7 +46,6 @@ import Validation.SymUnifier
 
 import Data.Foldable (foldrM)
 import Data.Hashable (hash)
-import Data.List
 import Data.SBV
 
 
@@ -74,9 +73,10 @@ translate (Let p t1 t2 _) =
 translate (Case t0 ts _) =
   do sp      <- translate t0
      translateBranches sp ts
-translate (TConstructor c ts _) =
+translate (TConstructor c ts adt) =
   do sts <- mapM translate ts
-     return $ SCtr c sts
+     sel <- symSelector adt c
+     return $ SCtr c sel sts
 translate (Plus t0 t1 _) =
   do t0' <- translate t0 >>= numeric
      t1' <- translate t1 >>= numeric
@@ -109,9 +109,10 @@ translatePattern (Value v) = translateValue v
 translatePattern (Variable x _) =
   do bindings <- ask
      return $ bindings x
-translatePattern (PConstructor c ps _) =
+translatePattern (PConstructor c ps adt) =
   do sps <- mapM translatePattern ps
-     return $ SCtr c sps
+     sel <- symSelector adt c
+     return $ SCtr c sel sps
 translatePattern (List ps _) =
   do sps <- mapM translatePattern ps
      return $ SArgs sps
@@ -120,9 +121,10 @@ translateValue :: Value Type -> Formula SValue
 translateValue (Unit      _) = return SUnit
 translateValue (Number  n _) = return $ SNumber  $ literal n
 translateValue (Boolean b _) = return $ SBoolean $ literal b
-translateValue (VConstructor c vs _) =
+translateValue (VConstructor c vs adt) =
   do svs <- mapM translateValue vs
-     return $ SCtr c svs
+     sel <- symSelector adt c
+     return $ SCtr c sel svs
 
 translateBranches :: SValue -> [(Pattern Type, Term Type)] -> Formula SValue
 translateBranches _  [] = error "Non-exhaustive patterns in case statement."
@@ -180,8 +182,10 @@ createSymbolic (Variable x (Variable' _)) =
 createSymbolic (Variable _ (TypeList [])) =
   do return $ SArgs []
 createSymbolic (Variable x (TypeList ts)) =
+     -- We should never be asked to create input for this type, since it's
+     -- interal and not exposed to the user. However, we are able to do so.
      -- Fabricate new name for each variable by hashing <x><type-name>
-     -- and appending the index of the variable type in the TypeList
+     -- and appending the index of the variable type in the TypeList.
   do let names = zipWith (\s i -> show (hash (x ++ show s)) ++ show i)
                  ts
                  [0..(length ts)]
@@ -209,7 +213,7 @@ createSymbolic p = error $
 
 -- Symbolic "unification" and unification constraint generation
 
-unifyOrFail :: Pattern a -> SValue -> Formula Transformation
+unifyOrFail :: Pattern Type -> SValue -> Formula Transformation
 unifyOrFail p sv =
   case symUnify p sv of
     MatchBy  bs -> return bs
@@ -244,3 +248,12 @@ numeric sv          = error  $ "Expected a numeric symval, but got " ++ show sv
 boolean :: SValue -> Formula SBool
 boolean (SBoolean b) = return b
 boolean sv           = error  $ "Expected a boolean symval, but got " ++ show sv
+
+symSelector :: Type -> C -> Formula SInteger
+symSelector (ADT t) c =
+  do env <- environment
+     sel <- selector env t c
+     let si = literal (toInteger sel)
+     return si
+symSelector tau c = error $ "Type error: Constructor '" ++ show c ++
+                            "' typed with non-ADT type '" ++ show tau ++ "'"

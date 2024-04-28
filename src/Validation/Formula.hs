@@ -44,7 +44,7 @@ data SValue =
     SUnit
   | SBoolean SBool
   | SNumber  SInteger
-  | SCtr     String [SValue]
+  | SCtr     String SInteger [SValue]
   | SArgs    [SValue]
   -- SArgs represents the fabricated argument list we create when flattening
   -- function definitions into a Case-statement
@@ -67,10 +67,11 @@ merge :: SBool -> SValue -> SValue -> SValue
 merge _  SUnit        SUnit       = SUnit
 merge b (SNumber  x) (SNumber  y) = SNumber  $ ite b x y
 merge b (SBoolean x) (SBoolean y) = SBoolean $ ite b x y
-merge b (SCtr  x xs) (SCtr  y ys)
-  | x == y    = SCtr x $ mergeList b xs ys
-  | otherwise = error $ "Type mismatch between data type constructors '"
-                ++ show x ++ "' and '" ++ show y ++ "'"
+merge b (SCtr  x si xs) (SCtr  y sj ys)
+  | x == y     = SCtr x (ite b si sj) (mergeList b xs ys)
+  | otherwise  = error $
+    "Type mismatch between data type constructors '"
+    ++ show x ++ "' and '" ++ show y ++ "'"
 merge b (SArgs   xs) (SArgs   ys) = SArgs $ mergeList b xs ys
 merge _ x y = error $ "Type mismatch between symbolic values '"
               ++ show x ++ "' and '" ++ show y ++ "'"
@@ -84,14 +85,16 @@ mergeList sb xs ys
 
 -- SValue (symbolic) equality
 sEqual :: SValue -> SValue -> SValue
-sEqual  SUnit         SUnit        = SBoolean sTrue
-sEqual (SBoolean  b) (SBoolean  c) = SBoolean (b .== c)
-sEqual (SNumber   n) (SNumber   m) = SBoolean (n .== m)
-sEqual (SCtr   x xs) (SCtr   y ys) = SBoolean $ sAnd $ fromBool (x == y)
-                                     : map truthy (zipWith sEqual xs ys)
-sEqual (SArgs    xs) (SArgs    ys) = SBoolean $ sAnd $ map truthy $
-                                                zipWith sEqual xs ys
-sEqual _             _             = SBoolean sFalse
+sEqual  SUnit          SUnit         = SBoolean sTrue
+sEqual (SBoolean   b) (SBoolean   c) = SBoolean (b .== c)
+sEqual (SNumber    n) (SNumber    m) = SBoolean (n .== m)
+sEqual (SCtr x si xs) (SCtr y sj ys) = SBoolean $ sAnd $
+                                        fromBool (x == y)
+                                      : (si .== sj)
+                                      : map truthy (zipWith sEqual xs ys)
+sEqual (SArgs     xs) (SArgs     ys) = SBoolean $ sAnd $ map truthy $
+                                                  zipWith sEqual xs ys
+sEqual _             _               = SBoolean sFalse
 
 
 -- Utility functions
