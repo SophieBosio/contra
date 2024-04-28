@@ -5,8 +5,8 @@ and x    y    = False .
 
 
 -- Variations on addition
-additionIsCongruent :: Integer -> Integer -> Integer -> Integer -> Boolean .
-additionIsCongruent x y xx yy =*=
+additionCongruent :: Integer -> Integer -> Integer -> Integer -> Boolean .
+additionCongruent x y xx yy =*=
   if (x == xx)
      then if (y == yy)
              then (x + y) == (xx + yy)
@@ -16,16 +16,16 @@ additionIsCongruent x y xx yy =*=
 plus :: Integer -> Integer -> Integer .
 plus x y = x + y .
 
-plusIsCongruent :: Integer -> Integer -> Integer -> Integer -> Boolean .
-plusIsCongruent x y xx yy =*=
+plusCongruent :: Integer -> Integer -> Integer -> Integer -> Boolean .
+plusCongruent x y xx yy =*=
   if (and (x == xx) (y == yy))
      then (plus x y) == (plus xx yy)
      else True .
 
 
 -- Variations on incrementing
-plusOneIsCongruent :: Integer -> Integer -> Boolean .
-plusOneIsCongruent x y =*=
+plusOneCongruent :: Integer -> Integer -> Boolean .
+plusOneCongruent x y =*=
   if (x == y)
      then (x + 1) == (y + 1)
      else True .
@@ -33,24 +33,35 @@ plusOneIsCongruent x y =*=
 inc :: Integer -> Integer .
 inc x = x + 1 .
 
-incIsCongruent :: Integer -> Integer -> Boolean .
-incIsCongruent x y =*=
+incCongruent :: Integer -> Integer -> Boolean .
+incCongruent x y =*=
   if (x == y)
      then (inc x) == (inc y)
      else True .
 
 
 -- Less than & greater than
-ltIsCongruent :: Integer -> Integer -> Boolean .
-ltIsCongruent x y =*=
-  case (x < y) of
-    ; True -> (x < y)
+ltCongruent :: Integer -> Integer -> Integer -> Integer -> Boolean .
+ltCongruent x y xx yy =*=
+  case and (x == xx) (y == yy) of
+    ; True -> (x < y) == (xx < yy)
     ; False -> True .
 
 
-gtIsCongruent :: Integer -> Integer -> Boolean .
-gtIsCongruent x y =*=
-  case (x > y) of
-    ; True -> (x > y)
+gtCongruent :: Integer -> Integer -> Integer -> Integer -> Boolean .
+gtCongruent x y xx yy =*=
+  case and (x == xx) (y == yy) of
+    ; True -> (x > y) == (xx > yy)
     ; False -> True .
 
+
+-- Simple ADTs
+adt Example = C Integer .
+
+exampleCongruent :: Example -> Example -> Boolean .
+exampleCongruent x y =*=
+  case (x == y) of
+    ; True -> let (C {xx}) = x in
+                let (C {yy}) = y in
+                  (xx == yy)
+    ; False -> True .
