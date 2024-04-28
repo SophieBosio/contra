@@ -199,31 +199,43 @@ createSymbolic depth (Variable x (TypeList ts)) =
      let ps    = zipWith Variable names ts
      sxs <- mapM (createSymbolic depth) ps
      return $ SArgs sxs
--- createSymbolic 0     (Variable x (ADT t)) =
-  
+createSymbolic 0     (Variable x (ADT adt)) =
+  do env  <- environment
+     ctrs <- constructors env adt
+     case removeRecursiveCtrs ctrs of
+       []    -> error $
+         "Fatal: Maxed out recursion depth when creating symbolic ADT '"
+         ++ show adt ++ "'"
+       ctrs' -> do (si, sFields) <- symFields 0 adt ctrs'
+                   return $ SCtr adt si sFields
 createSymbolic depth (Variable x (ADT adt)) =
   do env  <- environment
      ctrs <- constructors env adt
-     s    <- lift $ sInteger "selector"
-     let cardinality = literal (toInteger (length ctrs))
-     lift $ constrain $
-       (s .>= 0) .&& (s .< cardinality)
-     types <- symSelect s adt ctrs
-     let names = zipWith (\tau i -> show (hash (x ++ show tau)) ++ show i)
-                 types
-                 ([0..] :: [Integer])
-     let fields = zipWith Variable names types
-     sFields <- mapM (createSymbolic (depth - 1)) fields
-     return $ SCtr adt s sFields
+     (si, sFields) <- symFields (depth - 1) adt ctrs
+     return $ SCtr adt si sFields
 createSymbolic _ p = error $
      "Unexpected request to create symbolic sub-pattern '"
   ++ show p ++ "' of type '" ++ show (annotation p) ++ "'"
   ++ "\nPlease note that generating arbitrary functions is not supported."
 
 
--- Symbolically selecting a constructor, returning its field types
+-- * Helpers for creating symbolic ADT variables
+symFields :: RecursionDepth -> D -> [Constructor] -> Formula (SInteger, [SValue])
+symFields depth adt ctrs =
+  do si <- lift $ sInteger "selector"
+     let cardinality = literal $ toInteger $ length ctrs
+     lift $ constrain $
+       (si .>= 0) .&& (si .< cardinality)
+     types <- symSelect si adt ctrs
+     let names = zipWith (\tau i -> show (hash (adt ++ show tau)) ++ show i)
+                 types
+                 ([0..] :: [Integer])
+     let fields = zipWith Variable names types
+     sFields <- mapM (createSymbolic depth) fields
+     return (si, sFields)
+
 symSelect :: SInteger -> D -> [Constructor] -> Formula [Type]
-symSelect _  adt [   ] = error $ "Fatal: Failed to create input variable for ADT '"
+symSelect _  adt [   ] = error $ "Fatal: Failed to create symbolic variable for ADT '"
                         ++ show adt ++ "'"
 symSelect si adt [ctr] =
   do env <- environment
@@ -246,6 +258,13 @@ nameOf (Constructor c _) = c
 fieldsOf :: Constructor -> [Type]
 fieldsOf (Constructor _ taus) = taus
 
+removeRecursiveCtrs :: [Constructor] -> [Constructor]
+removeRecursiveCtrs = filter nonRecursive
+  where
+    nonRecursive ctr = all nonAlgebraic $ fieldsOf ctr
+    nonAlgebraic (ADT _) = False
+    nonAlgebraic _          = True
+    
 
 -- Symbolic "unification" and unification constraint generation
 unifyOrFail :: Pattern Type -> SValue -> Formula Transformation
