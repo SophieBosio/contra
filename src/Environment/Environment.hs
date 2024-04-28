@@ -25,8 +25,6 @@ module Environment.Environment where
 
 import Core.Syntax
 
-import Data.Maybe (fromJust)
-
 
 type Mapping      a b = a -> b
 type MapsTo       a b = Mapping a b -> Mapping a b
@@ -44,13 +42,37 @@ data Environment m a =
 programEnvironment :: Monad m => Program a -> Environment m a
 programEnvironment p =
   Environment
-    { function     = return . \f -> fromJust $ lookup f (functions         p)
-    , property     = return . \q -> fromJust $ lookup q (properties        p)
-    , datatype     = return . \c -> fromJust $ lookup c (constructorNames  p)
-    , fieldTypes   = return . \c -> fromJust $ lookup c (constructorFields p)
-    , constructors = return . \d -> fromJust $ lookup d (datatypes         p)
-    , selector     = \d c -> return $ fromJust $ findSelector 0 c $
-                                      fromJust $ lookup d (datatypes p)
+    { function = \f ->
+        case lookup f (functions p) of
+          Just def -> return def
+          Nothing  -> error $
+            "Couldn't find definition for function '" ++ f ++ "'"
+    , property = \q ->
+        case lookup q (properties p) of
+          Just def -> return def
+          Nothing  -> error $
+            "Couldn't find definition for property '" ++ q ++ "'"
+    , datatype = \c ->
+        case lookup c (constructorNames p) of
+          Just  d -> return d
+          Nothing -> error $
+            "Couldn't find data type declaration for constructor '" ++ c ++ "'"
+    , fieldTypes   = \c ->
+        case lookup c (constructorFields p) of
+          Just ts -> return ts
+          Nothing -> error $ "Couldn't find constructor with name '" ++ c ++ "'"
+    , constructors = \d ->
+        case lookup d (datatypes p) of
+          Just cs -> return cs
+          Nothing -> error $ "Couldn't find data type with name '" ++ d ++ "'"
+    , selector = \d c ->
+        case lookup d (datatypes p) of
+          Nothing -> error $ "Couldn't find data type with name '" ++ d ++ "'"
+          Just cs ->
+            case findSelector 0 c cs of
+              Just  s -> return s
+              Nothing -> error $ "Constructor '" ++ c ++
+                "' not found in data type declaration of type '" ++ d ++ "'"
     }
 
 matches :: C -> Constructor -> Bool
