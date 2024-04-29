@@ -37,17 +37,19 @@ import Environment.Environment
 import Environment.ERSymbolic
 
 import Data.SBV
+import Control.Monad (zipWithM)
 
 
 -- Custom symbolic variables
+type RecursionDepth = Integer
 data SValue =
     SUnit
   | SBoolean SBool
   | SNumber  SInteger
-  | SCtr     String SInteger [SValue]
+  | SCtr     D C [SValue]
   | SArgs    [SValue]
-  -- SArgs represents the fabricated argument list we create when flattening
-  -- function definitions into a Case-statement
+  -- SArgs represents the fabricated argument list we create when
+  -- flattening function definitions into a Case-statement
   deriving Show
 
 
@@ -56,26 +58,33 @@ type Bindings   = Mapping X SValue
 type Formula  a = ERSymbolic Type Bindings a
 
 bind :: X -> SValue -> X `MapsTo` SValue
-bind x tau look y = if x == y then tau else look y
+bind x tau look y = if x == y      -- Applying the bindings to some 'y' equal to 'x'
+                       then tau    -- you should now get back 'tau'
+                       else look y -- If you call it with some other 'y',
+                                   -- then return the old binding for 'y'
 
 
 -- SValue (symbolic) equality
-sEqual :: SValue -> SValue -> SValue
-sEqual  SUnit          SUnit         = SBoolean sTrue
-sEqual (SBoolean   b) (SBoolean   c) = SBoolean (b .== c)
-sEqual (SNumber    n) (SNumber    m) = SBoolean (n .== m)
-sEqual (SCtr x si xs) (SCtr y sj ys) = SBoolean $ sAnd $
-                                        fromBool (x == y)
-                                      : (si .== sj)
-                                      : map truthy (zipWith sEqual xs ys)
-sEqual (SArgs     xs) (SArgs     ys) = SBoolean $ sAnd $ map truthy $
-                                                  zipWith sEqual xs ys
-sEqual _             _               = SBoolean sFalse
+sEqual :: SValue -> SValue -> Formula SValue
+sEqual  SUnit           SUnit           = return $ SBoolean sTrue
+sEqual (SBoolean    b) (SBoolean     c) = return $ SBoolean (b .== c)
+sEqual (SNumber     n) (SNumber      m) = return $ SBoolean (n .== m)
+sEqual (SCtr adt x xs) (SCtr adt' y ys) =
+  do eqs <- zipWithM sEqual xs ys
+     return $ SBoolean $ sAnd $
+         fromBool (adt == adt')
+       : fromBool (x   == y   )
+       : map truthy eqs
+sEqual (SArgs     xs) (SArgs     ys) =
+  do eqs <- zipWithM sEqual xs ys
+     return $ SBoolean $ sAnd $ map truthy eqs
+sEqual _             _               = return $ SBoolean sFalse
 
 truthy :: SValue -> SBool
 truthy (SBoolean b) = b
 truthy  SUnit       = sTrue
-truthy v = error $ "Expected a symbolic boolean value, but got " ++ show v
+truthy v            = error $
+  "Expected a symbolic boolean value, but got " ++ show v
 
 
 -- SValues are 'Mergeable', meaning we can use SBV's if-then-else, called 'ite'.
@@ -87,8 +96,9 @@ merge :: SBool -> SValue -> SValue -> SValue
 merge _  SUnit        SUnit       = SUnit
 merge b (SNumber  x) (SNumber  y) = SNumber  $ ite b x y
 merge b (SBoolean x) (SBoolean y) = SBoolean $ ite b x y
-merge b (SCtr  x si xs) (SCtr  y sj ys)
-  | x == y     = SCtr x (ite b si sj) (mergeList b xs ys)
+merge b (SCtr adt x xs) (SCtr adt' y ys)
+  | adt == adt'
+  && x  == y   = SCtr adt x (mergeList b xs ys)
   | otherwise  = error $
     "Type mismatch between data type constructors '"
     ++ show x ++ "' and '" ++ show y ++ "'"

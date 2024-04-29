@@ -96,7 +96,10 @@ fresh = Variable' <$> (get >>= \i ->     -- Get current, fresh index (state)
                           return i)      -- Return fresh
 
 bind :: Eq x => x -> a -> x `MapsTo` a
-bind x a look y = if x == y then a else look y
+bind x a look y = if x == y      -- Applying the bindings to some 'y' equal to 'x'
+                     then a      -- you should now get back 'a'
+                     else look y -- If you call it with some other 'y',
+                                 -- then return the old binding for 'y'
 
 newConstraint :: Type -> Type -> String -> Constraint
 newConstraint t1 t2 msg =

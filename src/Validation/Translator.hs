@@ -50,8 +50,6 @@ import Data.SBV
 
 
 -- Recursion depth for ADTs
-type RecursionDepth = Integer
-
 defaultRecDepth :: RecursionDepth
 defaultRecDepth = 20
 
@@ -80,10 +78,9 @@ translate (Let p t1 t2 _) =
 translate (Case t0 ts _) =
   do sp      <- translate t0
      translateBranches sp ts
-translate (TConstructor c ts adt) =
+translate (TConstructor c ts (ADT d)) =
   do sts <- mapM translate ts
-     sel <- symSelector adt c
-     return $ SCtr c sel sts
+     return $ SCtr d c sts
 translate (Plus t0 t1 _) =
   do t0' <- translate t0 >>= numeric
      t1' <- translate t1 >>= numeric
@@ -103,10 +100,12 @@ translate (Gt t0 t1 _) =
 translate (Equal t0 t1 _) =
   do t0' <- translate t0
      t1' <- translate t1
-     return $ t0' `sEqual` t1'
+     t0' `sEqual` t1'
 translate (Not t0 _) =
   do t0' <- translate t0 >>= boolean
      return $ SBoolean $ sNot t0'
+translate t@(TConstructor {}) = error
+  $ "Ill-typed constructor argument '" ++ show t ++ "'"
 -- translate (Rec x t0 a) -- future work
 
 translatePattern :: Pattern Type -> Formula SValue
@@ -116,22 +115,24 @@ translatePattern (Value v) = translateValue v
 translatePattern (Variable x _) =
   do bindings <- ask
      return $ bindings x
-translatePattern (PConstructor c ps adt) =
+translatePattern (PConstructor c ps (ADT d)) =
   do sps <- mapM translatePattern ps
-     sel <- symSelector adt c
-     return $ SCtr c sel sps
+     return $ SCtr d c sps
 translatePattern (List ps _) =
   do sps <- mapM translatePattern ps
      return $ SArgs sps
+translatePattern p@(PConstructor {}) = error
+  $ "Ill-typed constructor argument '" ++ show p ++ "'"
 
 translateValue :: Value Type -> Formula SValue
 translateValue (Unit      _) = return SUnit
 translateValue (Number  n _) = return $ SNumber  $ literal n
 translateValue (Boolean b _) = return $ SBoolean $ literal b
-translateValue (VConstructor c vs adt) =
+translateValue (VConstructor c vs (ADT d)) =
   do svs <- mapM translateValue vs
-     sel <- symSelector adt c
-     return $ SCtr c sel svs
+     return $ SCtr d c svs
+translateValue v@(VConstructor {}) = error
+  $ "Ill-typed constructor argument '" ++ show v ++ "'"
 
 translateBranches :: SValue -> [(Pattern Type, Term Type)] -> Formula SValue
 translateBranches _  [] = error "Non-exhaustive patterns in case statement."
@@ -143,10 +144,11 @@ translateBranches sv ((alt, body) : rest) =
   case symUnify alt sv of
     NoMatch _  -> translateBranches sv rest
     MatchBy bs -> do alt' <- local bs $ translatePattern alt
-                     let cond = truthy $ sEqual alt' sv
+                     cond <- alt' `sEqual` sv
+                     -- let cond = truthy $ sEqual alt' sv
                      body' <- local bs $ translate body
                      next  <- translateBranches sv rest
-                     return $ merge cond body' next
+                     return $ merge (truthy cond) body' next
 
 
 -- Create symbolic input variables
@@ -199,20 +201,13 @@ createSymbolic depth (Variable x (TypeList ts)) =
      let ps    = zipWith Variable names ts
      sxs <- mapM (createSymbolic depth) ps
      return $ SArgs sxs
-createSymbolic 0     (Variable x (ADT adt)) =
-  do env  <- environment
-     ctrs <- constructors env adt
-     case removeRecursiveCtrs ctrs of
-       []    -> error $
-         "Fatal: Maxed out recursion depth when creating symbolic ADT '"
-         ++ show adt ++ "'"
-       ctrs' -> do (si, sFields) <- symFields 0 adt ctrs'
-                   return $ SCtr adt si sFields
+createSymbolic 0     (Variable x (ADT adt)) = error $
+  "Maxed out recursion depth when creating symbolic ADT " ++ adt ++ "'"
 createSymbolic depth (Variable x (ADT adt)) =
   do env  <- environment
      ctrs <- constructors env adt
-     (si, sFields) <- symFields (depth - 1) adt ctrs
-     return $ SCtr adt si sFields
+     si   <- createSelector ctrs
+     selectConstructor (depth - 1) adt si ctrs
 createSymbolic _ p = error $
      "Unexpected request to create symbolic sub-pattern '"
   ++ show p ++ "' of type '" ++ show (annotation p) ++ "'"
@@ -220,51 +215,35 @@ createSymbolic _ p = error $
 
 
 -- * Helpers for creating symbolic ADT variables
-symFields :: RecursionDepth -> D -> [Constructor] -> Formula (SInteger, [SValue])
-symFields depth adt ctrs =
-  do si <- lift $ sInteger "selector"
+createSelector :: [Constructor] -> Formula SInteger
+createSelector ctrs =
+  do si <- lift sInteger_
      let cardinality = literal $ toInteger $ length ctrs
      lift $ constrain $
        (si .>= 0) .&& (si .< cardinality)
-     types <- symSelect si adt ctrs
-     let names = zipWith (\tau i -> show (hash (adt ++ show tau)) ++ show i)
+     return si
+
+selectConstructor :: RecursionDepth -> D -> SInteger -> [Constructor] -> Formula SValue
+selectConstructor _     d _  [] = error $
+  "Fatal: Failed to create symbolic variable for ADT '" ++ show d ++ "'"
+selectConstructor depth d _  [Constructor c types] =
+  do let names = zipWith (\tau i -> show (hash (d ++ show tau)) ++ show i)
                  types
                  ([0..] :: [Integer])
      let fields = zipWith Variable names types
      sFields <- mapM (createSymbolic depth) fields
-     return (si, sFields)
+     return $ SCtr d c sFields
+selectConstructor depth d si ((Constructor c types) : ctrs) =
+  do env   <- environment
+     sel   <- selector env d c
+     let names = zipWith (\tau i -> show (hash (d ++ show tau)) ++ show i)
+                 types
+                 ([0..] :: [Integer])
+     let fields = zipWith Variable names types
+     sFields <- mapM (createSymbolic depth) fields
+     next  <- selectConstructor depth d si ctrs
+     return $ merge (si .== literal sel) (SCtr d c sFields) next
 
-symSelect :: SInteger -> D -> [Constructor] -> Formula [Type]
-symSelect _  adt [   ] = error $ "Fatal: Failed to create symbolic variable for ADT '"
-                        ++ show adt ++ "'"
-symSelect si adt [ctr] =
-  do env <- environment
-     i   <- selector env adt (nameOf ctr)
-     return $ ite (si .== literal i)
-                  (fieldsOf ctr)
-                  (error $ "Fatal: Failed to create input variable for ADT '"
-                        ++ show adt ++ "'")
-symSelect si adt (ctr : ctrs) =
-  do env  <- environment
-     i    <- selector env adt (nameOf ctr)
-     next <- symSelect si adt ctrs
-     return $ ite (si .== literal i)
-                  (fieldsOf ctr)
-                  next
- 
-nameOf :: Constructor -> C
-nameOf (Constructor c _) = c
-
-fieldsOf :: Constructor -> [Type]
-fieldsOf (Constructor _ taus) = taus
-
-removeRecursiveCtrs :: [Constructor] -> [Constructor]
-removeRecursiveCtrs = filter nonRecursive
-  where
-    nonRecursive ctr = all nonAlgebraic $ fieldsOf ctr
-    nonAlgebraic (ADT _) = False
-    nonAlgebraic _          = True
-    
 
 -- Symbolic "unification" and unification constraint generation
 unifyOrFail :: Pattern Type -> SValue -> Formula Transformation
