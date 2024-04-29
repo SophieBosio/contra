@@ -201,20 +201,21 @@ createSymbolic depth (Variable x (TypeList ts)) =
      let ps    = zipWith Variable names ts
      sxs <- mapM (createSymbolic depth) ps
      return $ SArgs sxs
--- createSymbolic 0     (Variable x (ADT adt)) =
+createSymbolic 0     (Variable x (ADT adt)) = error "Gotcha! TODO: Better error message"
   -- do env  <- environment
-     -- ctrs <- constructors env adt
+  --    ctrs <- constructors env adt
+  --    si   <- 
      -- case removeRecursiveCtrs ctrs of
        -- []    -> error $
          -- "Fatal: Maxed out recursion depth when creating symbolic ADT '"
          -- ++ show adt ++ "'"
        -- ctrs' -> do (si, sFields) <- symFields 0 adt ctrs'
 --                    return $ SCtr adt si sFields
--- createSymbolic depth (Variable x (ADT adt)) =
---   do env  <- environment
---      ctrs <- constructors env adt
---      (si, sFields) <- symFields (depth - 1) adt ctrs
---      return $ SCtr adt si sFields
+createSymbolic depth (Variable x (ADT adt)) =
+  do env  <- environment
+     ctrs <- constructors env adt
+     si   <- createSelector ctrs
+     selectConstructor (depth - 1) adt si ctrs
 createSymbolic _ p = error $
      "Unexpected request to create symbolic sub-pattern '"
   ++ show p ++ "' of type '" ++ show (annotation p) ++ "'"
@@ -222,6 +223,35 @@ createSymbolic _ p = error $
 
 
 -- * Helpers for creating symbolic ADT variables
+createSelector :: [Constructor] -> Formula SInteger
+createSelector ctrs =
+  do si <- lift sInteger_
+     let cardinality = literal $ toInteger $ length ctrs
+     lift $ constrain $
+       (si .>= 0) .&& (si .< cardinality)
+     return si
+
+selectConstructor :: RecursionDepth -> D -> SInteger -> [Constructor] -> Formula SValue
+selectConstructor _     d _  [] = error $
+  "Fatal: Failed to create symbolic variable for ADT '" ++ show d ++ "'"
+selectConstructor depth d _  [Constructor c types] =
+  do let names = zipWith (\tau i -> show (hash (d ++ show tau)) ++ show i)
+                 types
+                 ([0..] :: [Integer])
+     let fields = zipWith Variable names types
+     sFields <- mapM (createSymbolic depth) fields
+     return $ SCtr d c sFields
+selectConstructor depth d si ((Constructor c types) : ctrs) =
+  do env   <- environment
+     sel   <- selector env d c
+     let names = zipWith (\tau i -> show (hash (d ++ show tau)) ++ show i)
+                 types
+                 ([0..] :: [Integer])
+     let fields = zipWith Variable names types
+     sFields <- mapM (createSymbolic depth) fields
+     next  <- selectConstructor depth d si ctrs
+     return $ merge (si .== literal sel) (SCtr d c sFields) next
+
 symFields :: RecursionDepth -> D -> [Constructor] -> Formula (SInteger, [SValue])
 symFields depth adt ctrs =
   do si <- lift $ sInteger "selector"

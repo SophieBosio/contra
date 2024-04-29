@@ -25,6 +25,8 @@ module Environment.Environment where
 
 import Core.Syntax
 
+import Data.List (elemIndex)
+
 
 type Mapping      a b = a -> b
 type MapsTo       a b = Mapping a b -> Mapping a b
@@ -69,18 +71,10 @@ programEnvironment p =
         case lookup d (datatypes p) of
           Nothing -> error $ "Couldn't find data type with name '" ++ d ++ "'"
           Just cs ->
-            case findSelector 0 c cs of
-              Just  s -> return s
+            case elemIndex c (map nameOf cs) of
+              Just  s -> return $ toInteger s
               Nothing -> error $ "Constructor '" ++ c ++
                 "' not found in data type declaration of type '" ++ d ++ "'"
+            where
+              nameOf (Constructor x _) = x
     }
-
-matches :: C -> Constructor -> Bool
-matches c (Constructor d _) = c == d
-
-findSelector :: Integer -> C -> [Constructor] -> Maybe Integer
-findSelector _ _ [] = Nothing
-findSelector i c (ctr : ctrs)
-  | c `matches` ctr = Just i
-  | otherwise       = findSelector (i + 1) c ctrs
-
