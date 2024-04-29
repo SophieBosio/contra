@@ -78,9 +78,9 @@ translate (Let p t1 t2 _) =
 translate (Case t0 ts _) =
   do sp      <- translate t0
      translateBranches sp ts
-translate (TConstructor c ts _) =
+translate (TConstructor c ts (ADT d)) =
   do sts <- mapM translate ts
-     return $ SCtr c sts
+     return $ SCtr d c sts
 translate (Plus t0 t1 _) =
   do t0' <- translate t0 >>= numeric
      t1' <- translate t1 >>= numeric
@@ -104,29 +104,35 @@ translate (Equal t0 t1 _) =
 translate (Not t0 _) =
   do t0' <- translate t0 >>= boolean
      return $ SBoolean $ sNot t0'
+translate t@(TConstructor {}) = error
+  $ "Ill-typed constructor argument '" ++ show t ++ "'"
 -- translate (Rec x t0 a) -- future work
 
-translatePattern :: Pattern a -> Formula SValue
+translatePattern :: Pattern Type -> Formula SValue
 translatePattern (Value v) = translateValue v
 -- All input variables are bound at this point,
 -- so if a variable is not in the bindings, that's an error
 translatePattern (Variable x _) =
   do bindings <- ask
      return $ bindings x
-translatePattern (PConstructor c ps _) =
+translatePattern (PConstructor c ps (ADT d)) =
   do sps <- mapM translatePattern ps
-     return $ SCtr c sps
+     return $ SCtr d c sps
 translatePattern (List ps _) =
   do sps <- mapM translatePattern ps
      return $ SArgs sps
+translatePattern p@(PConstructor {}) = error
+  $ "Ill-typed constructor argument '" ++ show p ++ "'"
 
-translateValue :: Value a -> Formula SValue
+translateValue :: Value Type -> Formula SValue
 translateValue (Unit      _) = return SUnit
 translateValue (Number  n _) = return $ SNumber  $ literal n
 translateValue (Boolean b _) = return $ SBoolean $ literal b
-translateValue (VConstructor c vs _) =
+translateValue (VConstructor c vs (ADT d)) =
   do svs <- mapM translateValue vs
-     return $ SCtr c svs
+     return $ SCtr d c svs
+translateValue v@(VConstructor {}) = error
+  $ "Ill-typed constructor argument '" ++ show v ++ "'"
 
 translateBranches :: SValue -> [(Pattern Type, Term Type)] -> Formula SValue
 translateBranches _  [] = error "Non-exhaustive patterns in case statement."

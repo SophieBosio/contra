@@ -46,11 +46,11 @@ data SValue =
     SUnit
   | SBoolean SBool
   | SNumber  SInteger
-  | SCtr     C [SValue]
-  | SADT     D SInteger RecursionDepth
+  | SCtr     D C [SValue]
+  | SADT     D SInteger RecursionDepth [SValue]
   | SArgs    [SValue]
-  -- SArgs represents the fabricated argument list we create when flattening
-  -- function definitions into a Case-statement
+  -- SArgs represents the fabricated argument list we create when
+  -- flattening function definitions into a Case-statement
   deriving Show
 
 
@@ -59,27 +59,49 @@ type Bindings   = Mapping X SValue
 type Formula  a = ERSymbolic Type Bindings a
 
 bind :: X -> SValue -> X `MapsTo` SValue
-bind x tau look y = if x == y then tau else look y
+bind x tau look y = if x == y      -- Applying the bindings to some 'y' equal to 'x'
+                       then tau    -- you should now get back 'tau'
+                       else look y -- If you call it with some other 'y',
+                                   -- then return the old binding for 'y'
 
 
 -- SValue (symbolic) equality
 sEqual :: SValue -> SValue -> Formula SValue
-sEqual  SUnit          SUnit         = return $ SBoolean sTrue
-sEqual (SBoolean   b) (SBoolean   c) = return $ SBoolean (b .== c)
-sEqual (SNumber    n) (SNumber    m) = return $ SBoolean (n .== m)
-sEqual (SCtr    x xs) (SCtr    y ys) =
+sEqual  SUnit           SUnit           = return $ SBoolean sTrue
+sEqual (SBoolean    b) (SBoolean     c) = return $ SBoolean (b .== c)
+sEqual (SNumber     n) (SNumber      m) = return $ SBoolean (n .== m)
+sEqual (SCtr adt x xs) (SCtr adt' y ys) =
   do eqs <- zipWithM sEqual xs ys
      return $ SBoolean $ sAnd $
-         fromBool (x == y)
+         fromBool (adt == adt')
+       : fromBool (x   == y   )
        : map truthy eqs
-sEqual (SADT  x si r) (SADT y sj r') = return $ SBoolean $ sAnd
-                                         [ fromBool (x == y)
-                                         , si .== sj
-                                         , literal r  .== literal r'
-                                         ]
--- TODO: sEqual (SCtr  c  svs) (SADT  d si r) =
---   do 
--- sEqual (SADT  d si r) (SCtr  c  svs) = undefined
+sEqual (SADT  adt si r xs) (SADT adt' sj r' ys) =
+  do eqs <- zipWithM sEqual xs ys
+     return $ SBoolean $ sAnd $
+       [ fromBool (adt == adt')
+       , si .== sj
+       , literal r  .== literal r'
+       ]
+       ++ map truthy eqs
+sEqual (SCtr adt x xs) (SADT adt' si _ ys) =
+  do env <- environment
+     j   <- selector env adt x
+     eqs <- zipWithM sEqual xs ys
+     return $ SBoolean $ sAnd $
+       [ fromBool (adt == adt')
+       , si .== literal j
+       ]
+       ++ map truthy eqs
+sEqual (SADT  adt si _ xs) (SCtr adt' y ys) =
+  do env <- environment
+     j   <- selector env adt' y
+     eqs <- zipWithM sEqual xs ys
+     return $ SBoolean $ sAnd $
+       [ fromBool (adt == adt')
+       , si .== literal j
+       ]
+       ++ map truthy eqs
 sEqual (SArgs     xs) (SArgs     ys) =
   do eqs <- zipWithM sEqual xs ys
      return $ SBoolean $ sAnd $ map truthy eqs
@@ -88,7 +110,8 @@ sEqual _             _               = return $ SBoolean sFalse
 truthy :: SValue -> SBool
 truthy (SBoolean b) = b
 truthy  SUnit       = sTrue
-truthy v = error $ "Expected a symbolic boolean value, but got " ++ show v
+truthy v            = error $
+  "Expected a symbolic boolean value, but got " ++ show v
 
 
 -- SValues are 'Mergeable', meaning we can use SBV's if-then-else, called 'ite'.
@@ -100,16 +123,19 @@ merge :: SBool -> SValue -> SValue -> SValue
 merge _  SUnit        SUnit       = SUnit
 merge b (SNumber  x) (SNumber  y) = SNumber  $ ite b x y
 merge b (SBoolean x) (SBoolean y) = SBoolean $ ite b x y
-merge b (SCtr  x xs) (SCtr  y ys)
-  | x == y    = SCtr x (mergeList b xs ys)
-  | otherwise = error $
+merge b (SCtr adt x xs) (SCtr adt' y ys)
+  | adt == adt'
+  && x  == y   = SCtr adt x (mergeList b xs ys)
+  | otherwise  = error $
     "Type mismatch between data type constructors '"
     ++ show x ++ "' and '" ++ show y ++ "'"
-merge b (SADT x si r) (SADT y sj r')
-  | x == y    = SADT x (ite b si sj) (min r r')
+merge b (SADT x si r svs) (SADT y sj r' svs')
+  | x == y    = SADT x (ite b si sj) (min r r') (mergeList b svs svs')
   | otherwise = error $
     "Type mismatch between data types '"
     ++ show x ++ "' and '" ++ show y ++ "'"
+-- TODO: merge b (SCtr adt c xs) (SADT adt' si depth svs) = _
+-- merge b (SADT adt si depth svs) (SCtr adt' c xs) = _
 merge b (SArgs   xs) (SArgs   ys) = SArgs $ mergeList b xs ys
 merge _ x y = error $ "Type mismatch between symbolic values '"
               ++ show x ++ "' and '" ++ show y ++ "'"
