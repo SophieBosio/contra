@@ -66,4 +66,5 @@ exampleCongruent x y =*=
                   (xx == yy)
     ; False -> True .
 
-main = exampleCongruent (C {5}) (C {5}) .
+
+

@@ -47,7 +47,6 @@ data SValue =
   | SBoolean SBool
   | SNumber  SInteger
   | SCtr     D C [SValue]
-  | SADT     D SInteger RecursionDepth [SValue]
   | SArgs    [SValue]
   -- SArgs represents the fabricated argument list we create when
   -- flattening function definitions into a Case-statement
@@ -76,32 +75,6 @@ sEqual (SCtr adt x xs) (SCtr adt' y ys) =
          fromBool (adt == adt')
        : fromBool (x   == y   )
        : map truthy eqs
-sEqual (SADT  adt si r xs) (SADT adt' sj r' ys) =
-  do eqs <- zipWithM sEqual xs ys
-     return $ SBoolean $ sAnd $
-       [ fromBool (adt == adt')
-       , si .== sj
-       , literal r  .== literal r'
-       ]
-       ++ map truthy eqs
-sEqual (SCtr adt x xs) (SADT adt' si _ ys) =
-  do env <- environment
-     j   <- selector env adt x
-     eqs <- zipWithM sEqual xs ys
-     return $ SBoolean $ sAnd $
-       [ fromBool (adt == adt')
-       , si .== literal j
-       ]
-       ++ map truthy eqs
-sEqual (SADT  adt si _ xs) (SCtr adt' y ys) =
-  do env <- environment
-     j   <- selector env adt' y
-     eqs <- zipWithM sEqual xs ys
-     return $ SBoolean $ sAnd $
-       [ fromBool (adt == adt')
-       , si .== literal j
-       ]
-       ++ map truthy eqs
 sEqual (SArgs     xs) (SArgs     ys) =
   do eqs <- zipWithM sEqual xs ys
      return $ SBoolean $ sAnd $ map truthy eqs
@@ -129,13 +102,6 @@ merge b (SCtr adt x xs) (SCtr adt' y ys)
   | otherwise  = error $
     "Type mismatch between data type constructors '"
     ++ show x ++ "' and '" ++ show y ++ "'"
-merge b (SADT x si r svs) (SADT y sj r' svs')
-  | x == y    = SADT x (ite b si sj) (min r r') (mergeList b svs svs')
-  | otherwise = error $
-    "Type mismatch between data types '"
-    ++ show x ++ "' and '" ++ show y ++ "'"
--- TODO: merge b (SCtr adt c xs) (SADT adt' si depth svs) = _
--- merge b (SADT adt si depth svs) (SCtr adt' c xs) = _
 merge b (SArgs   xs) (SArgs   ys) = SArgs $ mergeList b xs ys
 merge _ x y = error $ "Type mismatch between symbolic values '"
               ++ show x ++ "' and '" ++ show y ++ "'"

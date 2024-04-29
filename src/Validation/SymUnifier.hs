@@ -81,7 +81,6 @@ sUnify (PConstructor c ps (ADT t)) (SCtr adt d svs)
     "Unexpected type occurred when trying to unify\n\
     \concrete pattern with constructor '" ++ c ++ "' and type '" ++ show t
     ++ "' against symbolic value of type '" ++ d ++ "'"
--- TODO: Unify patterns against SADTs
 sUnify p sv = substError $
   "Unexpected type error occurred\n\
   \trying to unify concrete pattern '"

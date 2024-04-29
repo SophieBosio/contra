@@ -201,16 +201,8 @@ createSymbolic depth (Variable x (TypeList ts)) =
      let ps    = zipWith Variable names ts
      sxs <- mapM (createSymbolic depth) ps
      return $ SArgs sxs
-createSymbolic 0     (Variable x (ADT adt)) = error "Gotcha! TODO: Better error message"
-  -- do env  <- environment
-  --    ctrs <- constructors env adt
-  --    si   <- 
-     -- case removeRecursiveCtrs ctrs of
-       -- []    -> error $
-         -- "Fatal: Maxed out recursion depth when creating symbolic ADT '"
-         -- ++ show adt ++ "'"
-       -- ctrs' -> do (si, sFields) <- symFields 0 adt ctrs'
---                    return $ SCtr adt si sFields
+createSymbolic 0     (Variable x (ADT adt)) = error $
+  "Maxed out recursion depth when creating symbolic ADT " ++ adt ++ "'"
 createSymbolic depth (Variable x (ADT adt)) =
   do env  <- environment
      ctrs <- constructors env adt
@@ -252,51 +244,6 @@ selectConstructor depth d si ((Constructor c types) : ctrs) =
      next  <- selectConstructor depth d si ctrs
      return $ merge (si .== literal sel) (SCtr d c sFields) next
 
-symFields :: RecursionDepth -> D -> [Constructor] -> Formula (SInteger, [SValue])
-symFields depth adt ctrs =
-  do si <- lift $ sInteger "selector"
-     let cardinality = literal $ toInteger $ length ctrs
-     lift $ constrain $
-       (si .>= 0) .&& (si .< cardinality)
-     types <- symSelect si adt ctrs
-     let names = zipWith (\tau i -> show (hash (adt ++ show tau)) ++ show i)
-                 types
-                 ([0..] :: [Integer])
-     let fields = zipWith Variable names types
-     sFields <- mapM (createSymbolic depth) fields
-     return (si, sFields)
-
-symSelect :: SInteger -> D -> [Constructor] -> Formula [Type]
-symSelect _  adt [   ] = error $ "Fatal: Failed to create symbolic variable for ADT '"
-                        ++ show adt ++ "'"
-symSelect si adt [ctr] =
-  do env <- environment
-     i   <- selector env adt (nameOf ctr)
-     return $ ite (si .== literal i)
-                  (fieldsOf ctr)
-                  (error $ "Fatal: Failed to create input variable for ADT '"
-                        ++ show adt ++ "'")
-symSelect si adt (ctr : ctrs) =
-  do env  <- environment
-     i    <- selector env adt (nameOf ctr)
-     next <- symSelect si adt ctrs
-     return $ ite (si .== literal i)
-                  (fieldsOf ctr)
-                  next
- 
-nameOf :: Constructor -> C
-nameOf (Constructor c _) = c
-
-fieldsOf :: Constructor -> [Type]
-fieldsOf (Constructor _ taus) = taus
-
-removeRecursiveCtrs :: [Constructor] -> [Constructor]
-removeRecursiveCtrs = filter nonRecursive
-  where
-    nonRecursive ctr = all nonAlgebraic $ fieldsOf ctr
-    nonAlgebraic (ADT _) = False
-    nonAlgebraic _          = True
-    
 
 -- Symbolic "unification" and unification constraint generation
 unifyOrFail :: Pattern Type -> SValue -> Formula Transformation
