@@ -1,0 +1,11 @@
+adt IntegerList = Nil | Cons Integer IntegerList .
+
+adt Pair = Pair IntegerList Integer .
+
+length :: IntegerList -> Integer .
+length list =
+  rec pair ->
+    (case pair of
+      ; Pair {Nil,         acc} -> acc
+      ; Pair {Cons n rest, acc} -> count rest (acc + 1))
+  (Pair list 0) .
