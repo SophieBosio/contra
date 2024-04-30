@@ -398,7 +398,7 @@ instance Show Constructor where
 instance Show (Term a) where
   show (Pattern               p) = show p
   show (TConstructor c  ts    _) = c ++
-    " {" ++ unwords (map show ts) ++ "}"
+    " {" ++ intercalate ", " (map show ts) ++ "}"
   show (Lambda       x  t     _) = parens $ "\\" ++ show x ++ " -> " ++ show t
   show (Let          x  t1 t2 _) = "let " ++ show x ++ " = " ++ show t1 ++
     " in " ++ show  t2
@@ -418,11 +418,11 @@ instance Show (Pattern a) where
   show (Variable     x    _) = show x
   show (List           ps _) = "[" ++ intercalate ", " (map show ps) ++ "]"
   show (PConstructor c ps _) = c  ++
-    " {" ++ unwords (map show ps) ++ "}"
+    " {" ++  intercalate ", " (map show ps) ++ "}"
 
 instance Show (Value a) where
   show (Unit              _) = "()"
   show (Number       n    _) = show n
   show (Boolean      b    _) = show b
   show (VConstructor c vs _) = c ++
-    " {" ++ unwords (map show vs) ++ "}"
+    " {" ++  intercalate ", " (map show vs) ++ "}"
