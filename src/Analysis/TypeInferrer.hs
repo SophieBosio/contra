@@ -54,7 +54,7 @@ import Environment.ERWS
 
 import Control.Monad (replicateM)
 import Control.Arrow (second)
-import Data.Foldable (foldrM, sequenceA_)
+import Data.Foldable (foldlM, sequenceA_)
 
 -- Abbreviations
 type ConstraintError  = String
@@ -360,19 +360,19 @@ liftPattern (PConstructor c ps a, tau) =
      adt <- datatype env c
      cs  <- fieldTypes env c
      addEquality tau (ADT adt) (show a)
-     (ps', bs) <- foldrM liftMany ([], id) (zip ps cs)
+     (ps', bs) <- foldlM liftMany ([], id) (zip ps cs)
      return (PConstructor c ps' tau, bs)
 liftPattern (List ps a, tau) =
   do xs <- replicateM (length ps) fresh
-     (ps', bs) <- foldrM liftMany ([], id) (zip ps xs)
+     (ps', bs) <- foldlM liftMany ([], id) (zip ps xs)
      addEquality tau (TypeList xs) (show a)
      return (List ps' tau, bs)
 
 liftMany :: Show a =>
-            (Pattern a, Type) ->
             ([Pattern Type], Bindings -> Bindings) ->
+            (Pattern a, Type) ->
             Annotation a ([Pattern Type], Bindings -> Bindings)
-liftMany (p, tau) (ps, bs) =
+liftMany (ps, bs)  (p, tau) =
   do (p', b) <- liftPattern (p, tau)
      return (ps ++ [p'], bs . b)
 
