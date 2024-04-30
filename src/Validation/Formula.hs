@@ -40,8 +40,14 @@ import Data.SBV
 import Control.Monad (zipWithM)
 
 
+-- Maximum recursion depth for ADTs and function calls
+type RecursionDepth = Int
+
+defaultRecDepth :: RecursionDepth
+defaultRecDepth = 20
+
+
 -- Custom symbolic variables
-type RecursionDepth = Integer
 data SValue =
     SUnit
   | SBoolean SBool

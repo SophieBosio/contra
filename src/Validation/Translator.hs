@@ -49,64 +49,58 @@ import Data.Hashable (hash)
 import Data.SBV
 
 
--- Recursion depth for ADTs
-defaultRecDepth :: RecursionDepth
-defaultRecDepth = 20
-
-
 -- Export
-translateToFormula :: Term Type -> Formula SValue
-translateToFormula prop =
-  do (bs, prop') <- liftPropertyInputPatterns prop
-     local bs $ translate prop'
+translateToFormula :: RecursionDepth -> Term Type -> Formula SValue
+translateToFormula depth prop =
+  do (bs, prop') <- liftPropertyInputPatterns depth prop
+     local bs $ translate depth prop'
 
 
 -- Constraint generation
-translate :: Term Type -> Formula SValue
-translate (Pattern    p) = translatePattern p
-translate (Application t1 t2 _) =
-  do t2'        <- translate t2
-     (bs, body) <- unifyAndBind t1 t2'
-     local bs $ translate body
-translate (Lambda p t _) =
-  do bs <- liftPattern p
-     local bs $ translate t
-translate (Let p t1 t2 _) =
-  do t1' <- translate t1
+translate :: RecursionDepth -> Term Type -> Formula SValue
+translate _ (Pattern    p) = translatePattern p
+translate depth (Application t1 t2 _) =
+  do t2'        <- translate depth t2
+     (bs, body) <- unifyAndBind depth t1 t2'
+     local bs $ translate depth body
+translate depth (Lambda p t _) =
+  do bs <- liftPattern depth p
+     local bs $ translate depth t
+translate depth (Let p t1 t2 _) =
+  do t1' <- translate depth t1
      bs  <- unifyOrFail p t1'
-     local bs $ translate t2
-translate (Case t0 ts _) =
-  do sp      <- translate t0
-     translateBranches sp ts
-translate (TConstructor c ts (ADT d)) =
-  do sts <- mapM translate ts
+     local bs $ translate depth t2
+translate depth (Case t0 ts _) =
+  do sp <- translate depth t0
+     translateBranches depth sp ts
+translate depth (TConstructor c ts (ADT d)) =
+  do sts <- mapM (translate depth) ts
      return $ SCtr d c sts
-translate (Plus t0 t1 _) =
-  do t0' <- translate t0 >>= numeric
-     t1' <- translate t1 >>= numeric
+translate depth (Plus t0 t1 _) =
+  do t0' <- translate depth t0 >>= numeric
+     t1' <- translate depth t1 >>= numeric
      return $ SNumber $ t0' + t1'
-translate (Minus t0 t1 _) =
-  do t0' <- translate t0 >>= numeric
-     t1' <- translate t1 >>= numeric
+translate depth (Minus t0 t1 _) =
+  do t0' <- translate depth t0>>= numeric
+     t1' <- translate depth t1>>= numeric
      return $ SNumber $ t0' - t1'
-translate (Lt t0 t1 _) =
-  do t0' <- translate t0 >>= numeric
-     t1' <- translate t1 >>= numeric
+translate depth (Lt t0 t1 _) =
+  do t0' <- translate depth t0 >>= numeric
+     t1' <- translate depth t1 >>= numeric
      return $ SBoolean $ t0' .< t1'
-translate (Gt t0 t1 _) =
-  do t0' <- translate t0 >>= numeric
-     t1' <- translate t1 >>= numeric
+translate depth (Gt t0 t1 _) =
+  do t0' <- translate depth t0 >>= numeric
+     t1' <- translate depth t1 >>= numeric
      return $ SBoolean $ t0' .> t1'
-translate (Equal t0 t1 _) =
-  do t0' <- translate t0
-     t1' <- translate t1
+translate depth (Equal t0 t1 _) =
+  do t0' <- translate depth t0
+     t1' <- translate depth t1
      t0' `sEqual` t1'
-translate (Not t0 _) =
-  do t0' <- translate t0 >>= boolean
+translate depth (Not t0 _) =
+  do t0' <- translate depth t0 >>= boolean
      return $ SBoolean $ sNot t0'
-translate t@(TConstructor {}) = error
+translate _ t@(TConstructor {}) = error
   $ "Ill-typed constructor argument '" ++ show t ++ "'"
--- translate (Rec x t0 a) -- future work
 
 translatePattern :: Pattern Type -> Formula SValue
 translatePattern (Value v) = translateValue v
@@ -134,20 +128,22 @@ translateValue (VConstructor c vs (ADT d)) =
 translateValue v@(VConstructor {}) = error
   $ "Ill-typed constructor argument '" ++ show v ++ "'"
 
-translateBranches :: SValue -> [(Pattern Type, Term Type)] -> Formula SValue
-translateBranches _  [] = error "Non-exhaustive patterns in case statement."
-translateBranches sv [(alt, body)] =
+translateBranches :: RecursionDepth
+                  -> SValue -> [(Pattern Type, Term Type)]
+                  -> Formula SValue
+translateBranches _  _ [] = error "Non-exhaustive patterns in case statement."
+translateBranches depth sv [(alt, body)] =
   case symUnify alt sv of
-    NoMatch _  -> translateBranches sv []
-    MatchBy bs -> local bs $ translate body
-translateBranches sv ((alt, body) : rest) =
+    NoMatch _  -> translateBranches depth sv []
+    MatchBy bs -> local bs $ translate depth body
+translateBranches depth sv ((alt, body) : rest) =
   case symUnify alt sv of
-    NoMatch _  -> translateBranches sv rest
+    NoMatch _  -> translateBranches depth sv rest
     MatchBy bs -> do alt' <- local bs $ translatePattern alt
                      cond <- alt' `sEqual` sv
                      -- let cond = truthy $ sEqual alt' sv
-                     body' <- local bs $ translate body
-                     next  <- translateBranches sv rest
+                     body' <- local bs $ translate depth body
+                     next  <- translateBranches depth sv rest
                      return $ merge (truthy cond) body' next
 
 
@@ -155,25 +151,26 @@ translateBranches sv ((alt, body) : rest) =
 emptyBindings :: Bindings
 emptyBindings = error . (++ " is unbound!")
 
-liftPattern :: Pattern Type -> Formula (Bindings -> Bindings)
-liftPattern (Value _) = return id
-liftPattern (Variable x tau) =
-  do sx <- createSymbolic defaultRecDepth (Variable x tau)
+liftPattern :: RecursionDepth -> Pattern Type -> Formula (Bindings -> Bindings)
+liftPattern _ (Value _) = return id
+liftPattern depth (Variable x tau) =
+  do sx <- createSymbolic depth (Variable x tau)
      return (bind x sx)
-liftPattern (PConstructor _ ps _) =
-  do foldrM (\p bs -> do b <- liftPattern p
+liftPattern depth (PConstructor _ ps _) =
+  do foldrM (\p bs -> do b <- liftPattern depth p
                          return (bs . b)
             ) id ps
-liftPattern (List ps _) =
-  do foldrM (\p bs -> do b <- liftPattern p
+liftPattern depth (List ps _) =
+  do foldrM (\p bs -> do b <- liftPattern depth p
                          return (bs . b)
             ) id ps
 
-liftPropertyInputPatterns :: Term Type -> Formula (Bindings -> Bindings, Term Type)
-liftPropertyInputPatterns (Lambda p t _) =
-  do bs <- liftPattern p
+liftPropertyInputPatterns :: RecursionDepth -> Term Type
+                          -> Formula (Bindings -> Bindings, Term Type)
+liftPropertyInputPatterns depth (Lambda p t _) =
+  do bs <- liftPattern depth p
      return (bs, t)
-liftPropertyInputPatterns t = return (id, t)
+liftPropertyInputPatterns _ t = return (id, t)
 
 
 -- Create symbolic variables for SBV to instantiate during solving
@@ -223,9 +220,13 @@ createSelector ctrs =
        (si .>= 0) .&& (si .< cardinality)
      return si
 
-selectConstructor :: RecursionDepth -> D -> SInteger -> [Constructor] -> Formula SValue
+selectConstructor :: RecursionDepth -> D -> SInteger -> [Constructor]
+                  -> Formula SValue
+selectConstructor 0     d _  _  = error $
+  "Reached max. recursion depth while trying to\
+  \create symbolic variable for ADT '" ++ d ++ "'"
 selectConstructor _     d _  [] = error $
-  "Fatal: Failed to create symbolic variable for ADT '" ++ show d ++ "'"
+  "Fatal: Failed to create symbolic variable for ADT '" ++ d ++ "'"
 selectConstructor depth d _  [Constructor c types] =
   do let names = zipWith (\tau i -> show (hash (d ++ show tau)) ++ show i)
                  types
@@ -252,20 +253,24 @@ unifyOrFail p sv =
     MatchBy  bs -> return bs
     NoMatch err -> error err
 
-unifyAndBind :: Term Type -> SValue -> Formula (Transformation, Term Type)
+unifyAndBind :: RecursionDepth -> Term Type -> SValue
+             -> Formula (Transformation, Term Type)
 -- A function is either a Lambda that can be applied directly
 -- or it's an Application that will (eventually) return a Lambda.
 -- Applying a Lambda symbolically means unifying the input pattern against the
 -- symbolic argument and binding the free variables from the input accordingly.
-unifyAndBind (Lambda p t1 _) sv =
+unifyAndBind 0 t s = error $
+  "Reached max. recursion depth while trying to translate function application\
+  \symbolically. Current step: Applying '" ++ show t ++ "' to '" ++ show s ++ "'"
+unifyAndBind _ (Lambda p t1 _) sv =
   do bs <- unifyOrFail p sv
      return (bs, t1)
-unifyAndBind (Application t1 t2 _) sv =
-  do t2'         <- translate t2
-     (bs,  f   ) <- unifyAndBind t1 t2'
-     (bs', body) <- unifyAndBind f sv
+unifyAndBind depth (Application t1 t2 _) sv =
+  do t2'         <- translate depth t2
+     (bs,  f   ) <- unifyAndBind (depth - 1) t1 t2'
+     (bs', body) <- unifyAndBind (depth - 1) f sv
      return (bs' . bs, body)
-unifyAndBind t1 t2 = error $ "Error when translating the application of term '"
+unifyAndBind _ t1 t2 = error $ "Error when translating the application of term '"
                            ++ show t1 ++ "' to symbolic value '" ++ show t2
                            ++ "'\n'" ++ show t1 ++ "' is not a function."
 

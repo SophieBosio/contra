@@ -53,19 +53,24 @@ import Control.Monad (foldM_)
 import Data.SBV
 
 
+-- Abbreviations
+type PropertyDef = (P, Term Type)
+type Property    = Term Type
+
+
 -- Export
-check :: Program Type -> IO ()
-check program =
+check :: RecursionDepth -> Program Type -> IO ()
+check depth program =
   -- For each property, collect the residual program
   -- and check next property with already specialised program
-  foldM_ checkProperty program (properties program)
+  foldM_ (checkProperty depth) program (properties program)
 
 
-checkProperty :: Program Type -> (P, Term Type) -> IO (Program Type)
-checkProperty prog (propName, prop) =
+checkProperty :: RecursionDepth -> Program Type -> PropertyDef -> IO (Program Type)
+checkProperty depth prog (propName, prop) =
   do putStr $ "Checking '" ++ propName ++ "' ❯ "
      let (prop', residual) = partiallyEvaluate prog prop
-     let f = generateFormula residual prop'
+     let f = generateFormula depth residual prop' 
      proveFormula f
      return residual
 
@@ -83,9 +88,10 @@ proveFormula f =
        _                 -> do putStrLnYellow " ● Unknown result: "
                                print r
 
-generateFormula :: Program Type -> Term Type -> Symbolic SBool
-generateFormula program p =
-  let sValueFormula = runFormula (translateToFormula p) program emptyBindings
+generateFormula :: RecursionDepth -> Program Type -> Property -> Symbolic SBool
+generateFormula depth program prop =
+  let sValueFormula =
+        runFormula (translateToFormula depth prop) program emptyBindings
   in  realise sValueFormula
 
 

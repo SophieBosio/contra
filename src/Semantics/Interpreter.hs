@@ -91,7 +91,6 @@ evaluate (Equal t0 t1 a) =
 evaluate (Not t0 a) =
   do b <- evaluate t0 >>= boolean
      return $ Pattern $ Value $ Boolean (not b) a
--- evaluate (Rec p t a) = -- future work
 
 evaluatePattern :: (Show a, Eq a) => Pattern a -> Runtime a (Term a)
 evaluatePattern (Value v) = evaluateValue v

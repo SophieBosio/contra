@@ -11,6 +11,7 @@ import Analysis.TypeInferrer      (inferProgram)
 import Semantics.Interpreter      (runMain)
 import Semantics.REPL             (evalLoop)
 import Validation.PropertyChecker (check, redStr)
+import Validation.Formula         (defaultRecDepth)
 
 import System.Environment (getArgs)
 import System.Exit        (die)
@@ -21,12 +22,13 @@ type ErrorMessage = String
 type VersionInfo  = String
 
 data Action =
-    REPL          (Program Type)
-  | Execute       (Program Type)
-  | PropertyCheck (Program Type)
-  | TypeCheck     (Program String)
-  | Version       VersionInfo
-  | Fail          ErrorMessage
+    REPL                     (Program Type)
+  | Execute                  (Program Type)
+  | PropertyCheckDefault     (Program Type)
+  | PropertyCheckCustom  Int (Program Type)
+  | TypeCheck                (Program String)
+  | Version                  VersionInfo
+  | Fail                     ErrorMessage
 
 
 -- Entry point
@@ -36,22 +38,26 @@ main = getArgs >>= run . action
 run :: IO Action -> IO ()
 run command =
   command >>= \case
-    (REPL          program) -> repl program
-    (Execute       program) -> execute program
-    (PropertyCheck program) -> checkProperties program
-    (TypeCheck     program) -> typecheck program >>= print
-    (Version       message) -> die message
-    (Fail          message) -> die message
+    (REPL                   program) -> repl program
+    (Execute                program) -> execute program
+    (PropertyCheckDefault   program) -> checkProperties program defaultRecDepth
+    (PropertyCheckCustom  n program) -> checkProperties program n
+    (TypeCheck              program) -> typecheck program >>= print
+    (Version                message) -> die message
+    (Fail                   message) -> die message
 
 action :: [String] -> IO Action
-action ["--check", file] = PropertyCheck <$> (parse file >>= typecheck)
-action ["--type",  file] = TypeCheck     <$>  parse file
-action ["--load",  file] = REPL          <$> (parse file >>= typecheck)
-action ["--version"    ] = return $ Version  versionInfo
-action ["--help"       ] = return $ Fail     useInfo
-action [           file] = Execute       <$> (parse file >>= typecheck)
-action [ ]               = return $ REPL     End
-action _                 = return $ Fail     useInfo
+action ["--check",    file] = PropertyCheckDefault
+                              <$> (parse file >>= typecheck)
+action ["--check", n, file] = PropertyCheckCustom (read n)
+                              <$> (parse file >>= typecheck)
+action ["--type",     file] = TypeCheck     <$>  parse file
+action ["--load",     file] = REPL          <$> (parse file >>= typecheck)
+action ["--version"       ] = return $ Version  versionInfo
+action ["--help"          ] = return $ Fail     useInfo
+action [              file] = Execute       <$> (parse file >>= typecheck)
+action [ ]                  = return $ REPL     End
+action _                    = return $ Fail     useInfo
 
 
 -- Main functions
@@ -78,10 +84,13 @@ execute program =
   do putStrLn "✦ Contra ✦\n"
      print (runMain program)
 
-checkProperties :: Program Type -> IO ()
-checkProperties program =
-  do putStrLn "✦ Contra: Checking properties ✦\n"
-     check program
+checkProperties :: Program Type -> Int -> IO ()
+checkProperties program depth =
+  do let depthInfo = if depth == defaultRecDepth
+           then "default recursion depth"
+           else "max. recursion depth set to " ++ show depth
+     putStrLn $ "✦ Contra: Checking properties with " ++ depthInfo ++ " ✦\n"
+     check depth program
 
 
 -- Information about the program
@@ -94,10 +103,12 @@ versionInfo =
 useInfo :: String
 useInfo =
   "How to use:\n\
-       \ contra          <filename>.con - Execute 'main' function in program\n\
-       \ contra --check  <filename>.con - Check all properties in program\n\
-       \ contra --type   <filename>.con - Type-check and print program\n\
-       \ contra --load   <filename>.con - Load program into REPL\n\
-       \ contra                         - Start blank interactive REPL session\n\
+       \ contra --check   <filename>.con - Check all properties in program\n\
+       \ contra --check n <filename.con> - Check properties with max. recursion depth 'n'\n\
+       \ contra           <filename>.con - Execute 'main' function in program\n\
+       \ contra --type    <filename>.con - Type-check and print program\n\
+  \Rudimentary REPL:\n\
+       \ contra                          - Start blank interactive REPL session\n\
+       \ contra --load    <filename>.con - Load program into REPL\n\
   \Exit REPL with ':q'"
 

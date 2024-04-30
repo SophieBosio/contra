@@ -152,7 +152,6 @@ partial ns (Not t0 a) =
        then do b <- boolean t0'
                return $ Pattern $ Value $ Boolean (not b) a
        else return $ Not t0' a
--- partial (Rec x t0 a) = -- future work
 
 partialPattern :: (Show a, Eq a) => [Name] -> Pattern a -> PartialState a (Term a)
 partialPattern _  (Value      v) = partialValue v
