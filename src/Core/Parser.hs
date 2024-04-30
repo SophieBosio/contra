@@ -82,7 +82,6 @@ reservedKeywords =
   , "in"
   , "adt"
   , "not"
-  -- , "rec"
   ]
 
 identHead :: Parser Char
@@ -178,7 +177,6 @@ term = choice $
     , keyword "not" >> Not    <$> term
     , keyword "let" >> Let    <$> pattern' <*>
                        (symbol "=" >> term)  <*> (symbol "in" >> term)
-    -- , keyword "rec" >> Rec <$> identifier <*> term
     ]
 
 simpleTerm :: Parser (Term Info)

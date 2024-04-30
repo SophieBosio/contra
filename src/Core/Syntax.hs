@@ -79,7 +79,6 @@ data Term a =
   | Let          (P0 a) (T1 a) (T2 a)     a
   | Case         (T0 a) [(Alt a, Body a)] a
   | TConstructor C      [Term a]          a
-  -- | Rec         X      (T0 a)            a -- Future work
   -- Utilities:
   | Plus         (T0 a) (T1 a)            a
   | Minus        (T0 a) (T1 a)            a
@@ -189,7 +188,6 @@ instance Annotated Term where
   annotations (Equal    t0 t1    a) = a : ([t0, t1]     >>= annotations)
   annotations (Not      t0       a) = a : annotations t0
   annotation  t                     = head $ annotations t
-  -- annotations (Rec    _ t0       a) = a : annotations t0 -- future work
 
 instance Annotated Pattern where
   annotations (Value              v) = annotations v
@@ -246,7 +244,6 @@ instance (Eq a) => Eq (Term a) where
                                                    c == d &&
                                                    and (zipWith (==) ts us)
   _ == _ = False
-  -- (Rec    x t0 a) == (Rec     y t0' b) = x == y &&  a == b   && t0 == t0'
 
 instance (Eq a) => Eq (Pattern a) where
   (Value             v) == (Value             w) = v == w
@@ -411,7 +408,6 @@ instance Show (Term a) where
   show (Gt           t0 t1    _) = show t0 ++ " > "  ++ show t1
   show (Equal        t0 t1    _) = show t0 ++ " == " ++ show t1
   show (Not          t0       _) = "not " ++ parens (show t0)
-  -- show (Rec          x  t0    _) = "rec " ++ x ++ " . " ++ show t0
 
 instance Show (Pattern a) where
   show (Value             v) = show v

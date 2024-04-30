@@ -179,7 +179,6 @@ substituteName x t v = -- computes t[v/x]
     Equal t0 t1  a                -> Equal (subs t0) (subs t1)       a
     Not   t0     a                -> Not   (subs t0)                 a
     _                             -> t
-    -- Rec  p t1 a -- future work
   where
     subs = flip (substituteName x) v
 

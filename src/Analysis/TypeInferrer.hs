@@ -239,10 +239,6 @@ annotate (Not t0 _) =
   do t0' <- annotate t0
      addConstraint t0' Boolean' (show $ annotation t0)
      return $ Not t0' Boolean'
--- annotate (Rec x t0 _) =
---   do tau <- fresh
---      t0' <- local (bind x tau) $ annotate t0
---      return $ Rec x t0' $ annotation t0'
 
 annotatePattern :: Show a => Pattern a -> Annotation a (Term Type)
 annotatePattern (Value      v) = annotateValue v
