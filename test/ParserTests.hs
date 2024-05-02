@@ -640,6 +640,8 @@ testParseErrorsPrograms =
     , "Multiple type signatures declared for function/property with name 'clone'\n")
   , ("examples/errors/multipleADTs.con"
     , "Multiple ADTs declared with name 'MyADT'\n")
+  , ("examples/errors/multipleCtrs.con"
+    , "Multiple constructors declared with name 'C'\n")
   , ("examples/errors/multipleProperties.con"
     , "Multiple properties declared with name 'clone'\n beginning at \n\"examples/errors/multipleProperties.con\" (line 1, column 7)\n and ending at\n\"examples/errors/multipleProperties.con\" (line 1, column 9)\n")
   ]

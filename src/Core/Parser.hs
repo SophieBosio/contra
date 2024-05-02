@@ -46,6 +46,7 @@ type Info   = (SourcePos, SourcePos)
 data ParsingError =
     MultipleSignatures  X
   | MultipleADTs        X
+  | MultipleCtrs        X
   | MultipleProperties (X, Info)
   | ParsingFailed      ParseError
   deriving Show
@@ -448,10 +449,12 @@ reportErrors :: Program Info -> [ParsingError]
 reportErrors p =
      [ MultipleSignatures  n         | n <- sigs  \\ nub sigs  ]
   ++ [ MultipleADTs        n         | n <- adts  \\ nub adts  ]
+  ++ [ MultipleCtrs        n         | n <- ctrs  \\ nub ctrs  ]
   ++ [ MultipleProperties (n, pos n) | n <- props \\ nub props ]
   where
     sigs  = fst <$> signatures p
     adts  = fst <$> datatypes  p
+    ctrs  = map (\(Constructor c _) -> c) $ concatMap snd $ datatypes p
     props = fst <$> properties p
     pos n =
       maybe
@@ -467,6 +470,9 @@ report ((MultipleSignatures n) : rest) =
   ++ report rest
 report ((MultipleADTs n) : rest) =
   ("Multiple ADTs declared with name '" ++ n ++ "'\n")
+  ++ report rest
+report ((MultipleCtrs n) : rest) =
+  ("Multiple constructors declared with name '" ++ n ++ "'\n")
   ++ report rest
 report ((MultipleProperties (n, i) : rest)) =
   let (start, end) = i
