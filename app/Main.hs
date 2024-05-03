@@ -9,8 +9,8 @@ import Core.Parser
   )
 import Analysis.TypeInferrer      (inferProgram)
 import Semantics.Interpreter      (runMain)
-import Semantics.REPL             (evalLoop)
-import Validation.PropertyChecker (check, redStr)
+import Semantics.REPL             (loop)
+import Validation.PropertyChecker (check)
 import Validation.Formula         (defaultRecDepth)
 
 import System.Environment (getArgs)
@@ -52,7 +52,6 @@ action ["--check",    file] = PropertyCheckDefault
 action ["--check", n, file] = PropertyCheckCustom (read n)
                               <$> (parse file >>= typecheck)
 action ["--type",     file] = TypeCheck     <$>  parse file
-action ["--load",     file] = REPL          <$> (parse file >>= typecheck)
 action ["--version"       ] = return $ Version  versionInfo
 action ["--help"          ] = return $ Fail     useInfo
 action [              file] = Execute       <$> (parse file >>= typecheck)
@@ -77,7 +76,7 @@ typecheck program =
 repl :: Program Type -> IO ()
 repl program =
   do putStrLn "✦ Contra REPL! ✦\n"
-     evalLoop program
+     loop program
 
 execute :: Program Type -> IO ()
 execute program =
@@ -105,10 +104,9 @@ useInfo =
   "How to use:\n\
        \ contra --check   <filename>.con - Check all properties in program\n\
        \ contra --check n <filename.con> - Check properties with max. recursion depth 'n'\n\
-       \ contra           <filename>.con - Execute 'main' function in program\n\
        \ contra --type    <filename>.con - Type-check and print program\n\
-  \Rudimentary REPL:\n\
-       \ contra                          - Start blank interactive REPL session\n\
-       \ contra --load    <filename>.con - Load program into REPL\n\
+       \ contra           <filename>.con - Execute 'main' function in program\n\
+       \ contra                          - Start an interactive REPL session\n\
+  \Load file into REPL with ':l <filename.con>'\n\
   \Exit REPL with ':q'"
 

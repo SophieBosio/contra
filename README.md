@@ -83,14 +83,11 @@ Like a normal programming language, you can also execute Contra programs. By def
 contra <program-name>.con
 ```
 
-This prototype also comes with a rudimentary REPL. Start a blank interactive session by typing just `contra` or load a program's functions into the REPL with `--load <program-name>.con`.
+This prototype also comes with a rudimentary REPL. Start a blank interactive session by typing just `contra`. Load files into the REPL with `:l <filename>.con` and quit with `:q`.
 
 ```shell
 # blank REPL session
 contra
-
-# load program into REPL
-contra --load <program-name>.con
 ```
 
 

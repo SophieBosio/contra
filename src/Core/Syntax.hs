@@ -422,3 +422,23 @@ instance Show (Value a) where
   show (Boolean      b    _) = show b
   show (VConstructor c vs _) = c ++
     " {" ++  intercalate ", " (map show vs) ++ "}"
+
+
+-- Pretty printing in the terminal
+redStr :: String -> String
+redStr s = "\ESC[31m\STX" ++ s ++ "\ESC[m\STX"
+
+yellowStr :: String -> String
+yellowStr s = "\ESC[33m\STX" ++ s ++ "\ESC[m\STX"
+
+greenStr :: String -> String
+greenStr s = "\ESC[32m\STX" ++ s ++ "\ESC[m\STX"
+
+putStrLnRed :: String -> IO ()
+putStrLnRed = putStrLn . redStr
+
+putStrLnYellow :: String -> IO ()
+putStrLnYellow = putStrLn . yellowStr
+
+putStrLnGreen :: String -> IO ()
+putStrLnGreen = putStrLn . greenStr

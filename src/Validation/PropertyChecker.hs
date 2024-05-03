@@ -104,24 +104,3 @@ realise sv =
                     "Unexpected error: Property should translate to a\
                     \Boolean formula, but was a " ++ show other
 
-
--- Pretty printing
--- printCounterExample :: SMTModel -> IO ()
-
-redStr :: String -> String
-redStr s = "\ESC[31m\STX" ++ s ++ "\ESC[m\STX"
-
-yellowStr :: String -> String
-yellowStr s = "\ESC[33m\STX" ++ s ++ "\ESC[m\STX"
-
-greenStr :: String -> String
-greenStr s = "\ESC[32m\STX" ++ s ++ "\ESC[m\STX"
-
-putStrLnRed :: String -> IO ()
-putStrLnRed = putStrLn . redStr
-
-putStrLnYellow :: String -> IO ()
-putStrLnYellow = putStrLn . yellowStr
-
-putStrLnGreen :: String -> IO ()
-putStrLnGreen = putStrLn . greenStr
