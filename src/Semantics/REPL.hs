@@ -31,6 +31,9 @@ import Semantics.PartialEvaluator
 
 import System.IO   (hFlush, stdout)
 import System.Exit (die)
+import Data.List   (stripPrefix)
+import Data.Char   (isSpace)
+import Data.Maybe  (fromMaybe)
 
 
 -- Export
@@ -43,19 +46,28 @@ loop p =
          do program <- loadProgram file
             putStrLn $ "Loaded file " ++ show file
             loop program
-       ('d':'e':'f':' ':x:' ':'=':' ':expr) ->
-         do parsed <- parseLine expr
-            typed  <- typeCheck parsed
-            let (interpreted, residual) = eval p typed
-            let residual' = residual <> (Function [x] interpreted End)
-            print interpreted
-            loop residual'
        expr                                 ->
-         do parsed <- parseLine expr
-            typed  <- typeCheck parsed
-            let (interpreted, residual) = eval p typed
-            print interpreted
-            loop residual
+         case stripPrefix "def" expr of
+           Nothing   ->
+             do parsed <- parseLine expr
+                typed  <- typeCheck parsed
+                let (interpreted, residual) = eval p typed
+                print interpreted
+                loop residual
+           Just rest ->
+             do let varName = trim $ takeWhile (/= '=') rest
+                let body    = dropWhile (/= '=') rest
+                let def     = fromMaybe "Malformed 'def' expression!" $
+                              stripPrefix "= " body
+                parsed <- parseLine def
+                typed  <- typeCheck parsed
+                let (interpreted, residual) = eval p typed
+                let residual' = residual <> Function varName interpreted End
+                print interpreted
+                loop residual'
+     where
+       trim = f . f
+       f = reverse . dropWhile isSpace
 
 
 -- Utility
