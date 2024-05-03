@@ -12,8 +12,13 @@
   This is a rudimentary REPL (Read-Eval-Print Loop) for Contra.
 
   It can be used to interact with the core language and the function definitions
-  in a program text. After starting the REPL, load a program in the terminal
-  with ':l <filename.con>' and start calling functions interactively.
+  in a program text.
+
+  After starting the REPL, load a program in the terminal with
+  ':l <filename.con>' and start calling functions interactively.
+
+  Define a new variable with "def x = ...", which is saved as a function
+  definition in the program for that session.
 
 -}
 
@@ -33,15 +38,24 @@ loop :: Program Type -> IO ()
 loop p =
   do input <- readLine
      case input of
-       ":q"                -> return ()
-       (':':'l':' ': file) -> do program <- loadProgram file
-                                 putStrLn $ "Loaded file " ++ show file
-                                 loop program
-       command             -> do parsed <- parseLine command
-                                 typed  <- typeCheck parsed
-                                 let (interpreted, residual) = eval p typed
-                                 print interpreted
-                                 loop residual
+       ":q"                                 -> return ()
+       (':':'l':' ': file)                  ->
+         do program <- loadProgram file
+            putStrLn $ "Loaded file " ++ show file
+            loop program
+       ('d':'e':'f':' ':x:' ':'=':' ':expr) ->
+         do parsed <- parseLine expr
+            typed  <- typeCheck parsed
+            let (interpreted, residual) = eval p typed
+            let residual' = residual <> (Function [x] interpreted End)
+            print interpreted
+            loop residual'
+       expr                                 ->
+         do parsed <- parseLine expr
+            typed  <- typeCheck parsed
+            let (interpreted, residual) = eval p typed
+            print interpreted
+            loop residual
 
 
 -- Utility
