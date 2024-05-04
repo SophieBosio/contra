@@ -35,9 +35,7 @@ type PartialState a = StateT (Program a) (Reader (Program a))
 
 -- Export
 partiallyEvaluate :: (Show a, Eq a) => Program a -> (Term a -> (Term a, Program a))
-partiallyEvaluate p t =
-  let (specialised, residual) = runReader (runStateT (partial [] t) p) p
-  in  (specialised, residual)
+partiallyEvaluate p t = runReader (runStateT (partial [] t) p) p
 
 
 -- Memoisation
