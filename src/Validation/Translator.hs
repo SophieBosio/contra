@@ -44,9 +44,9 @@ import Environment.ERSymbolic
 import Validation.Formula
 import Validation.SymUnifier
 
+import Data.SBV
 import Data.Foldable (foldrM)
 import Data.Hashable (hash)
-import Data.SBV
 
 
 -- Export
@@ -141,7 +141,6 @@ translateBranches depth sv ((alt, body) : rest) =
     NoMatch _  -> translateBranches depth sv rest
     MatchBy bs -> do alt' <- local bs $ translatePattern alt
                      cond <- alt' `sEqual` sv
-                     -- let cond = truthy $ sEqual alt' sv
                      body' <- local bs $ translate depth body
                      next  <- translateBranches depth sv rest
                      return $ merge (truthy cond) body' next
@@ -199,12 +198,16 @@ createSymbolic depth (Variable x (TypeList ts)) =
      sxs <- mapM (createSymbolic depth) ps
      return $ SArgs sxs
 createSymbolic 0     (Variable x (ADT adt)) = error $
-  "Maxed out recursion depth when creating symbolic ADT " ++ adt ++ "'"
+  "Reached max. recursion depth while trying to generate symbolic ADT "
+  ++ adt ++ "' for variable '" ++ x ++ "'"
 createSymbolic depth (Variable x (ADT adt)) =
   do env  <- environment
      ctrs <- constructors env adt
      si   <- createSelector ctrs
-     selectConstructor (depth - 1) adt si ctrs
+     sCtr <- selectConstructor (depth - 1) adt si ctrs
+     desc <- lift $ sString x
+     lift $ constrain $ desc .== literal (show sCtr)
+     return sCtr
 createSymbolic _ p = error $
      "Unexpected request to create symbolic sub-pattern '"
   ++ show p ++ "' of type '" ++ show (annotation p) ++ "'"
@@ -223,7 +226,7 @@ createSelector ctrs =
 selectConstructor :: RecursionDepth -> D -> SInteger -> [Constructor]
                   -> Formula SValue
 selectConstructor 0     d _  _  = error $
-  "Reached max. recursion depth while trying to\
+  "Reached max. recursion depth while trying to \
   \create symbolic variable for ADT '" ++ d ++ "'"
 selectConstructor _     d _  [] = error $
   "Fatal: Failed to create symbolic variable for ADT '" ++ d ++ "'"
@@ -261,7 +264,7 @@ unifyAndBind :: RecursionDepth -> Term Type -> SValue
 -- symbolic argument and binding the free variables from the input accordingly.
 unifyAndBind 0 t s = error $
   "Reached max. recursion depth while trying to translate function application\
-  \symbolically. Current step: Applying '" ++ show t ++ "' to '" ++ show s ++ "'"
+  \symbolically.\nCurrent step: Applying '" ++ show t ++ "' to '" ++ show s ++ "'"
 unifyAndBind _ (Lambda p t1 _) sv =
   do bs <- unifyOrFail p sv
      return (bs, t1)
@@ -270,6 +273,13 @@ unifyAndBind depth (Application t1 t2 _) sv =
      (bs,  f   ) <- unifyAndBind (depth - 1) t1 t2'
      (bs', body) <- unifyAndBind (depth - 1) f sv
      return (bs' . bs, body)
+unifyAndBind depth (Pattern (Variable x _)) sv =
+  do env <- environment
+     case map snd $ filter ((== x) . fst) (envFunctions env ++ envProperties env) of
+       [f] -> unifyAndBind depth f sv
+       [ ] -> error $ "Error when translating the application of terms.\n\
+                          \Variable with name '" ++ x ++ "' is not a function."
+       _   -> error $ "Ambiguous bindings for variable '" ++ x ++ "'"
 unifyAndBind _ t1 t2 = error $ "Error when translating the application of term '"
                            ++ show t1 ++ "' to symbolic value '" ++ show t2
                            ++ "'\n'" ++ show t1 ++ "' is not a function."
@@ -283,12 +293,3 @@ numeric sv          = error  $ "Expected a numeric symval, but got " ++ show sv
 boolean :: SValue -> Formula SBool
 boolean (SBoolean b) = return b
 boolean sv           = error  $ "Expected a boolean symval, but got " ++ show sv
-
-symSelector :: Type -> C -> Formula SInteger
-symSelector (ADT t) c =
-  do env <- environment
-     sel <- selector env t c
-     let si = literal sel
-     return si
-symSelector tau c = error $ "Type error: Constructor '" ++ show c ++
-                            "' typed with non-ADT type '" ++ show tau ++ "'"

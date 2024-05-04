@@ -42,19 +42,19 @@ run command =
     (Execute                program) -> execute program
     (PropertyCheckDefault   program) -> checkProperties program defaultRecDepth
     (PropertyCheckCustom  n program) -> checkProperties program n
-    (TypeCheck              program) -> typecheck program >>= print
+    (TypeCheck              program) -> typeCheck program >>= print
     (Version                message) -> die message
     (Fail                   message) -> die message
 
 action :: [String] -> IO Action
 action ["--check",    file] = PropertyCheckDefault
-                              <$> (parse file >>= typecheck)
+                              <$> (parse file >>= typeCheck)
 action ["--check", n, file] = PropertyCheckCustom (read n)
-                              <$> (parse file >>= typecheck)
+                              <$> (parse file >>= typeCheck)
 action ["--type",     file] = TypeCheck     <$>  parse file
 action ["--version"       ] = return $ Version  versionInfo
 action ["--help"          ] = return $ Fail     useInfo
-action [              file] = Execute       <$> (parse file >>= typecheck)
+action [              file] = Execute       <$> (parse file >>= typeCheck)
 action [ ]                  = return $ REPL     End
 action _                    = return $ Fail     useInfo
 
@@ -67,8 +67,8 @@ parse file =
        Left  problems -> die $ redStr $ report problems
        Right program  -> return program
 
-typecheck :: Program String -> IO (Program Type)
-typecheck program =
+typeCheck :: Program String -> IO (Program Type)
+typeCheck program =
   case inferProgram program of
     Left err -> die $ redStr err
     Right tp -> return tp

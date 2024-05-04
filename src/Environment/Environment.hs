@@ -33,12 +33,14 @@ type MapsTo       a b = Mapping a b -> Mapping a b
 
 data Environment m a =
   Environment
-    { function     :: F -> m (Term a)
-    , property     :: P -> m (Term a)
-    , datatype     :: C -> m D
-    , fieldTypes   :: C -> m [Type]
-    , constructors :: D -> m [Constructor]
-    , selector     :: D -> C -> m Integer
+    { function      :: F -> m (Term a)
+    , property      :: P -> m (Term a)
+    , envFunctions  :: [(F, Term a)]
+    , envProperties :: [(P, Term a)]
+    , datatype      :: C -> m D
+    , fieldTypes    :: C -> m [Type]
+    , constructors  :: D -> m [Constructor]
+    , selector      :: D -> C -> m Integer
     }
 
 programEnvironment :: Monad m => Program a -> Environment m a
@@ -54,6 +56,8 @@ programEnvironment p =
           Just def -> return def
           Nothing  -> error $
             "Couldn't find definition for property '" ++ q ++ "'"
+    , envFunctions  = functions  p
+    , envProperties = properties p
     , datatype = \c ->
         case lookup c (constructorNames p) of
           Just  d -> return d
