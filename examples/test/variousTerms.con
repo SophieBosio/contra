@@ -69,14 +69,20 @@ adtToAdt x = x .
 
 adtCase :: Example .
 adtCase = case (C {5}) of
-  ; (C {x})    -> (C {x})
-  ; (D {x, y}) -> (D {x, y}) .
+  ; C {x}    -> C {x}
+  ; D {x, y} -> D {x, y} .
 
 adtToAdtCase :: Example -> Example .
 adtToAdtCase x = case x of
-  ; (C {y})    -> (C {y})
-  ; (D {y, z}) -> (D {y, z}) .
+  ; C {y}    -> C {y}
+  ; D {y, z} -> D {y, z} .
 
+concreteAdtCase :: Example -> Example .
+concreteAdtCase x = case x of
+  ; C {5}           -> C {10}
+  ; D {True, False} -> D {True, False}
+  ; y               -> y .
+  
 patternMatchADT :: Example -> Integer .
 patternMatchADT (C {5}) = 5 .
 patternMatchADT (C {x}) = x + x .
@@ -94,4 +100,10 @@ letOutADT x = let (C {y}) = x in y.
 alwaysLetOutADT :: Integer .
 alwaysLetOutADT = let (C {x}) = (C {5}) in x .
 
-main = letOutADT (C {15}) .
+adt Recursive = Ctr Integer | Rec Integer Recursive .
+
+nestedPatternMatch :: Recursive -> Integer .
+nestedPatternMatch x =
+  case x of
+    ; Rec {y, z} -> y
+    ; Ctr {y} -> y .

@@ -1,0 +1,46 @@
+-- Definition
+adt Nat = Z | S Nat .
+
+-- Operations
+plus :: Nat -> Nat -> Nat .
+plus n Z     = n .
+plus Z m     = m .
+plus n (S {m}) = S {plus n m} .
+
+minus :: Nat -> Nat -> Nat .
+minus n       Z       = n .
+minus Z       n       = Z .
+minus (S {n}) (S {m}) = minus n m .
+
+mult :: Nat -> Nat -> Nat .
+mult n Z = Z .
+mult n (S {m}) = plus n (mult n m) .
+
+-- Relations
+equal :: Nat -> Nat -> Boolean .
+equal Z Z = True .
+equal n Z = False .
+equal Z m = False .
+equal (S {n}) (S {m}) = equal n m .
+
+-- Examples
+three :: Nat .
+three = S {S {S {Z}}} .
+
+five :: Nat .
+five = S {S {S {S {S {Z}}}}} .
+
+main :: Nat .
+main = plus three five .
+
+-- Helper functions
+and :: Boolean -> Boolean -> Boolean .
+and True True = True  .
+and x    y    = False .
+
+-- Properties
+plusCongruent :: Nat -> Nat -> Nat -> Nat -> Boolean .
+plusCongruent x y xx yy =*=
+  if and (equal x xx) (equal y yy)
+     then equal (plus x y) (plus xx yy)
+     else True .

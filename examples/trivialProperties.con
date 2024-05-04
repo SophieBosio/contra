@@ -8,6 +8,7 @@ eqFalsifiable x y =*= x == y .
 gtFalsifiable :: Integer -> Integer -> Boolean .
 gtFalsifiable x y =*= x > y .
 
+ltFalsifiable :: Integer -> Integer -> Boolean .
 ltFalsifiable x y =*= x < y .
 
 -- Operations
