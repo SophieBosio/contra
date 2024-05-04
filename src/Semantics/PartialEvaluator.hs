@@ -85,8 +85,7 @@ partial ns (Application t1@(Pattern (Variable x _)) t2 a) =
                              specialised <- partial ns (f t2')
                              bind x' specialised
                              return specialised
-                     else do t1' <- partial ns t1
-                             return $ Application t1' t2' a
+                     else return $ Application t1 t2' a
 -- Specialise anonymous function
 partial ns (Application t1 t2 a) =
   do t1' <- partial ns t1
