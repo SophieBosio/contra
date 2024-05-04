@@ -58,7 +58,7 @@ translateToFormula depth prop =
 
 -- Constraint generation
 translate :: RecursionDepth -> Term Type -> Formula SValue
-translate _ (Pattern    p) = translatePattern p
+translate depth (Pattern    p) = translatePattern depth p
 translate depth (Application t1 t2 _) =
   do t2'        <- translate depth t2
      (bs, body) <- unifyAndBind depth t1 t2'
@@ -102,20 +102,24 @@ translate depth (Not t0 _) =
 translate _ t@(TConstructor {}) = error
   $ "Ill-typed constructor argument '" ++ show t ++ "'"
 
-translatePattern :: Pattern Type -> Formula SValue
-translatePattern (Value v) = translateValue v
+translatePattern :: RecursionDepth -> Pattern Type -> Formula SValue
+translatePattern _ (Value v) = translateValue v
 -- All input variables are bound at this point,
--- so if a variable is not in the bindings, that's an error
-translatePattern (Variable x _) =
-  do bindings <- ask
-     return $ bindings x
-translatePattern (PConstructor c ps (ADT d)) =
-  do sps <- mapM translatePattern ps
+-- so if a variable is not a function and not in the bindings, that's an error
+translatePattern depth (Variable x _) =
+  do env <- environment
+     case map snd $ filter ((== x) . fst) (envFunctions env ++ envProperties env) of
+       [ t@(Lambda {}) ] -> translate depth t
+       [ ] -> do bindings <- ask
+                 return $ bindings x
+       _   -> error $ "Variable '" ++ x ++ "' is not a function and not bound"
+translatePattern depth (PConstructor c ps (ADT d)) =
+  do sps <- mapM (translatePattern depth) ps
      return $ SCtr d c sps
-translatePattern (List ps _) =
-  do sps <- mapM translatePattern ps
+translatePattern depth (List ps _) =
+  do sps <- mapM (translatePattern depth) ps
      return $ SArgs sps
-translatePattern p@(PConstructor {}) = error
+translatePattern _ p@(PConstructor {}) = error
   $ "Ill-typed constructor argument '" ++ show p ++ "'"
 
 translateValue :: Value Type -> Formula SValue
@@ -139,7 +143,7 @@ translateBranches depth sv [(alt, body)] =
 translateBranches depth sv ((alt, body) : rest) =
   case symUnify alt sv of
     NoMatch _  -> translateBranches depth sv rest
-    MatchBy bs -> do alt' <- local bs $ translatePattern alt
+    MatchBy bs -> do alt' <- local bs $ translatePattern depth alt
                      cond <- alt' `sEqual` sv
                      body' <- local bs $ translate depth body
                      next  <- translateBranches depth sv rest
