@@ -72,7 +72,8 @@ partial ns (TConstructor c ts a) =
   do ts' <- mapM (partial ns) ts
      return $ strengthenIfPossible c ts' a
 partial ns (Lambda p t a) =
-  do let fvs = freeVariables' p
+  do notAtTopLevel p
+     let fvs = freeVariables' p
      let (ns', alphaP, alphaT) = alpha fvs ns p t
      t'  <- partial ns' alphaT
      return $ Lambda alphaP t' a
@@ -89,18 +90,18 @@ partial ns (Let p t1 t2 a) =
        else return $ Let p' t1' t2 a
 -- Specialise named function (denoted by a variable name)
 partial ns (Application t1@(Pattern (Variable x _)) t2 a) =
-  do t2' <- partial ns t2
-     env <- get
+  do env <- get
      case lookup x (functions env ++ properties env) of
        Just (Lambda p t0 _) ->
-         if canonical t2'
-            then let x' = show x ++ show (hash (show t2')) in
-                 case lookup x' (functions env ++ properties env) of
-                   Just specialised -> return specialised
-                   Nothing -> do result <- partial ns $ substitute p t0 t2'
-                                 bind x' result
-                                 return result
-            else return $ Application t1 t2' a
+         do t2' <- partial ns t2
+            if canonical t2'
+              then let x' = show x ++ show (hash (show t2')) in
+                     case lookup x' (functions env ++ properties env) of
+                       Just specialised -> return specialised
+                       Nothing -> do result <- partial ns $ substitute p t0 t2'
+                                     bind x' result
+                                     return result
+              else return $ Application t1 t2' a
        Just _  -> error $ "Variable '" ++ x ++ "' is not a function"
        Nothing -> error $ "Unbound function name '" ++ x ++ "'"
 -- Specialise anonymous function
