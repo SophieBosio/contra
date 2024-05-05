@@ -103,13 +103,14 @@ data Value a =
 
 
 -- Canonical terms & Patterns
--- A canonical term is a pattern with no variables
+-- A canonical term is a pattern with no variables or a lambda
 class Canonical a where
   canonical :: a -> Bool
 
 instance Canonical (Term a) where
   canonical (Pattern           p) = canonical p
   canonical (TConstructor _ ts _) = all canonical ts
+  canonical (Lambda           {}) = True
   canonical _                     = False
 
 instance Canonical (Pattern a) where
