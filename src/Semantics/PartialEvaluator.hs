@@ -30,12 +30,12 @@ import Data.Hashable        (hash)
 
 
 -- Abbreviations
-type PartialState a = StateT (Program a) (Reader (Program a))
+type PartialState a = State (Program a)
 
 
 -- Export
 partiallyEvaluate :: (Show a, Eq a) => Program a -> (Term a -> (Term a, Program a))
-partiallyEvaluate p t = runReader (runStateT (partial [] t) p) p
+partiallyEvaluate p t = runState (partial [] t) p
 
 
 -- Memoisation
@@ -170,7 +170,7 @@ partial ns (Not t0 a) =
 partialPattern :: (Show a, Eq a) => [Name] -> Pattern a -> PartialState a (Term a)
 partialPattern _  (Value      v) = partialValue v
 partialPattern ns (Variable x a) =
-  do program <- ask
+  do program <- get
      case map snd $ filter ((== x) . fst) (functions program ++ properties program) of
        [ ] -> return $ Pattern $ Variable x a
        [t] -> if selfRecursive x t
@@ -266,7 +266,7 @@ function t = error $ "Expected a function, but got the term '" ++ show t ++ "'"
 
 notAtTopLevel :: Pattern a -> PartialState a ()
 notAtTopLevel (Variable x _) =
-  do program <- ask
+  do program <- get
      when (x `elem` (fst <$> functions program)) $
        error $ "The name '" ++ x ++
                "' shadows the top level declaration of '" ++ x ++ "'."
