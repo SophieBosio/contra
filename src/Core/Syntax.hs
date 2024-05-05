@@ -28,7 +28,6 @@
 
 module Core.Syntax where
 
-import Data.SBV
 import Data.List (intercalate)
 
 
@@ -287,16 +286,6 @@ instance (Eq a) => Eq (Program a) where
     rest == rest'
   _ == _ = False
 
-
--- Types are SBV 'Mergeable'
--- We need this in the function 'symSelect' (Validation.Translator)
-instance Mergeable Type where
-  symbolicMerge = const mergeType
-
-mergeType :: SBool -> Type -> Type -> Type
-mergeType sb tau1 tau2
-  | Just b <- unliteral sb = if b then tau1 else tau2
-  | otherwise              = tau2
 
 
 -- Utility functions for convenient program access
