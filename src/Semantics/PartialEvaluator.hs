@@ -98,7 +98,8 @@ partial ns (Application t1@(Pattern (Variable x _)) t2 a) =
               then let x' = show x ++ show (hash (show t2')) in
                      case lookup x' (functions env ++ properties env) of
                        Just specialised -> return specialised
-                       Nothing -> do result <- partial ns $ substitute p t0 t2'
+                       Nothing -> do bind x' undefined
+                                     result <- partial ns $ substitute p t0 t2'
                                      bind x' result
                                      return result
               else return $ Application t1 t2' a
@@ -174,9 +175,7 @@ partialPattern ns (Variable x a) =
   do program <- get
      case map snd $ filter ((== x) . fst) (functions program ++ properties program) of
        [ ] -> return $ Pattern $ Variable x a
-       [t] -> if selfRecursive x t
-                 then return t
-                 else partial ns t
+       [t] -> partial ns t
        _   -> error  $ "Ambiguous bindings for variable " ++ show x
 partialPattern ns (List ps a) =
   do ts <- mapM (partialPattern ns) ps
@@ -199,13 +198,6 @@ eliminateUnreachable (Pattern p) =
              MatchBy _ -> (alt, body) : ts'
         ) []
 eliminateUnreachable _ = id
-
-
--- Checking if function definition contains its own name
-selfRecursive :: X -> Term a -> Bool
-selfRecursive x t
-  | x `elem` freeVariables t = True
-  | otherwise = False
 
 
 -- Alpha renaming
