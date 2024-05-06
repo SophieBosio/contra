@@ -37,7 +37,7 @@ import Environment.Environment
 import Environment.ERSymbolic
 
 import Data.SBV
-import Control.Monad (zipWithM)
+import Control.Monad (zipWithM, zipWithM_)
 
 
 -- Maximum recursion depth for ADTs and function calls
@@ -106,6 +106,50 @@ truthy v            = error $
   "Expected a symbolic boolean value, but got " ++ show v
 
 
+-- * Coerce a symbolically created algebraic data type to be equal to a concrete one
+coerce :: D -> (C, SInteger) -> ([SValue], [SValue]) -> Formula SValue
+coerce adt (c, si) (xs, ys) =
+  do env    <- environment
+     (_, i) <- selector env (adt, c)
+     lift $ constrain $ si .== literal i
+     types  <- fieldTypes env c
+     ys'    <- populate adt ys types
+     eqs    <- zipWithM sEqual xs ys'
+     return $ SBoolean $ sAnd $
+         (si .== literal i)
+       : map truthy eqs
+
+
+populate :: D -> [SValue] -> [Type] -> Formula [SValue]
+populate adt [ ] [   ] = return []
+populate adt [ ] types = instantiate adt types
+populate adt svs types = ensureTypeAccord svs types >> return svs
+
+instantiate :: D -> [Type] -> Formula [SValue]
+instantiate adt types =
+  do svs <- zipWithM createSymbolic types
+     return svs
+
+ensureTypeAccord :: [SValue] -> [Type] -> Formula ()
+ensureTypeAccord [      ] [        ] = return ()
+ensureTypeAccord [      ] _          = error
+  "Fatal: Symbolic algebraic data type was missing fields."
+ensureTypeAccord _        [        ] = error
+  "Fatal: Symbolic algebraic data type was missing fields."
+ensureTypeAccord (sv:svs) (tau:taus) = match sv tau >> ensureTypeAccord svs taus
+  where
+    match SUnit          Unit'            = return ()
+    match (SNumber    _) Integer'         = return ()
+    match (SBoolean   _) Boolean'         = return ()
+    match (SArgs   svs') (TypeList taus') = zipWithM_ match svs' taus'
+    match (SCtr adt _ _) (ADT adt')       | adt == adt' = return ()
+    match (SADT adt _ _) (ADT adt')       | adt == adt' = return ()
+    match sv'            tau'             = error $
+      "Type mismatch occurred in equality check of constructor fields.\n\
+      \Unsatisfiable constraint: '" ++ show sv' ++ "' not of expected type '"
+      ++ show tau' ++ "'"
+
+
 -- SValues are 'Mergeable', meaning we can use SBV's if-then-else, called 'ite'.
 instance Mergeable SValue where
   symbolicMerge = const merge
@@ -142,4 +186,5 @@ mergeList :: SBool -> [SValue] -> [SValue] -> [SValue]
 mergeList sb xs ys
   | Just b <- unliteral sb = if b then xs else ys
   | otherwise              = error $ "Unable to merge arguments '"
-                             ++ show xs ++ "' with '" ++ show ys ++ "'"
+                             ++ show xs ++ "' with '" ++ show ys ++ "'\n\
+                             \Impossible to determine Boolean condition."
