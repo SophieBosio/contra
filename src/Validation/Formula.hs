@@ -53,6 +53,7 @@ data SValue =
   | SBoolean SBool
   | SNumber  SInteger
   | SCtr     D C [SValue]
+  | SADT     D SInteger [SValue]
   | SArgs    [SValue]
   -- SArgs represents the fabricated argument list we create when
   -- flattening function definitions into a Case-statement
@@ -81,6 +82,16 @@ sEqual (SCtr adt x xs) (SCtr adt' y ys) =
          fromBool (adt == adt')
        : fromBool (x   == y   )
        : map truthy eqs
+sEqual (SADT adt si xs) (SADT adt' sj ys) =
+  do eqs <- zipWithM sEqual xs ys
+     return $ SBoolean $ sAnd $
+         fromBool (adt == adt')
+       : (si .== sj)
+       : map truthy eqs
+sEqual (SCtr adt x  xs) (SADT adt' sj ys) =
+  undefined
+sEqual (SADT adt si xs) (SCtr adt' y  ys) =
+  undefined
 sEqual (SArgs     xs) (SArgs     ys) =
   do eqs <- zipWithM sEqual xs ys
      return $ SBoolean $ sAnd $ map truthy eqs
@@ -103,11 +114,25 @@ merge _  SUnit        SUnit       = SUnit
 merge b (SNumber  x) (SNumber  y) = SNumber  $ ite b x y
 merge b (SBoolean x) (SBoolean y) = SBoolean $ ite b x y
 merge b (SCtr adt x xs) (SCtr adt' y ys)
-  | adt == adt'
-  && x  == y   = SCtr adt x (mergeList b xs ys)
-  | otherwise  = error $
+  | adt == adt' = SCtr adt (ite b x y) (mergeList b xs ys)
+  | otherwise   = error $
     "Type mismatch between data type constructors '"
     ++ show x ++ "' and '" ++ show y ++ "'"
+merge b (SADT adt si xs) (SADT adt' sj ys)
+  | adt == adt' = SADT adt (ite b si sj) (mergeList b xs ys)
+  | otherwise   = error $
+    "Type mismatch between symbolic data types '"
+    ++ adt ++ "' and ' " ++ adt' ++ "'"
+merge b (SCtr adt x  xs) (SADT adt' si ys)
+  | adt == adt' = undefined
+  | otherwise   = error $
+    "Type mismatch between concrete data type '" ++ adt ++
+    "' and symbolic data type variable '" ++ adt' ++ "'"
+merge b (SADT adt si xs) (SCtr adt' y  ys)
+  | adt == adt' = undefined
+  | otherwise   = error $
+    "Type mismatch between concrete data type '" ++ adt' ++
+    "' and symbolic data type variable '" ++ adt ++ "'"
 merge b (SArgs   xs) (SArgs   ys) = SArgs $ mergeList b xs ys
 merge _ x y = error $ "Type mismatch between symbolic values '"
               ++ show x ++ "' and '" ++ show y ++ "'"
