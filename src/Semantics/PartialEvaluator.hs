@@ -38,33 +38,6 @@ partiallyEvaluate :: (Show a, Eq a) => Program a -> (Term a -> (Term a, Program 
 partiallyEvaluate p t = runState (partial [] t) p
 
 
--- * Memoisation
-addSpecialised :: F -> Term a -> (Program a -> Program a)
-addSpecialised f t p =
-  case lookup f (functions p ++ properties p) of
-    Just def -> Function f t End <> removeDefinition (f, def) p
-    Nothing  -> Function f t End <> p
-
-removeDefinition :: (F, Term a) -> Program a -> Program a
-removeDefinition (f', t') (Function f t rest)
-  | f == f'   = removeDefinition (f', t') rest
-  | otherwise = Function f t (removeDefinition (f', t') rest)
-removeDefinition (p', t') (Property p t rest)
-  | p == p'   = removeDefinition (p', t') rest
-  | otherwise = Property p t (removeDefinition (p', t') rest)
-removeDefinition def (Signature x t  rest) =
-  Signature x t  (removeDefinition def rest)
-removeDefinition def (Data      x ts rest) =
-  Data      x ts (removeDefinition def rest)
-removeDefinition _ End = End
-
-bind :: F -> Term a -> PartialState a ()
-bind f t =
-  do env  <- get
-     let env' = addSpecialised f t env
-     put env'
-
-
 -- * Main functions
 partial :: (Show a, Eq a) => [Name] -> Term a -> PartialState a (Term a)
 partial ns (Pattern p) = partialPattern ns p
@@ -187,6 +160,33 @@ partialPattern ns (PConstructor c ps a) =
 
 partialValue :: (Show a, Eq a) => Value a -> PartialState a (Term a)
 partialValue v = return $ Pattern $ Value v
+
+
+-- * Memoisation
+addSpecialised :: F -> Term a -> (Program a -> Program a)
+addSpecialised f t p =
+  case lookup f (functions p ++ properties p) of
+    Just def -> Function f t End <> removeDefinition (f, def) p
+    Nothing  -> Function f t End <> p
+
+removeDefinition :: (F, Term a) -> Program a -> Program a
+removeDefinition (f', t') (Function f t rest)
+  | f == f'   = removeDefinition (f', t') rest
+  | otherwise = Function f t (removeDefinition (f', t') rest)
+removeDefinition (p', t') (Property p t rest)
+  | p == p'   = removeDefinition (p', t') rest
+  | otherwise = Property p t (removeDefinition (p', t') rest)
+removeDefinition def (Signature x t  rest) =
+  Signature x t  (removeDefinition def rest)
+removeDefinition def (Data      x ts rest) =
+  Data      x ts (removeDefinition def rest)
+removeDefinition _ End = End
+
+bind :: F -> Term a -> PartialState a ()
+bind f t =
+  do env  <- get
+     let env' = addSpecialised f t env
+     put env'
 
 
 -- * Eliminating unreachable paths in case statement
