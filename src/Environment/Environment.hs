@@ -41,6 +41,7 @@ data Environment m a =
     , fieldTypes    :: C -> m [Type]
     , constructors  :: D -> m [Constructor]
     , selector      :: (D, C) -> m (D, Integer)
+    , reconstruct   :: (D, Integer) -> m (D, C)
     , cardinality   :: D -> m Integer
     }
 
@@ -80,10 +81,16 @@ programEnvironment p =
               Just  s -> return (d, toInteger s)
               Nothing -> error $ "Constructor '" ++ c ++
                 "' not found in data type declaration of type '" ++ d ++ "'"
-            where
-              nameOf (Constructor x _) = x
+    , reconstruct = \(d, i) ->
+        case lookup d (datatypes p) of
+          Nothing   -> error $ "Couldn't find data type with name '" ++ d ++ "'"
+          Just ctrs -> let cs = map nameOf ctrs
+                       in  return (d, cs !! (fromInteger i))
     , cardinality = \d ->
         case lookup d (datatypes p) of
           Nothing -> error $ "Couldn't find data type with name '" ++ d ++ "'"
           Just cs -> return $ toInteger $ length cs
     }
+
+nameOf :: Constructor -> X
+nameOf (Constructor x _) = x

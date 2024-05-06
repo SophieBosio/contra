@@ -89,8 +89,10 @@ sEqual (SADT adt si xs) (SADT adt' sj ys) =
        : (si .== sj)
        : map truthy eqs
 sEqual (SCtr adt x  xs) (SADT adt' sj ys) =
+  -- TODO
   undefined
 sEqual (SADT adt si xs) (SCtr adt' y  ys) =
+  -- TODO
   undefined
 sEqual (SArgs     xs) (SArgs     ys) =
   do eqs <- zipWithM sEqual xs ys
