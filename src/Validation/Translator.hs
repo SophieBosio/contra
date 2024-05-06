@@ -52,19 +52,19 @@ import Data.Hashable (hash)
 -- * Export
 translateToFormula :: RecursionDepth -> Term Type -> Formula SValue
 translateToFormula depth prop =
-  do (bs, prop') <- liftPropertyInputPatterns depth prop
+  do (bs, prop') <- liftPropertyInputPatterns prop
      local bs $ translate depth prop'
 
 
 -- * Constraint generation
-translate :: RecursionDepth -> Term Type -> Formula SValue
+translate :: RecursionDepth ->Term Type -> Formula SValue
 translate depth (Pattern    p) = translatePattern depth p
 translate depth (Application t1 t2 _) =
   do t2'        <- translate depth t2
      (bs, body) <- unifyAndBind depth t1 t2'
      local bs $ translate depth body
 translate depth (Lambda p t _) =
-  do bs <- liftPattern depth p
+  do bs <- liftPattern p
      local bs $ translate depth t
 translate depth (Let p t1 t2 _) =
   do t1' <- translate depth t1
@@ -154,103 +154,108 @@ translateBranches depth sv ((alt, body) : rest) =
 emptyBindings :: Bindings
 emptyBindings = error . (++ " is unbound!")
 
-liftPattern :: RecursionDepth -> Pattern Type -> Formula (Bindings -> Bindings)
-liftPattern _ (Value _) = return id
-liftPattern depth (Variable x tau) =
-  do sx <- createSymbolic depth (Variable x tau)
+liftPattern :: Pattern Type -> Formula (Bindings -> Bindings)
+liftPattern (Value _) = return id
+liftPattern (Variable x tau) =
+  do sx <- createSymbolic (Variable x tau)
      return (bind x sx)
-liftPattern depth (PConstructor _ ps _) =
-  do foldrM (\p bs -> do b <- liftPattern depth p
+liftPattern (PConstructor _ ps _) =
+  do foldrM (\p bs -> do b <- liftPattern p
                          return (bs . b)
             ) id ps
-liftPattern depth (List ps _) =
-  do foldrM (\p bs -> do b <- liftPattern depth p
+liftPattern (List ps _) =
+  do foldrM (\p bs -> do b <- liftPattern p
                          return (bs . b)
             ) id ps
 
-liftPropertyInputPatterns :: RecursionDepth -> Term Type
-                          -> Formula (Bindings -> Bindings, Term Type)
-liftPropertyInputPatterns depth (Lambda p t _) =
-  do bs <- liftPattern depth p
+liftPropertyInputPatterns :: Term Type -> Formula (Bindings -> Bindings, Term Type)
+liftPropertyInputPatterns (Lambda p t _) =
+  do bs <- liftPattern p
      return (bs, t)
-liftPropertyInputPatterns _ t = return (id, t)
+liftPropertyInputPatterns t = return (id, t)
 
 
 -- * Create symbolic variables for SBV to instantiate during solving
-createSymbolic :: RecursionDepth -> Pattern Type -> Formula SValue
-createSymbolic _ (Variable _ Unit')    = return SUnit
-createSymbolic _ (Variable x Integer') =
+createSymbolic :: Pattern Type -> Formula SValue
+createSymbolic (Variable _ Unit')    = return SUnit
+createSymbolic (Variable x Integer') =
   do sx <- lift $ sInteger x
      return $ SNumber sx
-createSymbolic _ (Variable x Boolean') =
+createSymbolic (Variable x Boolean') =
   do sx <- lift $ sBool x
      return $ SBoolean sx
-createSymbolic _ (Variable x (Variable' _)) =
+createSymbolic (Variable x (Variable' _)) =
   do sx <- lift $ free x
      return $ SNumber sx
-createSymbolic _ (Variable _ (TypeList [])) =
+createSymbolic (Variable _ (TypeList [])) =
   do return $ SArgs []
-createSymbolic depth (Variable x (TypeList ts)) =
+createSymbolic (Variable x (TypeList ts)) =
      -- We should never be asked to create input for this type, since it's
-     -- interal and not exposed to the user. However, we are able to do so.
+     -- internal and not exposed to the user. However, we are able to do so.
      -- Fabricate new name for each variable by hashing <x><type-name>
      -- and appending the index of the variable type in the TypeList.
   do let names = zipWith (\tau i -> show (hash (x ++ show tau)) ++ show i)
                  ts
                  ([0..] :: [Integer])
      let ps    = zipWith Variable names ts
-     sxs <- mapM (createSymbolic depth) ps
+     sxs <- mapM createSymbolic ps
      return $ SArgs sxs
-createSymbolic 0     (Variable x (ADT adt)) = error $
-  "Reached max. recursion depth while trying to generate symbolic ADT "
-  ++ adt ++ "' for variable '" ++ x ++ "'"
-createSymbolic depth (Variable x (ADT adt)) =
-  do env  <- environment
-     ctrs <- constructors env adt
-     si   <- createSelector ctrs
-     sCtr <- selectConstructor (depth - 1) adt si ctrs
-     desc <- lift $ sString x
-     lift $ constrain $ desc .== literal (show sCtr)
-     return sCtr
-createSymbolic _ p = error $
+createSymbolic (Variable x (ADT adt)) =
+  do env   <- environment
+     si    <- lift $ sInteger "selector"
+     upper <- cardinality env adt
+     lift $ constrain $ (si .>= 0) .&& (si .< literal upper)
+     return $ SADT adt si []
+createSymbolic p = error $
      "Unexpected request to create symbolic sub-pattern '"
   ++ show p ++ "' of type '" ++ show (annotation p) ++ "'"
   ++ "\nPlease note that generating arbitrary functions is not supported."
 
+-- createSymbolic 0     (Variable x (ADT adt)) = error $
+--   "Reached max. recursion depth while trying to generate symbolic ADT "
+--   ++ adt ++ "' for variable '" ++ x ++ "'"
+-- createSymbolic depth (Variable x (ADT adt)) =
+--   do env  <- environment
+--      ctrs <- constructors env adt
+--      si   <- createSelector ctrs
+--      sCtr <- selectConstructor (depth - 1) adt si ctrs
+--      desc <- lift $ sString x
+--      lift $ constrain $ desc .== literal (show sCtr)
+--      return sCtr
 
--- * Helpers for creating symbolic ADT variables
-createSelector :: [Constructor] -> Formula SInteger
-createSelector ctrs =
-  do si <- lift sInteger_
-     let cardinality = literal $ toInteger $ length ctrs
-     lift $ constrain $
-       (si .>= 0) .&& (si .< cardinality)
-     return si
+-- -- * Helpers for creating symbolic ADT variables
+-- createSelector :: [Constructor] -> Formula SInteger
+-- createSelector ctrs =
+--   do si <- lift sInteger_
+--      let cardinality = literal $ toInteger $ length ctrs
+--      lift $ constrain $
+--        (si .>= 0) .&& (si .< cardinality)
+--      return si
 
-selectConstructor :: RecursionDepth -> D -> SInteger -> [Constructor]
-                  -> Formula SValue
-selectConstructor 0     d _  _  = error $
-  "Reached max. recursion depth while trying to \
-  \create symbolic variable for ADT '" ++ d ++ "'"
-selectConstructor _     d _  [] = error $
-  "Fatal: Failed to create symbolic variable for ADT '" ++ d ++ "'"
-selectConstructor depth d _  [Constructor c types] =
-  do let names = zipWith (\tau i -> show (hash (d ++ show tau)) ++ show i)
-                 types
-                 ([0..] :: [Integer])
-     let fields = zipWith Variable names types
-     sFields <- mapM (createSymbolic depth) fields
-     return $ SCtr d c sFields
-selectConstructor depth d si ((Constructor c types) : ctrs) =
-  do env      <- environment
-     (_, sel) <- selector env (d, c)
-     let names = zipWith (\tau i -> show (hash (d ++ show tau)) ++ show i)
-                 types
-                 ([0..] :: [Integer])
-     let fields = zipWith Variable names types
-     sFields <- mapM (createSymbolic depth) fields
-     next  <- selectConstructor depth d si ctrs
-     return $ merge (si .== literal sel) (SCtr d c sFields) next
+-- selectConstructor :: RecursionDepth -> D -> SInteger -> [Constructor]
+--                   -> Formula SValue
+-- selectConstructor 0     d _  _  = error $
+--   "Reached max. recursion depth while trying to \
+--   \create symbolic variable for ADT '" ++ d ++ "'"
+-- selectConstructor _     d _  [] = error $
+--   "Fatal: Failed to create symbolic variable for ADT '" ++ d ++ "'"
+-- selectConstructor depth d _  [Constructor c types] =
+--   do let names = zipWith (\tau i -> show (hash (d ++ show tau)) ++ show i)
+--                  types
+--                  ([0..] :: [Integer])
+--      let fields = zipWith Variable names types
+--      sFields <- mapM (createSymbolic depth) fields
+--      return $ SCtr d c sFields
+-- selectConstructor depth d si ((Constructor c types) : ctrs) =
+--   do env      <- environment
+--      (_, sel) <- selector env (d, c)
+--      let names = zipWith (\tau i -> show (hash (d ++ show tau)) ++ show i)
+--                  types
+--                  ([0..] :: [Integer])
+--      let fields = zipWith Variable names types
+--      sFields <- mapM (createSymbolic depth) fields
+--      next  <- selectConstructor depth d si ctrs
+--      return $ merge (si .== literal sel) (SCtr d c sFields) next
 
 
 -- * Symbolic "unification" and unification constraint generation
