@@ -34,3 +34,6 @@ main = reverse exampleList .
 
   
 -- Example properties
+involution :: IntList -> Boolean .
+involution list =*= (reverse (reverse list)) == list .
+

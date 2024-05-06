@@ -15,3 +15,8 @@ inferredList = Cons { 1, Cons { 2, Cons { 3,  Nil } } } .
 -- Dead simple prop -- all that's required is that an ADT instance is *created*
 alwaysTrue :: Single -> Boolean .
 alwaysTrue x =*= True .
+
+oneFalse :: Single -> Boolean .
+oneFalse x =*= case x of
+  ; Dtr {5} -> False
+  ; y       -> True .

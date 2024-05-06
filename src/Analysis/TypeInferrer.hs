@@ -27,11 +27,11 @@
    * Writer: [Constraint], a list of type equality constraints
    * State: Index, a fresh unification variable index
 
-  Either a term's type judgement rule let us decide their type by the type of
-  their subterms, or we generate fresh unification variables and add constraints
-  to them according to the type judgement rules.
+  Either a term's type judgement rule let us decide its type by its type or by
+  the type of its subterms directly, or we generate fresh unification variables
+  and add constraints to them according to the type judgement rules.
 
-  Values (literals/canonical terms) are type-annotated directly with their
+  Values (canonical terms) are type-annotated directly with their
   concrete type, while Patterns and general Terms are annotated indirectly.
 
   Finally, we solve the constraints and replace each unification

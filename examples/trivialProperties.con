@@ -12,8 +12,8 @@ ltFalsifiable :: Integer -> Integer -> Boolean .
 ltFalsifiable x y =*= x < y .
 
 -- Operations
-plusOneGt :: Integer -> Boolean .
-plusOneGt x =*= (x + 1) > x .
+addOneGt :: Integer -> Boolean .
+addOneGt x =*= (x + 1) > x .
 
-minusOneLt :: Integer -> Boolean .
-minusOneLt x =*= (x - 1) < x .
+subOneLt :: Integer -> Boolean .
+subOneLt x =*= (x - 1) < x .
