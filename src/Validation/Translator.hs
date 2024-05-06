@@ -49,14 +49,14 @@ import Data.Foldable (foldrM)
 import Data.Hashable (hash)
 
 
--- Export
+-- * Export
 translateToFormula :: RecursionDepth -> Term Type -> Formula SValue
 translateToFormula depth prop =
   do (bs, prop') <- liftPropertyInputPatterns depth prop
      local bs $ translate depth prop'
 
 
--- Constraint generation
+-- * Constraint generation
 translate :: RecursionDepth -> Term Type -> Formula SValue
 translate depth (Pattern    p) = translatePattern depth p
 translate depth (Application t1 t2 _) =
@@ -150,7 +150,7 @@ translateBranches depth sv ((alt, body) : rest) =
                      return $ merge (truthy cond) body' next
 
 
--- Create symbolic input variables
+-- * Lift symbolic input variables
 emptyBindings :: Bindings
 emptyBindings = error . (++ " is unbound!")
 
@@ -176,7 +176,7 @@ liftPropertyInputPatterns depth (Lambda p t _) =
 liftPropertyInputPatterns _ t = return (id, t)
 
 
--- Create symbolic variables for SBV to instantiate during solving
+-- * Create symbolic variables for SBV to instantiate during solving
 createSymbolic :: RecursionDepth -> Pattern Type -> Formula SValue
 createSymbolic _ (Variable _ Unit')    = return SUnit
 createSymbolic _ (Variable x Integer') =
@@ -253,7 +253,7 @@ selectConstructor depth d si ((Constructor c types) : ctrs) =
      return $ merge (si .== literal sel) (SCtr d c sFields) next
 
 
--- Symbolic "unification" and unification constraint generation
+-- * Symbolic "unification" and unification constraint generation
 unifyOrFail :: Pattern Type -> SValue -> Formula Transformation
 unifyOrFail p sv =
   case symUnify p sv of
@@ -289,7 +289,7 @@ unifyAndBind _ t1 t2 = error $ "Error when translating the application of term '
                            ++ "'\n'" ++ show t1 ++ "' is not a function."
 
 
--- Translation helpers
+-- * Translation helpers
 numeric :: SValue -> Formula SInteger
 numeric (SNumber n) = return n
 numeric sv          = error  $ "Expected a numeric symval, but got " ++ show sv

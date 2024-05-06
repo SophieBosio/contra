@@ -37,7 +37,7 @@ import qualified Control.Monad.Reader as Reader
 import Data.SBV
 
 
--- Environment, Reader, Symbolic
+-- * Environment, Reader, Symbolic
 newtype ERSymbolic e r a =
   ERSymbolic { coERSymbolic :: Reader.ReaderT (Environment (ERSymbolic e r) e, r) Symbolic a }
 
@@ -52,16 +52,18 @@ instance Applicative (ERSymbolic e r) where
 instance Functor (ERSymbolic e r) where
   fmap f = ERSymbolic . fmap f . coERSymbolic
 
+
+-- * Run the monad
 runFormula :: ERSymbolic e r a -> Program e -> r -> Symbolic a
 runFormula formula p r = Reader.runReaderT (coERSymbolic formula) (programEnvironment p, r)
 
 
--- Environment
+-- * Environment
 environment :: ERSymbolic e r (Environment (ERSymbolic e r) e)
 environment = ERSymbolic $ Reader.asks fst
 
 
--- Reader
+-- * Reader
 local :: (r -> r) -> (ERSymbolic e r b -> ERSymbolic e r b)
 local f = ERSymbolic . Reader.local (second f) . coERSymbolic
 
@@ -69,6 +71,6 @@ ask :: ERSymbolic e r r
 ask = ERSymbolic $ Reader.asks snd
 
 
--- Symbolic
+-- * Symbolic
 lift :: Symbolic a -> ERSymbolic e r a
 lift = ERSymbolic . Reader.lift

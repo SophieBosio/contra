@@ -29,16 +29,16 @@ import Control.Monad.State
 import Data.Hashable        (hash)
 
 
--- Abbreviations
+-- * Abbreviations
 type PartialState a = State (Program a)
 
 
--- Export
+-- * Export
 partiallyEvaluate :: (Show a, Eq a) => Program a -> (Term a -> (Term a, Program a))
 partiallyEvaluate p t = runState (partial [] t) p
 
 
--- Memoisation
+-- * Memoisation
 addSpecialised :: F -> Term a -> (Program a -> Program a)
 addSpecialised f t p =
   case lookup f (functions p ++ properties p) of
@@ -65,7 +65,7 @@ bind f t =
      put env'
 
 
--- Main functions
+-- * Main functions
 partial :: (Show a, Eq a) => [Name] -> Term a -> PartialState a (Term a)
 partial ns (Pattern p) = partialPattern ns p
 partial ns (TConstructor c ts a) =
@@ -189,7 +189,7 @@ partialValue :: (Show a, Eq a) => Value a -> PartialState a (Term a)
 partialValue v = return $ Pattern $ Value v
 
 
--- Eliminating unreachable paths in case statement
+-- * Eliminating unreachable paths in case statement
 eliminateUnreachable :: Show a => Term a -> [(Pattern a, Term a)] -> [(Pattern a, Term a)]
 eliminateUnreachable (Pattern p) =
   foldr (\(alt, body) ts' ->
@@ -200,7 +200,7 @@ eliminateUnreachable (Pattern p) =
 eliminateUnreachable _ = id
 
 
--- Alpha renaming
+-- * Alpha renaming
 alpha :: Show a => [Name] -> [Name] -> Pattern a -> Term a
       -> ([Name], Pattern a, Term a)
 alpha [     ] ns p t = (ns, p, t)
@@ -250,7 +250,7 @@ replaceWithIn' x x' (List ps a) =
 replaceWithIn' _ _ p = p
 
 
--- Utility
+-- * Utility
 function :: Show a => Term a -> PartialState a (Term a -> Term a)
 function (Lambda p t _) =
   do notAtTopLevel p
