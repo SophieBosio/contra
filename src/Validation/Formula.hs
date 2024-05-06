@@ -88,12 +88,12 @@ sEqual (SADT adt si xs) (SADT adt' sj ys) =
          fromBool (adt == adt')
        : (si .== sj)
        : map truthy eqs
-sEqual (SCtr adt x  xs) (SADT adt' sj ys) =
-  -- TODO
-  undefined
-sEqual (SADT adt si xs) (SCtr adt' y  ys) =
-  -- TODO
-  undefined
+sEqual (SCtr adt c  xs) (SADT adt' sj ys)
+  | adt == adt' = coerce adt (c, sj) (xs, ys)
+  | otherwise   = return $ SBoolean sFalse
+sEqual (SADT adt si xs) (SCtr adt' c  ys)
+  | adt == adt' = coerce adt (c, si) (ys, xs)
+  | otherwise   = return $ SBoolean sFalse
 sEqual (SArgs     xs) (SArgs     ys) =
   do eqs <- zipWithM sEqual xs ys
      return $ SBoolean $ sAnd $ map truthy eqs
@@ -107,7 +107,6 @@ truthy v            = error $
 
 
 -- SValues are 'Mergeable', meaning we can use SBV's if-then-else, called 'ite'.
--- Contra Types are also Mergeable -- declared in Core.Syntax.
 instance Mergeable SValue where
   symbolicMerge = const merge
 
@@ -125,13 +124,13 @@ merge b (SADT adt si xs) (SADT adt' sj ys)
   | otherwise   = error $
     "Type mismatch between symbolic data types '"
     ++ adt ++ "' and ' " ++ adt' ++ "'"
-merge b (SCtr adt x  xs) (SADT adt' si ys)
-  | adt == adt' = undefined
+merge b (SCtr adt c xs) (SADT adt' si ys)
+  | adt == adt' = ite b (SCtr adt c xs) (SADT adt' si ys)
   | otherwise   = error $
     "Type mismatch between concrete data type '" ++ adt ++
     "' and symbolic data type variable '" ++ adt' ++ "'"
-merge b (SADT adt si xs) (SCtr adt' y  ys)
-  | adt == adt' = undefined
+merge b (SADT adt si xs) (SCtr adt' c ys)
+  | adt == adt' = ite b (SADT adt si xs) (SCtr adt' c ys)
   | otherwise   = error $
     "Type mismatch between concrete data type '" ++ adt' ++
     "' and symbolic data type variable '" ++ adt ++ "'"
