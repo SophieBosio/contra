@@ -40,7 +40,8 @@ data Environment m a =
     , datatype      :: C -> m D
     , fieldTypes    :: C -> m [Type]
     , constructors  :: D -> m [Constructor]
-    , selector      :: D -> C -> m Integer
+    , selector      :: (D, C) -> m (D, Integer)
+    , cardinality   :: D -> m Integer
     }
 
 programEnvironment :: Monad m => Program a -> Environment m a
@@ -71,14 +72,18 @@ programEnvironment p =
         case lookup d (datatypes p) of
           Just cs -> return cs
           Nothing -> error $ "Couldn't find data type with name '" ++ d ++ "'"
-    , selector = \d c ->
+    , selector = \(d, c) ->
         case lookup d (datatypes p) of
           Nothing -> error $ "Couldn't find data type with name '" ++ d ++ "'"
           Just cs ->
             case elemIndex c (map nameOf cs) of
-              Just  s -> return $ toInteger s
+              Just  s -> return (d, toInteger s)
               Nothing -> error $ "Constructor '" ++ c ++
                 "' not found in data type declaration of type '" ++ d ++ "'"
             where
               nameOf (Constructor x _) = x
+    , cardinality = \d ->
+        case lookup d (datatypes p) of
+          Nothing -> error $ "Couldn't find data type with name '" ++ d ++ "'"
+          Just cs -> return $ toInteger $ length cs
     }

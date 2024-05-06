@@ -242,8 +242,8 @@ selectConstructor depth d _  [Constructor c types] =
      sFields <- mapM (createSymbolic depth) fields
      return $ SCtr d c sFields
 selectConstructor depth d si ((Constructor c types) : ctrs) =
-  do env   <- environment
-     sel   <- selector env d c
+  do env      <- environment
+     (_, sel) <- selector env (d, c)
      let names = zipWith (\tau i -> show (hash (d ++ show tau)) ++ show i)
                  types
                  ([0..] :: [Integer])
