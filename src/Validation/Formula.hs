@@ -35,8 +35,11 @@ module Validation.Formula where
 import Core.Syntax
 import Environment.Environment
 import Environment.ERSymbolic
+import System.Random
+import System.IO.Unsafe
 
 import Data.SBV
+import Data.Hashable (hash)
 import Control.Monad (zipWithM, zipWithM_)
 
 
@@ -69,6 +72,45 @@ bind x tau look y = if x == y      -- Applying the bindings to some 'y' equal to
                        then tau    -- you should now get back 'tau'
                        else look y -- If you call it with some other 'y',
                                    -- then return the old binding for 'y'
+
+
+-- * Create symbolic variables for SBV to instantiate during solving
+createSymbolic :: Pattern Type -> Formula SValue
+createSymbolic (Variable _ Unit')    = return SUnit
+createSymbolic (Variable x Integer') =
+  do sx <- lift $ sInteger x
+     return $ SNumber sx
+createSymbolic (Variable x Boolean') =
+  do sx <- lift $ sBool x
+     return $ SBoolean sx
+createSymbolic (Variable x (Variable' _)) =
+  do sx <- lift $ free x
+     return $ SNumber sx
+createSymbolic (Variable _ (TypeList [])) =
+  do return $ SArgs []
+createSymbolic (Variable x (TypeList ts)) =
+     -- We should never be asked to create input for this type, since it's
+     -- internal and not exposed to the user. However, we are able to do so.
+     -- Fabricate new name for each variable by hashing <x><type-name>
+     -- and appending the index of the variable type in the TypeList.
+  do let names = zipWith (\tau i -> show (hash (x ++ show tau)) ++ show i)
+                 ts
+                 ([0..] :: [Integer])
+     let ps    = zipWith Variable names ts
+     sxs <- mapM createSymbolic ps
+     return $ SArgs sxs
+createSymbolic (Variable x (ADT adt)) =
+  do env   <- environment
+     si    <- lift $ sInteger "selector"
+     upper <- cardinality env adt
+     lift $ constrain $ (si .>= 0) .&& (si .< literal upper)
+     ident <- lift $ sString x
+     lift $ constrain $ ident .== (literal x)
+     return $ SADT adt si []
+createSymbolic p = error $
+     "Unexpected request to create symbolic sub-pattern '"
+  ++ show p ++ "' of type '" ++ show (annotation p) ++ "'"
+  ++ "\nPlease note that generating arbitrary functions is not supported."
 
 
 -- SValue (symbolic) equality
@@ -127,8 +169,12 @@ populate adt svs types = ensureTypeAccord svs types >> return svs
 
 instantiate :: D -> [Type] -> Formula [SValue]
 instantiate adt types =
-  do svs <- zipWithM createSymbolic types
+  do let vars = map (Variable randomStr) types
+     svs <- mapM createSymbolic vars
      return svs
+
+randomStr :: String
+randomStr = take 10 $ randomRs ('a','z') $ unsafePerformIO newStdGen
 
 ensureTypeAccord :: [SValue] -> [Type] -> Formula ()
 ensureTypeAccord [      ] [        ] = return ()
@@ -162,7 +208,8 @@ merge b (SCtr adt x xs) (SCtr adt' y ys)
   | adt == adt' = SCtr adt (ite b x y) (mergeList b xs ys)
   | otherwise   = error $
     "Type mismatch between data type constructors '"
-    ++ show x ++ "' and '" ++ show y ++ "'"
+    ++ x ++ "' and '" ++ y ++ "'\n\
+    \Of types '" ++ adt ++ "' and '" ++ adt' ++ ", respectively."
 merge b (SADT adt si xs) (SADT adt' sj ys)
   | adt == adt' = SADT adt (ite b si sj) (mergeList b xs ys)
   | otherwise   = error $
