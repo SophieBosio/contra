@@ -1,0 +1,5 @@
+count :: Integer -> Integer -> Integer .
+count n m =
+  case n == 0 of
+    ; False -> count (n - 1) (m + 1)
+    ; True  -> m .

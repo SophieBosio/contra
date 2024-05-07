@@ -37,7 +37,8 @@ import Environment.Environment
 import Environment.ERSymbolic
 
 import Data.SBV
-import Control.Monad (zipWithM)
+import Data.Hashable (hash)
+import Control.Monad (zipWithM, zipWithM_)
 
 
 -- Maximum recursion depth for ADTs and function calls
@@ -53,6 +54,7 @@ data SValue =
   | SBoolean SBool
   | SNumber  SInteger
   | SCtr     D C [SValue]
+  | SADT     X D SInteger [SValue]
   | SArgs    [SValue]
   -- SArgs represents the fabricated argument list we create when
   -- flattening function definitions into a Case-statement
@@ -70,6 +72,43 @@ bind x tau look y = if x == y      -- Applying the bindings to some 'y' equal to
                                    -- then return the old binding for 'y'
 
 
+-- * Create symbolic variables for SBV to instantiate during solving
+createSymbolic :: Pattern Type -> Formula SValue
+createSymbolic (Variable _ Unit')    = return SUnit
+createSymbolic (Variable x Integer') =
+  do sx <- lift $ sInteger x
+     return $ SNumber sx
+createSymbolic (Variable x Boolean') =
+  do sx <- lift $ sBool x
+     return $ SBoolean sx
+createSymbolic (Variable x (Variable' _)) =
+  do sx <- lift $ free x
+     return $ SNumber sx
+createSymbolic (Variable _ (TypeList [])) =
+  do return $ SArgs []
+createSymbolic (Variable x (TypeList ts)) =
+     -- We should never be asked to create input for this type, since it's
+     -- internal and not exposed to the user. However, we are able to do so.
+     -- Fabricate new name for each variable by hashing <x><type-name>
+     -- and appending the index of the variable type in the TypeList.
+  do let names = zipWith (\tau i -> show (hash (x ++ show tau)) ++ show i)
+                 ts
+                 ([0..] :: [Integer])
+     let ps    = zipWith Variable names ts
+     sxs <- mapM createSymbolic ps
+     return $ SArgs sxs
+createSymbolic (Variable x (ADT adt)) =
+  do env   <- environment
+     si    <- lift $ sInteger x
+     upper <- cardinality env adt
+     lift $ constrain $ (si .>= 0) .&& (si .< literal upper)
+     return $ SADT x adt si []
+createSymbolic p = error $
+     "Unexpected request to create symbolic sub-pattern '"
+  ++ show p ++ "' of type '" ++ show (annotation p) ++ "'"
+  ++ "\nPlease note that generating arbitrary functions is not supported."
+
+
 -- SValue (symbolic) equality
 sEqual :: SValue -> SValue -> Formula SValue
 sEqual  SUnit           SUnit           = return $ SBoolean sTrue
@@ -81,6 +120,18 @@ sEqual (SCtr adt x xs) (SCtr adt' y ys) =
          fromBool (adt == adt')
        : fromBool (x   == y   )
        : map truthy eqs
+sEqual (SADT _ adt si xs) (SADT _ adt' sj ys) =
+  do eqs <- zipWithM sEqual xs ys
+     return $ SBoolean $ sAnd $
+         fromBool (adt == adt')
+       : (si .== sj)
+       : map truthy eqs
+sEqual (SCtr adt c  xs) (SADT ident adt' sj ys)
+  | adt == adt' = coerce ident adt (c, sj) (xs, ys)
+  | otherwise   = return $ SBoolean sFalse
+sEqual (SADT ident adt si xs) (SCtr adt' c  ys)
+  | adt == adt' = coerce ident adt (c, si) (ys, xs)
+  | otherwise   = return $ SBoolean sFalse
 sEqual (SArgs     xs) (SArgs     ys) =
   do eqs <- zipWithM sEqual xs ys
      return $ SBoolean $ sAnd $ map truthy eqs
@@ -93,8 +144,52 @@ truthy v            = error $
   "Expected a symbolic boolean value, but got " ++ show v
 
 
+-- * Coerce a symbolically created algebraic data type to be equal to a concrete one
+coerce :: X -> D -> (C, SInteger) -> ([SValue], [SValue]) -> Formula SValue
+coerce ident adt (c, si) (xs, ys) =
+  do env    <- environment
+     (_, i) <- selector env (adt, c)
+     lift $ constrain $ si .== literal i
+     types  <- fieldTypes env c
+     ys'    <- populate ident adt ys types
+     eqs    <- zipWithM sEqual xs ys'
+     return $ SBoolean $ sAnd $
+         (si .== literal i)
+       : map truthy eqs
+
+
+populate :: X -> D -> [SValue] -> [Type] -> Formula [SValue]
+populate _     adt [ ] [   ] = return []
+populate ident adt [ ] types = instantiate ident adt types
+populate _     adt svs types = ensureTypeAccord svs types >> return svs
+
+instantiate :: X -> D -> [Type] -> Formula [SValue]
+instantiate ident adt types =
+  do let names = zipWith (++) (repeat (ident ++ "-field")) (map show [0..(length types)])
+     let vars  = zipWith Variable names types
+     mapM createSymbolic vars
+
+ensureTypeAccord :: [SValue] -> [Type] -> Formula ()
+ensureTypeAccord [      ] [        ] = return ()
+ensureTypeAccord [      ] _          = error
+  "Fatal: Symbolic algebraic data type was missing fields."
+ensureTypeAccord _        [        ] = error
+  "Fatal: Symbolic algebraic data type was missing fields."
+ensureTypeAccord (sv:svs) (tau:taus) = match sv tau >> ensureTypeAccord svs taus
+  where
+    match SUnit            Unit'            = return ()
+    match (SNumber      _) Integer'         = return ()
+    match (SBoolean     _) Boolean'         = return ()
+    match (SArgs     svs') (TypeList taus') = zipWithM_ match svs' taus'
+    match (SCtr   adt _ _) (ADT adt')       | adt == adt' = return ()
+    match (SADT _ adt _ _) (ADT adt')       | adt == adt' = return ()
+    match sv'              tau'             = error $
+      "Type mismatch occurred in equality check of constructor fields.\n\
+      \Unsatisfiable constraint: '" ++ show sv' ++ "' not of expected type '"
+      ++ show tau' ++ "'"
+
+
 -- SValues are 'Mergeable', meaning we can use SBV's if-then-else, called 'ite'.
--- Contra Types are also Mergeable -- declared in Core.Syntax.
 instance Mergeable SValue where
   symbolicMerge = const merge
 
@@ -103,11 +198,28 @@ merge _  SUnit        SUnit       = SUnit
 merge b (SNumber  x) (SNumber  y) = SNumber  $ ite b x y
 merge b (SBoolean x) (SBoolean y) = SBoolean $ ite b x y
 merge b (SCtr adt x xs) (SCtr adt' y ys)
-  | adt == adt'
-  && x  == y   = SCtr adt x (mergeList b xs ys)
-  | otherwise  = error $
+  | adt == adt' = SCtr adt (ite b x y) (mergeList b xs ys)
+  | otherwise   = error $
     "Type mismatch between data type constructors '"
-    ++ show x ++ "' and '" ++ show y ++ "'"
+    ++ x ++ "' and '" ++ y ++ "'\n\
+    \Of types '" ++ adt ++ "' and '" ++ adt' ++ ", respectively."
+merge b (SADT x adt si xs) (SADT y adt' sj ys)
+  | adt == adt' = SADT (ite b x y) adt (ite b si sj) (mergeList b xs ys)
+  | otherwise   = error $
+    "Type mismatch between symbolic data types '"
+    ++ adt ++ "' and ' " ++ adt' ++ "'"
+merge b (SCtr adt c xs) (SADT ident adt' si ys)
+  | adt == adt' = ite b (SCtr adt c xs) (SADT ident adt' si ys)
+  | otherwise   = error $
+    "Type mismatch between concrete data type '" ++ adt ++
+    "' and symbolic data type variable '" ++ ident ++
+    "' with type '" ++ adt' ++ "'"
+merge b (SADT ident adt si xs) (SCtr adt' c ys)
+  | adt == adt' = ite b (SADT ident adt si xs) (SCtr adt' c ys)
+  | otherwise   = error $
+    "Type mismatch between concrete data type '" ++ adt' ++
+    "' and symbolic data type variable '" ++ ident ++
+    "' with type '" ++ adt ++ "'"
 merge b (SArgs   xs) (SArgs   ys) = SArgs $ mergeList b xs ys
 merge _ x y = error $ "Type mismatch between symbolic values '"
               ++ show x ++ "' and '" ++ show y ++ "'"
@@ -116,4 +228,5 @@ mergeList :: SBool -> [SValue] -> [SValue] -> [SValue]
 mergeList sb xs ys
   | Just b <- unliteral sb = if b then xs else ys
   | otherwise              = error $ "Unable to merge arguments '"
-                             ++ show xs ++ "' with '" ++ show ys ++ "'"
+                             ++ show xs ++ "' with '" ++ show ys ++ "'\n\
+                             \Impossible to determine Boolean condition."

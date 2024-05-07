@@ -28,7 +28,6 @@
 
 module Core.Syntax where
 
-import Data.SBV
 import Data.List (intercalate)
 
 
@@ -104,13 +103,14 @@ data Value a =
 
 
 -- Canonical terms & Patterns
--- A canonical term is a pattern with no variables
+-- A canonical term is a pattern with no variables or a lambda
 class Canonical a where
   canonical :: a -> Bool
 
 instance Canonical (Term a) where
   canonical (Pattern           p) = canonical p
   canonical (TConstructor _ ts _) = all canonical ts
+  canonical (Lambda           {}) = True
   canonical _                     = False
 
 instance Canonical (Pattern a) where
@@ -287,16 +287,6 @@ instance (Eq a) => Eq (Program a) where
     rest == rest'
   _ == _ = False
 
-
--- Types are SBV 'Mergeable'
--- We need this in the function 'symSelect' (Validation.Translator)
-instance Mergeable Type where
-  symbolicMerge = const mergeType
-
-mergeType :: SBool -> Type -> Type -> Type
-mergeType sb tau1 tau2
-  | Just b <- unliteral sb = if b then tau1 else tau2
-  | otherwise              = tau2
 
 
 -- Utility functions for convenient program access

@@ -26,41 +26,27 @@ import Semantics.Interpreter (boolean, number)
 
 import Control.Monad.Reader
 import Control.Monad.State
-import Data.Hashable
+import Data.Hashable        (hash)
 
 
--- Abbreviations
-type PartialState a = StateT (Program a) (Reader (Program a))
+-- * Abbreviations
+type PartialState a = State (Program a)
 
 
--- Export
+-- * Export
 partiallyEvaluate :: (Show a, Eq a) => Program a -> (Term a -> (Term a, Program a))
-partiallyEvaluate p t =
-  let (specialised, residual) = runReader (runStateT (partial [] t) p) p
-  in  (specialised, residual)
+partiallyEvaluate p t = runState (partial [] t) p
 
 
--- Memoisation
-addSpecialised :: F -> Term a -> (Program a -> Program a)
-addSpecialised f t p =
-  case lookup f (functions p ++ properties p) of
-    Just  _ -> p
-    Nothing -> Function f t End <> p
-
-bind :: F -> Term a -> PartialState a ()
-bind f t = do
-  newEnv <- lift $ local (addSpecialised f t) ask
-  put newEnv
-
-
--- Main functions
+-- * Main functions
 partial :: (Show a, Eq a) => [Name] -> Term a -> PartialState a (Term a)
 partial ns (Pattern p) = partialPattern ns p
 partial ns (TConstructor c ts a) =
   do ts' <- mapM (partial ns) ts
      return $ strengthenIfPossible c ts' a
 partial ns (Lambda p t a) =
-  do let fvs = freeVariables' p
+  do notAtTopLevel p
+     let fvs = freeVariables' p
      let (ns', alphaP, alphaT) = alpha fvs ns p t
      t'  <- partial ns' alphaT
      return $ Lambda alphaP t' a
@@ -77,18 +63,21 @@ partial ns (Let p t1 t2 a) =
        else return $ Let p' t1' t2 a
 -- Specialise named function (denoted by a variable name)
 partial ns (Application t1@(Pattern (Variable x _)) t2 a) =
-  do t2' <- partial ns t2
-     env <- get
-     let x' = x ++ show t2'
-     case lookup x' (functions env) of
-       Just  s -> return s -- Already specialised
-       Nothing -> if canonical t2'
-                     then do f   <- partial ns t1 >>= function
-                             specialised <- partial ns (f t2')
-                             bind x' specialised
-                             return specialised
-                     else do t1' <- partial ns t1
-                             return $ Application t1' t2' a
+  do env <- get
+     case lookup x (functions env ++ properties env) of
+       Just (Lambda p t0 _) ->
+         do t2' <- partial ns t2
+            if canonical t2'
+              then let x' = show x ++ show (hash (show t2')) in
+                     case lookup x' (functions env ++ properties env) of
+                       Just specialised -> return specialised
+                       Nothing -> do bind x' undefined
+                                     result <- partial ns $ substitute p t0 t2'
+                                     bind x' result
+                                     return result
+              else return $ Application t1 t2' a
+       Just _  -> error $ "Variable '" ++ x ++ "' is not a function"
+       Nothing -> error $ "Unbound function name '" ++ x ++ "'"
 -- Specialise anonymous function
 partial ns (Application t1 t2 a) =
   do t1' <- partial ns t1
@@ -156,13 +145,11 @@ partial ns (Not t0 a) =
 partialPattern :: (Show a, Eq a) => [Name] -> Pattern a -> PartialState a (Term a)
 partialPattern _  (Value      v) = partialValue v
 partialPattern ns (Variable x a) =
-  do program <- ask
+  do program <- get
      case map snd $ filter ((== x) . fst) (functions program ++ properties program) of
        [ ] -> return $ Pattern $ Variable x a
-       [t] -> if selfRecursive x t
-                 then return t
-                 else partial ns t
-       _   -> error  $ "ambiguous bindings for " ++ show x
+       [t] -> partial ns t
+       _   -> error  $ "Ambiguous bindings for variable " ++ show x
 partialPattern ns (List ps a) =
   do ts <- mapM (partialPattern ns) ps
      let ps' = map strengthenToPattern ts
@@ -175,7 +162,34 @@ partialValue :: (Show a, Eq a) => Value a -> PartialState a (Term a)
 partialValue v = return $ Pattern $ Value v
 
 
--- Eliminating unreachable paths in case statement
+-- * Memoisation
+addSpecialised :: F -> Term a -> (Program a -> Program a)
+addSpecialised f t p =
+  case lookup f (functions p ++ properties p) of
+    Just def -> Function f t End <> removeDefinition (f, def) p
+    Nothing  -> Function f t End <> p
+
+removeDefinition :: (F, Term a) -> Program a -> Program a
+removeDefinition (f', t') (Function f t rest)
+  | f == f'   = removeDefinition (f', t') rest
+  | otherwise = Function f t (removeDefinition (f', t') rest)
+removeDefinition (p', t') (Property p t rest)
+  | p == p'   = removeDefinition (p', t') rest
+  | otherwise = Property p t (removeDefinition (p', t') rest)
+removeDefinition def (Signature x t  rest) =
+  Signature x t  (removeDefinition def rest)
+removeDefinition def (Data      x ts rest) =
+  Data      x ts (removeDefinition def rest)
+removeDefinition _ End = End
+
+bind :: F -> Term a -> PartialState a ()
+bind f t =
+  do env  <- get
+     let env' = addSpecialised f t env
+     put env'
+
+
+-- * Eliminating unreachable paths in case statement
 eliminateUnreachable :: Show a => Term a -> [(Pattern a, Term a)] -> [(Pattern a, Term a)]
 eliminateUnreachable (Pattern p) =
   foldr (\(alt, body) ts' ->
@@ -186,14 +200,7 @@ eliminateUnreachable (Pattern p) =
 eliminateUnreachable _ = id
 
 
--- Checking if function definition contains its own name
-selfRecursive :: X -> Term a -> Bool
-selfRecursive x t
-  | x `elem` freeVariables t = True
-  | otherwise = False
-
-
--- Alpha renaming
+-- * Alpha renaming
 alpha :: Show a => [Name] -> [Name] -> Pattern a -> Term a
       -> ([Name], Pattern a, Term a)
 alpha [     ] ns p t = (ns, p, t)
@@ -243,7 +250,7 @@ replaceWithIn' x x' (List ps a) =
 replaceWithIn' _ _ p = p
 
 
--- Utility
+-- * Utility
 function :: Show a => Term a -> PartialState a (Term a -> Term a)
 function (Lambda p t _) =
   do notAtTopLevel p
@@ -252,7 +259,7 @@ function t = error $ "Expected a function, but got the term '" ++ show t ++ "'"
 
 notAtTopLevel :: Pattern a -> PartialState a ()
 notAtTopLevel (Variable x _) =
-  do program <- ask
+  do program <- get
      when (x `elem` (fst <$> functions program)) $
        error $ "The name '" ++ x ++
                "' shadows the top level declaration of '" ++ x ++ "'."

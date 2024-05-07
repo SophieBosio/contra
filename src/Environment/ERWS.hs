@@ -27,7 +27,7 @@ import Control.Arrow
 import qualified Control.Monad.RWS as RWS
 
 
--- Environment Reader Writer State monad
+-- * Environment Reader Writer State monad
 newtype ERWS e r w s a =
   ERWS { coERWS :: RWS.RWS (Environment (ERWS e r w s) e, r) w s a }
 
@@ -45,22 +45,22 @@ instance Monoid w => Functor (ERWS e r w s) where
 runERWS :: Monoid w => ERWS e r w s a -> Program e -> r -> s -> (a, s, w)
 runERWS erws p r = RWS.runRWS (coERWS erws) (programEnvironment p, r)
 
--- Environment.
+-- * Environment
 environment :: Monoid w => ERWS e r w s (Environment (ERWS e r w s) e)
 environment = ERWS $ fst <$> RWS.ask
 
--- Reader.
+-- * Reader
 local :: Monoid w => (r -> r) -> (ERWS e r w s b -> ERWS e r w s b)
 local f = ERWS . RWS.local (second f) . coERWS
 
 ask :: Monoid w => ERWS e r w s r
 ask = ERWS $ snd <$> RWS.ask
 
--- Writer.
+-- * Writer
 tell :: Monoid w => w -> ERWS e r w s ()
 tell = ERWS . RWS.tell
 
--- State.
+-- * State
 put :: Monoid w => s -> ERWS e r w s ()
 put = ERWS . RWS.put
 
@@ -70,7 +70,7 @@ get = ERWS RWS.get
 modify :: Monoid w => (s -> s) -> ERWS e r w s ()
 modify f = ERWS $ RWS.modify f
 
--- "Getter".
+-- * "Getter"
 infixl 2 <?>
 
 (<?>) :: Monad m => m (a -> m b) -> (a -> m b)

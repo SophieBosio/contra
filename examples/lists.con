@@ -1,11 +1,39 @@
-adt IntegerList = Nil | Cons Integer IntegerList .
+-- Custom integer lists
+adt IntList = Nil | Cons Integer IntList .
 
-adt Pair = Pair IntegerList Integer .
+count :: IntList -> Integer .
+count Nil = 0 .
+count (Cons {n, rest}) = 1 + (count rest) .
 
-length :: IntegerList -> Integer .
-length list =
-  rec pair ->
-    (case pair of
-      ; Pair {Nil,         acc} -> acc
-      ; Pair {Cons n rest, acc} -> count rest (acc + 1))
-  (Pair list 0) .
+append :: Integer -> IntList -> IntList .
+append n (Nil {}) = Cons {n, Nil {}} .
+append n (Cons {a, b}) = Cons {a, (append n b)} .
+
+prepend :: Integer -> IntList -> IntList .
+prepend n l = Cons {n, l} .
+
+cutFirst :: IntList -> IntList .
+cutFirst (Cons {a, b}) = b .
+
+reverseHelper :: IntList -> IntList -> IntList .
+reverseHelper Nil list = list .
+reverseHelper (Cons {x, xs}) list = reverseHelper xs (Cons {x, list}) .
+
+reverse :: IntList -> IntList .
+reverse list = reverseHelper list Nil .
+
+
+-- Example
+exampleList :: IntList .
+exampleList = Cons {1, Cons {2, Cons {3, Cons {4, Cons {5, Nil}}}}} .
+
+test = let (Cons {a, b}) = exampleList in b .
+
+main :: IntList .
+main = reverse exampleList .
+
+  
+-- Example properties
+involution :: IntList -> Boolean .
+involution list =*= (reverse (reverse list)) == list .
+
