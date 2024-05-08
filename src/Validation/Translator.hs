@@ -175,53 +175,6 @@ liftPropertyInputPatterns (Lambda p t _) =
 liftPropertyInputPatterns t = return (id, t)
 
 
--- createSymbolic 0     (Variable x (ADT adt)) = error $
---   "Reached max. recursion depth while trying to generate symbolic ADT "
---   ++ adt ++ "' for variable '" ++ x ++ "'"
--- createSymbolic depth (Variable x (ADT adt)) =
---   do env  <- environment
---      ctrs <- constructors env adt
---      si   <- createSelector ctrs
---      sCtr <- selectConstructor (depth - 1) adt si ctrs
---      desc <- lift $ sString x
---      lift $ constrain $ desc .== literal (show sCtr)
---      return sCtr
-
--- -- * Helpers for creating symbolic ADT variables
--- createSelector :: [Constructor] -> Formula SInteger
--- createSelector ctrs =
---   do si <- lift sInteger_
---      let cardinality = literal $ toInteger $ length ctrs
---      lift $ constrain $
---        (si .>= 0) .&& (si .< cardinality)
---      return si
-
--- selectConstructor :: RecursionDepth -> D -> SInteger -> [Constructor]
---                   -> Formula SValue
--- selectConstructor 0     d _  _  = error $
---   "Reached max. recursion depth while trying to \
---   \create symbolic variable for ADT '" ++ d ++ "'"
--- selectConstructor _     d _  [] = error $
---   "Fatal: Failed to create symbolic variable for ADT '" ++ d ++ "'"
--- selectConstructor depth d _  [Constructor c types] =
---   do let names = zipWith (\tau i -> show (hash (d ++ show tau)) ++ show i)
---                  types
---                  ([0..] :: [Integer])
---      let fields = zipWith Variable names types
---      sFields <- mapM (createSymbolic depth) fields
---      return $ SCtr d c sFields
--- selectConstructor depth d si ((Constructor c types) : ctrs) =
---   do env      <- environment
---      (_, sel) <- selector env (d, c)
---      let names = zipWith (\tau i -> show (hash (d ++ show tau)) ++ show i)
---                  types
---                  ([0..] :: [Integer])
---      let fields = zipWith Variable names types
---      sFields <- mapM (createSymbolic depth) fields
---      next  <- selectConstructor depth d si ctrs
---      return $ merge (si .== literal sel) (SCtr d c sFields) next
-
-
 -- * Symbolic "unification" and unification constraint generation
 unifyOrFail :: Pattern Type -> SValue -> Formula Transformation
 unifyOrFail p sv =
