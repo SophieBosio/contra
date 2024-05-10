@@ -57,7 +57,7 @@ translateToFormula depth prop =
 
 
 -- * Constraint generation
-translate :: RecursionDepth ->Term Type -> Formula SValue
+translate :: RecursionDepth -> Term Type -> Formula SValue
 translate depth (Pattern    p) = translatePattern depth p
 translate depth (Application t1 t2 _) =
   do t2'        <- translate depth t2
@@ -68,7 +68,7 @@ translate depth (Lambda p t _) =
      local bs $ translate depth t
 translate depth (Let p t1 t2 _) =
   do t1' <- translate depth t1
-     bs  <- unifyOrFail p t1'
+     bs  <- symbolicallyUnify p t1'
      local bs $ translate depth t2
 translate depth (Case t0 ts _) =
   do sp <- translate depth t0
@@ -177,8 +177,8 @@ liftPropertyInputPatterns t = return (id, t)
 
 
 -- * Symbolic "unification" and unification constraint generation
-unifyOrFail :: Pattern Type -> SValue -> Formula Transformation
-unifyOrFail p sv =
+symbolicallyUnify :: Pattern Type -> SValue -> Formula Transformation
+symbolicallyUnify p sv =
   symUnify p sv >>= \case
     MatchBy  bs -> return bs
     NoMatch err -> error err
@@ -193,7 +193,7 @@ unifyAndBind 0 t s = error $
   "Reached max. recursion depth while trying to translate function application\
   \symbolically.\nCurrent step: Applying '" ++ show t ++ "' to '" ++ show s ++ "'"
 unifyAndBind _ (Lambda p t1 _) sv =
-  do bs <- unifyOrFail p sv
+  do bs <- symbolicallyUnify p sv
      return (bs, t1)
 unifyAndBind depth (Application t1 t2 _) sv =
   do t2'         <- translate depth t2

@@ -99,7 +99,7 @@ createSymbolic (Variable x (TypeList ts)) =
      return $ SArgs sxs
 createSymbolic (Variable x (ADT adt)) =
   do env   <- environment
-     si    <- lift $ sInteger x
+     si    <- lift $ sInteger $ "ADT-" ++ x
      upper <- cardinality env adt
      if upper == 1
        then do lift $ constrain $ si .== 0
