@@ -59,11 +59,11 @@ instance Monoid Substitution where
   mempty  = Substitution $ Right id
   mappend = (<>)
 
-substError :: String -> Formula Substitution
-substError = return . Substitution . Left . return
+substError :: String -> Substitution
+substError =  Substitution . Left . return
 
-substitution :: Transformation -> Formula Substitution
-substitution = return . Substitution . Right
+substitution :: Transformation -> Substitution
+substitution = Substitution . Right
 
 
 -- * Export
@@ -74,11 +74,17 @@ symUnify p sv =
        Right bs -> return $ MatchBy bs
        Left err -> return $ NoMatch $ intercalate "\n" err
 
+unifiable :: Pattern Type -> SValue -> PatternMatch
+unifiable p sv =
+  case unifier $ compatibleBy p sv of
+    Right bs -> MatchBy bs
+    Left err -> NoMatch $ intercalate "\n" err
 
--- * Main function
+
+-- * Main functions
 sUnify :: Pattern Type -> SValue -> Formula Substitution
 sUnify (Value v) sv = sUnifyValue v sv
-sUnify (Variable x _) sv = substitution $ bind x sv
+sUnify (Variable x _) sv = return $ substitution $ bind x sv
 sUnify (List ps _) (SArgs svs) =
   do foldrM (\(p, sv) u -> do u' <- sUnify p sv
                               return $ u <> u'
@@ -89,7 +95,7 @@ sUnify (PConstructor c ps (ADT adt)) (SCtr adt' c' svs)
                                          return $ u <> u'
                        ) mempty $ zip ps svs
 -- sUnify (PConstructor c ps (ADT adt)) (SADT ident adt' si svs) = undefined
-sUnify p sv = substError $
+sUnify p sv = return $ substError $
   "Unexpected type error occurred \
   \trying to unify concrete pattern\n'"
   ++ show p  ++ "'\nagainst symbolic value\n'"
@@ -108,12 +114,30 @@ sUnifyValue (VConstructor c vs (ADT adt)) (SCtr adt' c' svs)
   && c  == c' = foldrM (\(v, sv) u -> do u' <- sUnifyValue v sv
                                          return $ u <> u'
                        ) mempty $ zip vs svs
-  | otherwise = substError $
+  | otherwise = return $ substError $
     "Type or constructor mismatch between concrete constructor\n'" ++ c ++
     "' of type '" ++ adt ++ "'\n and symbolic constructor\n'" ++ c' ++
     "' of type '" ++ adt' ++ "'\n"
-sUnifyValue v sv = substError $
+sUnifyValue v sv = return $ substError $
   "Unexpected type error occurred\
   \trying to unify concrete value\n'"
   ++ show v  ++ "'\nagainst symbolic value\n'"
   ++ show sv ++ "'\n"
+
+compatibleBy :: Pattern Type -> SValue -> Substitution
+compatibleBy (Value             _) _            = mempty
+compatibleBy (Variable     x    _) sv           = substitution $ bind x sv
+compatibleBy (List           ps _) (SArgs  svs) =
+  foldr (\(p, sv) u -> u <> compatibleBy p sv) mempty $ zip ps svs
+compatibleBy (PConstructor c ps (ADT t)) (SCtr adt d svs)
+  |  t == adt
+  && c == d   = foldr (\(p, sv) u -> u <> compatibleBy p sv) mempty $ zip ps svs
+  | otherwise = substError $
+    "Unexpected type occurred when trying to unify\n\
+    \concrete pattern with constructor '" ++ c ++ "' and type '" ++ show t
+    ++ "' against symbolic value of type '" ++ d ++ "'"
+compatibleBy p sv = substError $
+  "Unexpected type error occurred\n\
+  \trying to unify concrete pattern '"
+  ++ show p  ++ "' against symbolic value '"
+  ++ show sv ++ "'"
