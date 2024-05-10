@@ -165,7 +165,7 @@ populate _     adt svs types = ensureTypeAccord svs types >> return svs
 
 instantiate :: X -> D -> [Type] -> Formula [SValue]
 instantiate ident adt types =
-  do let names = zipWith (++) (repeat (ident ++ "-field")) (map show [0..(length types)])
+  do let names = map (((ident ++ "-field") ++) . show) [0..(length types)]
      let vars  = zipWith Variable names types
      mapM createSymbolic vars
 

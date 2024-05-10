@@ -46,7 +46,6 @@ import Validation.SymUnifier
 
 import Data.SBV
 import Data.Foldable (foldrM)
-import Data.Hashable (hash)
 
 
 -- * Export
