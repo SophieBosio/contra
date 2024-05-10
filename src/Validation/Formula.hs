@@ -106,7 +106,7 @@ createSymbolic (Variable x (ADT adt)) =
                (_, c) <- reconstruct env (adt, 0)
                types  <- fieldTypes env c
                svs    <- ensureInstantiated x adt [] types
-               return $ SCtr adt c svs
+               return $ SADT x adt si svs
        else do lift $ constrain $ (si .>= 0) .&& (si .< literal upper)
                return $ SADT x adt si []
 createSymbolic p = error $
