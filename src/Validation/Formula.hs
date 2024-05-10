@@ -101,8 +101,14 @@ createSymbolic (Variable x (ADT adt)) =
   do env   <- environment
      si    <- lift $ sInteger x
      upper <- cardinality env adt
-     lift $ constrain $ (si .>= 0) .&& (si .< literal upper)
-     return $ SADT x adt si []
+     if upper == 1
+       then do lift $ constrain $ si .== 0
+               (_, c) <- reconstruct env (adt, 0)
+               types  <- fieldTypes env c
+               svs    <- ensureInstantiated x adt [] types
+               return $ SCtr adt c svs
+       else do lift $ constrain $ (si .>= 0) .&& (si .< literal upper)
+               return $ SADT x adt si []
 createSymbolic p = error $
      "Unexpected request to create symbolic sub-pattern '"
   ++ show p ++ "' of type '" ++ show (annotation p) ++ "'"
@@ -120,7 +126,7 @@ sEqual (SCtr adt x xs) (SCtr adt' y ys) =
          fromBool (adt == adt')
        : fromBool (x   == y   )
        : map truthy eqs
-sEqual (SADT _ adt si xs) (SADT _ adt' sj ys) =
+sEqual (SADT x adt si xs) (SADT y adt' sj ys) =
   do eqs <- zipWithM sEqual xs ys
      return $ SBoolean $ sAnd $
          fromBool (adt == adt')
@@ -151,17 +157,17 @@ coerce ident adt (c, si) (xs, ys) =
      (_, i) <- selector env (adt, c)
      lift $ constrain $ si .== literal i
      types  <- fieldTypes env c
-     ys'    <- populate ident adt ys types
+     ys'    <- ensureInstantiated ident adt ys types
      eqs    <- zipWithM sEqual xs ys'
      return $ SBoolean $ sAnd $
          (si .== literal i)
        : map truthy eqs
 
 
-populate :: X -> D -> [SValue] -> [Type] -> Formula [SValue]
-populate _     adt [ ] [   ] = return []
-populate ident adt [ ] types = instantiate ident adt types
-populate _     adt svs types = ensureTypeAccord svs types >> return svs
+ensureInstantiated :: X -> D -> [SValue] -> [Type] -> Formula [SValue]
+ensureInstantiated _     adt [ ] [   ] = return []
+ensureInstantiated ident adt [ ] types = instantiate ident adt types
+ensureInstantiated _     adt svs types = ensureTypeAccord svs types >> return svs
 
 instantiate :: X -> D -> [Type] -> Formula [SValue]
 instantiate ident adt types =

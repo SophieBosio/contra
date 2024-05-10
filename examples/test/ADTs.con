@@ -20,3 +20,29 @@ oneFalse :: Single -> Boolean .
 oneFalse x =*= case x of
   ; Dtr {5} -> False
   ; y       -> True .
+
+
+-- Simple ADTs
+adt Example = Num Integer .
+
+exampleCongruent :: Example -> Example -> Boolean .
+exampleCongruent x y =*=
+  case (x == y) of
+    ; True -> let (Num {xx}) = x in
+                let (Num {yy}) = y in
+                  (xx == yy)
+    ; False -> True .
+
+concretely :: Example -> Example -> Boolean .
+concretely (Num {x}) (Num {y}) =*=
+  case x == y of
+    ; True  -> x == y
+    ; False -> True .
+
+shouldFail :: Example -> Example -> Boolean .
+shouldFail x y =*= x == y .
+
+adt Example2 = One Integer | Two Integer .
+
+shouldFail2 :: Example2 -> Example2 -> Boolean .
+shouldFail2 x y =*= x == y .

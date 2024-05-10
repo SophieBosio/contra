@@ -65,6 +65,3 @@ exampleCongruent x y =*=
                 let (C {yy}) = y in
                   (xx == yy)
     ; False -> True .
-
-
-
