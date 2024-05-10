@@ -171,7 +171,8 @@ liftPattern (List ps _) =
 liftPropertyInputPatterns :: Term Type -> Formula (Bindings -> Bindings, Term Type)
 liftPropertyInputPatterns (Lambda p t _) =
   do bs <- liftPattern p
-     return (bs, t)
+     (bs', t') <- liftPropertyInputPatterns t
+     return (bs' . bs, t')
 liftPropertyInputPatterns t = return (id, t)
 
 
