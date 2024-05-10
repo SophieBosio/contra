@@ -20,6 +20,7 @@ module Validation.SymUnifier where
 import Core.Syntax
 import Validation.Formula
 import Environment.ERSymbolic
+import Environment.Environment
 
 import Data.SBV
 import Data.List     (intercalate)
@@ -59,12 +60,6 @@ instance Monoid Substitution where
   mempty  = Substitution $ Right id
   mappend = (<>)
 
-substError :: String -> Substitution
-substError =  Substitution . Left . return
-
-substitution :: Transformation -> Substitution
-substitution = Substitution . Right
-
 
 -- * Export
 symUnify :: Pattern Type -> SValue -> Formula PatternMatch
@@ -94,7 +89,16 @@ sUnify (PConstructor c ps (ADT adt)) (SCtr adt' c' svs)
   && c  == c' = foldrM (\(p, sv) u -> do u' <- sUnify p sv
                                          return $ u <> u'
                        ) mempty $ zip ps svs
--- sUnify (PConstructor c ps (ADT adt)) (SADT ident adt' si svs) = undefined
+sUnify (PConstructor c ps (ADT adt)) (SADT ident adt' si svs)
+  | adt == adt' =
+      do env    <- environment
+         (_, i) <- selector env (adt, c)
+         lift $ constrain $ si .== literal i
+         types  <- fieldTypes env c
+         svs'   <- ensureInstantiated ident adt svs types
+         foldrM (\(p, sv) u -> do u' <- sUnify p sv
+                                  return $ u <> u'
+                ) mempty $ zip ps svs'
 sUnify p sv = return $ substError $
   "Unexpected type error occurred \
   \trying to unify concrete pattern\n'"
@@ -141,3 +145,11 @@ compatibleBy p sv = substError $
   \trying to unify concrete pattern '"
   ++ show p  ++ "' against symbolic value '"
   ++ show sv ++ "'"
+
+
+-- * Helpers
+substError :: String -> Substitution
+substError =  Substitution . Left . return
+
+substitution :: Transformation -> Substitution
+substitution = Substitution . Right
