@@ -75,7 +75,7 @@ typeCheck program =
 
 repl :: Program Type -> IO ()
 repl program =
-  do putStrLn "✦ Contra REPL! ✦\n"
+  do putStrLn "✦ Started the Contra REPL! ✦\n"
      loop program
 
 execute :: Program Type -> IO ()

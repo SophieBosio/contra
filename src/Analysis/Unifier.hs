@@ -117,7 +117,6 @@ unifyPattern v@(Variable x _) w@(Variable y _)
   | x == y    = mempty
   | otherwise = v `replaces` w
 unifyPattern v@(Variable x _) p                | not $ p `contains` x = p `replaces` v
--- unifyPattern (Variable {}) _ = Substitution Nothing
 unifyPattern p                v@(Variable x _) | not $ p `contains` x = p `replaces` v
 unifyPattern (List      ps _) (List     ps' _) =
   case validateUnifiers (zipWith unifyPattern ps ps') of

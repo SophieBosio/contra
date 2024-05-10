@@ -36,7 +36,7 @@ import Data.Char   (isSpace)
 import Data.Maybe  (fromMaybe)
 
 
--- Export
+-- * Export
 loop :: Program Type -> IO ()
 loop p =
   do input <- readLine
@@ -70,7 +70,7 @@ loop p =
        f = reverse . dropWhile isSpace
 
 
--- Utility
+-- * Utility
 loadProgram :: String -> IO (Program Type)
 loadProgram file = parse file >>= typecheck
 

@@ -101,6 +101,6 @@ realise sv =
   sv >>= \case
     (SBoolean b) -> return b
     other        -> error $
-                    "Unexpected error: Property should translate to a\
+                    "Unexpected error: Property should translate to a \
                     \Boolean formula, but was a " ++ show other
 
