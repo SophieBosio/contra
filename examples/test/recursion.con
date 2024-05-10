@@ -3,3 +3,11 @@ count n m =
   case n == 0 of
     ; False -> count (n - 1) (m + 1)
     ; True  -> m .
+
+diff :: Integer -> Integer -> Integer .
+diff x 0 = x .
+diff 0 y = (0 - y) .
+diff x y = diff (x - 1) (y - 1) .
+
+test :: Integer -> Integer -> Boolean .
+test x y =*= (diff x y) > 0 .
