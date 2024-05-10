@@ -35,6 +35,7 @@
   underlying Symbolic monad to create symbolic variables.
 
 -}
+{-# LANGUAGE LambdaCase #-}
 
 module Validation.Translator where
 
@@ -136,11 +137,11 @@ translateBranches :: RecursionDepth
                   -> Formula SValue
 translateBranches _  _ [] = error "Non-exhaustive patterns in case statement."
 translateBranches depth sv [(alt, body)] =
-  case symUnify alt sv of
+  symUnify alt sv >>= \case
     NoMatch _  -> translateBranches depth sv []
     MatchBy bs -> local bs $ translate depth body
 translateBranches depth sv ((alt, body) : rest) =
-  case symUnify alt sv of
+  symUnify alt sv >>= \case
     NoMatch _  -> translateBranches depth sv rest
     MatchBy bs -> do alt' <- local bs $ translatePattern depth alt
                      cond <- alt' `sEqual` sv
@@ -178,7 +179,7 @@ liftPropertyInputPatterns t = return (id, t)
 -- * Symbolic "unification" and unification constraint generation
 unifyOrFail :: Pattern Type -> SValue -> Formula Transformation
 unifyOrFail p sv =
-  case symUnify p sv of
+  symUnify p sv >>= \case
     MatchBy  bs -> return bs
     NoMatch err -> error err
 
