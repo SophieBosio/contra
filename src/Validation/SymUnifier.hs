@@ -13,7 +13,6 @@
   us to "unify" them - e.g., in Case-statements, Let-Statements and Lambdas.
 
 -}
-{-# LANGUAGE LambdaCase #-}
 
 module Validation.SymUnifier where
 
