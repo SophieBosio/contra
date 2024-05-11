@@ -118,9 +118,25 @@ sUnifyValue (VConstructor c vs (ADT adt)) (SCtr adt' c' svs)
                                          return $ u <> u'
                        ) mempty $ zip vs svs
   | otherwise = return $ substError $
-    "Type or constructor mismatch between concrete constructor\n'" ++ c ++
-    "' of type '" ++ adt ++ "'\n and symbolic constructor\n'" ++ c' ++
-    "' of type '" ++ adt' ++ "'\n"
+    "Unexpected type occurred when trying to unify\n\
+    \concrete pattern with constructor '" ++ c ++ "' and type '" ++ show adt
+    ++ "' against symbolic with constructor '" ++ c' ++ "' value of type '"
+    ++ adt' ++ "'"
+sUnifyValue (VConstructor c vs (ADT adt)) (SADT ident adt' si svs)
+  | adt == adt' =
+      do env    <- environment
+         (_, i) <- selector env (adt, c)
+         lift $ constrain $ si .== literal i
+         types  <- fieldTypes env c
+         svs'   <- ensureInstantiated ident adt svs types
+         foldrM (\(p, sv) u -> do u' <- sUnifyValue p sv
+                                  return $ u <> u'
+                ) mempty $ zip vs svs'
+  | otherwise   = return $ substError $
+    "Unexpected type occurred when trying to unify\n\
+    \concrete pattern with constructor '" ++ c ++ "' and type '" ++ show adt
+    ++ "' against symbolic variable '" ++ ident
+    ++ "' of algebraic data type '" ++ adt' ++ "'"
 sUnifyValue v sv = return $ substError $
   "Unexpected type error occurred\
   \trying to unify concrete value\n'"
@@ -132,13 +148,21 @@ compatibleBy (Value             _) _            = mempty
 compatibleBy (Variable     x    _) sv           = substitution $ bind x sv
 compatibleBy (List           ps _) (SArgs  svs) =
   foldr (\(p, sv) u -> u <> compatibleBy p sv) mempty $ zip ps svs
-compatibleBy (PConstructor c ps (ADT t)) (SCtr adt d svs)
-  |  t == adt
-  && c == d   = foldr (\(p, sv) u -> u <> compatibleBy p sv) mempty $ zip ps svs
-  | otherwise = substError $
+compatibleBy (PConstructor c ps (ADT adt)) (SCtr adt' c' svs)
+  |  adt == adt'
+  && c   == c'  = foldr (\(p, sv) u -> u <> compatibleBy p sv) mempty $ zip ps svs
+  | otherwise   = substError $
     "Unexpected type occurred when trying to unify\n\
-    \concrete pattern with constructor '" ++ c ++ "' and type '" ++ show t
-    ++ "' against symbolic value of type '" ++ d ++ "'"
+    \concrete pattern with constructor '" ++ c ++ "' and type '" ++ show adt
+    ++ "' against symbolic with constructor '" ++ c' ++ "' value of type '"
+    ++ adt' ++ "'"
+compatibleBy (PConstructor c _ (ADT adt)) (SADT ident adt' _ _)
+  | adt == adt' = mempty
+  | otherwise   = substError $
+    "Unexpected type error occurred when trying to unify\n\
+    \concrete pattern with constructor '" ++ c ++ "' and type '" ++ show adt
+    ++ "' against symbolic variable '" ++ ident
+    ++ "' of algebraic data type '" ++ show adt' ++ "'"
 compatibleBy p sv = substError $
   "Unexpected type error occurred\n\
   \trying to unify concrete pattern '"
