@@ -56,7 +56,7 @@ import Control.Monad (replicateM)
 import Control.Arrow (second)
 import Data.Foldable (foldlM, sequenceA_)
 
--- Abbreviations
+-- * Abbreviations
 type ConstraintError  = String
 data Constraint       =
   Constraint
@@ -70,7 +70,7 @@ type Annotation     a = ERWS a Bindings [Constraint] Index
 type TypeSubstitution = [(Index, Type)]
 
 
--- Export
+-- * Export
 inferProgram :: Show a => Program a -> Either ConstraintError (Program Type)
 inferProgram program =
   case solve constraints of
@@ -89,7 +89,7 @@ inferTerm t =
   in  t'
 
 
--- Setup
+-- * Setup
 fresh :: Annotation a Type
 fresh = Variable' <$> (get >>= \i ->     -- Get current, fresh index (state)
                           put (i + 1) >> -- Increment to create next index
@@ -141,7 +141,7 @@ emptyBindings :: Bindings
 emptyBindings = error . (++ " is unbound or ambiguously typed!")
 
 
--- Annotate program
+-- * Annotate program
 annotateProgram ::Show a => Program a -> Annotation a (Program Type)
 annotateProgram (Signature x def rest) =
   do i <- get
@@ -166,7 +166,7 @@ annotateProgram (Property p def rest) =
 annotateProgram End = return End
 
 
--- Annotate terms
+-- * Annotate terms
 annotate :: Show a => Term a -> Annotation a (Term Type)
 annotate (Pattern p) = annotatePattern p
 annotate (TConstructor c ts _) =
@@ -271,7 +271,7 @@ annotateValue (VConstructor c vs _) =
      return $ strengthenIfPossible c ts' (ADT adt)
 
 
--- Additional contstraints
+-- * Additional constraints
 signatureDefinitionAccord :: Program Type -> [Constraint]
 signatureDefinitionAccord annotatedProgram =
   [ newConstraint tau (annotation t)
@@ -295,7 +295,7 @@ propertiesReturnBoolean annotatedProgram =
       , sig == prop ]
 
 
--- Resolve constraints
+-- * Resolve constraints
 solve :: [Constraint] -> Either ConstraintError TypeSubstitution
 solve [                 ] = Right mempty
 solve (constraint : rest) =
@@ -341,7 +341,7 @@ refine _              (ADT name)             = ADT name
 refine s              (TypeList ts)          = TypeList $ map (refine s) ts
 
 
--- Lifting (binding) variables
+-- * Lifting (binding) variables
 liftPattern :: Show a =>
                (Pattern a, Type) ->
                Annotation a (Pattern Type, Bindings -> Bindings)
@@ -378,7 +378,7 @@ liftFreeVariables [             ] bs = bs
 liftFreeVariables ((x, t) : rest) bs = bind x t $ liftFreeVariables rest bs
 
 
--- Alpha renaming
+-- * Alpha renaming
 alpha :: Index -> (Type -> (Index, Type))
 alpha i t =
   (if null (indices t)
@@ -401,7 +401,7 @@ alphaDef i (Constructor c cs) = second (Constructor c)
                                           second (: ts) (alpha j t)) (i, []) cs)
 
 
--- Utility functions
+-- * Utility functions
 indices :: Type -> [Index]
 indices (Variable' i) = return i
 indices (t0  :->: t1) = indices t0 ++ indices t1
@@ -434,7 +434,7 @@ addSignatures sigs (Data      x t rest) = Data      x t $ addSignatures sigs res
 addSignatures _ End = End
 
 
--- Error messages
+-- * Error messages
 typeError :: Type -> Type -> String -> ConstraintError
 typeError t1 t2 msg =    "Type error: Expected term of type '" ++ show t2
                       ++ "' but got term of type '" ++ show t1 ++ "'\n"

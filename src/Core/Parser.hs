@@ -38,7 +38,7 @@ import Data.Functor    ((<&>))
 import Data.List       (nub, (\\), groupBy, sortBy)
 
 
--- Abbreviations
+-- * Abbreviations
 type Source = String
 type Parser = Parsec Source ()
 type Info   = (SourcePos, SourcePos)
@@ -52,7 +52,7 @@ data ParsingError =
   deriving Show
 
 
--- Export
+-- * Export
 parseProgram :: Source -> IO (Either [ParsingError] (Program String))
 parseProgram path =
   do src <- readFile path
@@ -68,7 +68,7 @@ parseString :: Parser a -> String -> Either ParseError a
 parseString p = runParser p () "<error>"
     
 
--- Language basics
+-- * Language basics
 comment :: Parser ()
 comment = void $ lexeme $ symbol "--" >> many (noneOf "\n")
 
@@ -106,7 +106,7 @@ keyword :: String -> Parser ()
 keyword s = try $ void $ lexeme $ string s >> notFollowedBy identTail
 
 
--- Types
+-- * Types
 type' :: Parser Type
 type' = choice
   [ try $ partialArrowType type'
@@ -129,7 +129,7 @@ partialArrowType retType =
      arrow >> (argType :->:) <$> retType
 
 
--- Values
+-- * Values
 number :: Parser Integer
 number = option id (symbol "-" >> return negate) <*> digits
   where digits = lexeme $ read <$> many1 digit
@@ -154,7 +154,7 @@ value = choice $
   ++ [ try valueConstructor ]
 
 
--- Patterns
+-- * Patterns
 pattern' :: Parser (Pattern Info)
 pattern' = choice
   [ parens pattern'
@@ -163,7 +163,7 @@ pattern' = choice
   , info $ identifier <&> Variable
   ]
 
--- Terms
+-- * Terms
 term :: Parser (Term Info)
 term = choice $
   chainl1 simpleTerm operator :
@@ -255,7 +255,7 @@ constructorList p =
      return ts
 
 
--- Functions, properties, signatures & data types
+-- * Functions, properties, signatures & data types
 function :: Parser (Program Info -> Program Info)
 function =
   do f    <- identifier
@@ -285,7 +285,7 @@ signature' =
      return $ Signature s t
 
 
--- Algebraic Data Types
+-- * Algebraic Data Types
 constructor :: Parser Constructor
 constructor =
   do c  <- constructorName
@@ -302,7 +302,7 @@ adt =
      return $ Data t cs
 
 
--- Program
+-- * Program
 program :: Parser (Program Info)
 program = whitespace >> fmap (foldr id End) statements
   
@@ -319,7 +319,7 @@ statements =
      return prog
 
 
--- Utility
+-- * Utility
 info :: Parser (Info -> a) -> Parser a
 info p =
   do start <- getPosition
@@ -352,7 +352,7 @@ reserved :: Name -> Bool
 reserved = flip elem reservedKeywords
 
 
--- Flatten function definitions into a case statement with tuples
+-- * Flatten function definitions into a case statement with tuples
 flatten :: Program a -> Program a
 flatten p = remaining <> newDefs defs
   where
@@ -444,7 +444,7 @@ generateLambdas (List (p:ps) i1) cases i2 =
 generateLambdas t cases i = Lambda t cases i
 
 
--- Handling errors
+-- * Handling errors
 reportErrors :: Program Info -> [ParsingError]
 reportErrors p =
      [ MultipleSignatures  n         | n <- sigs  \\ nub sigs  ]

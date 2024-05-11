@@ -28,9 +28,12 @@ import Core.Syntax
 import Data.List (elemIndex)
 
 
+-- * Abbreviations
 type Mapping      a b = a -> b
 type MapsTo       a b = Mapping a b -> Mapping a b
 
+
+-- * Definition
 data Environment m a =
   Environment
     { function      :: F -> m (Term a)
@@ -45,6 +48,7 @@ data Environment m a =
     , cardinality   :: D -> m Integer
     }
 
+-- * Implementation
 programEnvironment :: Monad m => Program a -> Environment m a
 programEnvironment p =
   Environment
@@ -85,7 +89,7 @@ programEnvironment p =
         case lookup d (datatypes p) of
           Nothing   -> error $ "Couldn't find data type with name '" ++ d ++ "'"
           Just ctrs -> let cs = map nameOf ctrs
-                       in  return (d, cs !! (fromInteger i))
+                       in  return (d, cs !! fromInteger i)
     , cardinality = \d ->
         case lookup d (datatypes p) of
           Nothing -> error $ "Couldn't find data type with name '" ++ d ++ "'"

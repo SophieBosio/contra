@@ -31,7 +31,7 @@ module Core.Syntax where
 import Data.List (intercalate)
 
 
--- Abbreviations
+-- * Abbreviations
 type Index = Integer -- Unification variable index
 
 type Name = String
@@ -50,7 +50,7 @@ type Alt  a = Pattern a  -- Case alternative
 type Body a = Term    a  -- Case alternative body
 
 
--- Abstract Syntax
+-- * Abstract Syntax
 data Program a =
     Signature X  Type         (Program a)  -- Type signature declaration
   | Data      D [Constructor] (Program a)  -- Algebraic data type declaration
@@ -102,8 +102,8 @@ data Value a =
   deriving (Functor)
 
 
--- Canonical terms & Patterns
--- A canonical term is a pattern with no variables or a lambda
+-- * Canonical terms & Patterns
+--   A canonical term is a pattern with no variables or a lambda
 class Canonical a where
   canonical :: a -> Bool
 
@@ -126,7 +126,7 @@ instance Canonical (Value a) where
   canonical (VConstructor _ vs _) = all canonical vs
 
 
--- Working between terms, patterns, and values
+-- * Conversion between terms, patterns, and values
 strengthenToPattern :: Show a => Term a -> Pattern a
 strengthenToPattern (TConstructor c ts a)
   | all isPattern ts = PConstructor c (map strengthenToPattern ts) a
@@ -167,7 +167,7 @@ strengthenIfPossible c ts a =
      else TConstructor c ts a
 
 
--- Annotations
+-- * Annotations
 class Annotated term where
   annotation  :: term a -> a
   annotations :: term a -> [a]
@@ -204,7 +204,7 @@ instance Annotated Value where
   annotation  v                      = head $ annotations v
 
 
--- Term Equality
+-- * Term & Type Equality
 instance Eq Type where
   (==) = equivalent
 
@@ -266,7 +266,7 @@ instance (Eq a) => Eq (Value a) where
 
 
 
--- Program Equality
+-- * Program Equality
 instance (Eq a) => Eq (Program a) where
   End                   == End                    = True
   (Signature x t  rest) == (Signature y s  rest') =
@@ -289,8 +289,8 @@ instance (Eq a) => Eq (Program a) where
 
 
 
--- Utility functions for convenient program access
--- Mostly used via Environment.Environment
+-- * Utility functions for convenient program access
+--   Mostly used via Environment.Environment
 swap :: (a, b) -> (b, a)
 swap (a, b) = (b, a)
 
@@ -348,7 +348,7 @@ constructorFields p = map (\(Constructor c ts) -> (c, ts)) constructors
     constructors = map fst (dataConstructors p)
 
 
--- Pretty printing
+-- * Pretty printing
 parens :: String -> String
 parens = ("(" ++) . (++ ")")
 
@@ -414,7 +414,7 @@ instance Show (Value a) where
     " {" ++  intercalate ", " (map show vs) ++ "}"
 
 
--- Pretty printing in the terminal
+-- * Pretty printing in the terminal
 redStr :: String -> String
 redStr s = "\ESC[31m\STX" ++ s ++ "\ESC[m\STX"
 

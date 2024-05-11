@@ -32,10 +32,10 @@ import Analysis.Unifier
 import Control.Monad.Reader
 
 
--- Abbreviation
+-- * Abbreviation
 type Runtime a = Reader (Program a)
 
--- Export
+-- * Export
 runMain :: (Show a, Eq a) => Program a -> Term a
 runMain p = runReader (evaluate (mainFunction p)) p
 
@@ -45,7 +45,7 @@ normalise p t =
   in  (strengthenToValue . strengthenToPattern) result
 
 
--- Main functions
+-- * Main functions
 evaluate :: (Show a, Eq a) => Term a -> Runtime a (Term a)
 evaluate (Pattern p) = evaluatePattern p
 evaluate (TConstructor c ts a) =
@@ -113,7 +113,7 @@ evaluateValue :: (Show a, Eq a) => Value a -> Runtime a (Term a)
 evaluateValue v = return $ Pattern $ Value v
 
 
--- Utility functions
+-- * Utility functions
 mainFunction :: Show a => Program a -> Term a
 mainFunction (Function "main" t _) = t
 mainFunction (Function   _ _ rest) = mainFunction rest

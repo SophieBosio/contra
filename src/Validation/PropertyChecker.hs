@@ -53,12 +53,12 @@ import Control.Monad (foldM_)
 import Data.SBV
 
 
--- Abbreviations
+-- * Abbreviations
 type PropertyDef = (P, Term Type)
 type Property    = Term Type
 
 
--- Export
+-- * Export
 check :: RecursionDepth -> Program Type -> IO ()
 check depth program =
   -- For each property, collect the residual program
@@ -75,7 +75,7 @@ checkProperty depth prog (propName, prop) =
      return residual
 
 
--- Main functions
+-- * Main functions
 proveFormula :: Symbolic SBool -> IO ()
 proveFormula f =
   do r@(ThmResult result) <- prove f

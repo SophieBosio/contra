@@ -33,8 +33,8 @@ import Control.Arrow (second)
 import Data.Maybe    (isNothing)
 
 
--- Abbreviations
--- Meta is a placeholder for the Pattern/Term constructors
+-- * Abbreviations
+--   Meta is a placeholder for the Pattern/Term constructors
 type Transformation meta a = [(meta a, meta a)]
 
 data PatternMatch a =
@@ -48,7 +48,7 @@ newtype Substitution meta a = Substitution { unifier :: Unifier (meta a) }
   deriving Show
 
 
--- Substitution is, conveniently, a semigroup and a monoid!
+-- * Substitution is, conveniently, a semigroup and a monoid!
 instance Semigroup (Substitution meta a) where
   s <> s' = Substitution $ unifier s <> unifier s'
 
@@ -57,7 +57,7 @@ instance Monoid (Substitution meta a) where
   mappend = (<>)
 
 
--- Helpers
+-- * Helpers
 mapsTo :: Pattern a -> Pattern a -> Transformation Pattern a
 mapsTo p q = return (p, q)
 
@@ -65,7 +65,7 @@ replaces :: Pattern a -> Pattern a -> Substitution Pattern a
 replaces p q = Substitution $ return $ q `mapsTo` p
 
 
--- Exports
+-- * Exports
 patternMatch :: Show a => Pattern a -> Term a -> PatternMatch a
 patternMatch p q = maybe NoMatch MatchBy (unifier $ unify p q)
 
@@ -103,7 +103,7 @@ substitute (List ps _) t (Pattern (List qs _))
 substitute _ t _ = t
 
 
--- Unification
+-- * Unification
 unify :: Show a => Pattern a -> Term a -> Substitution Pattern a
 unify p (Pattern q) = unifyPattern p q
 unify p (TConstructor c ts a)
@@ -153,7 +153,7 @@ unifyValue (VConstructor c vs _) (VConstructor c' vs' _)
 unifyValue _             _                 = Substitution Nothing
 
 
--- Subsitution helpers
+-- * Subsitution helpers
 substituteName :: Show a => X -> Term a -> (Term a -> Term a)
 substituteName x t v = -- computes t[v/x]
   case t of
@@ -186,7 +186,7 @@ validateUnifiers us
   | otherwise                    = Just $ foldr (flip (<>)) mempty us
 
 
--- Free Variables
+-- * Free Variables
 freeVariables :: Term a -> [Name]
 freeVariables (Pattern           p) = freeVariables' p
 freeVariables (TConstructor _ ts _) = concatMap freeVariables ts
@@ -217,7 +217,7 @@ freeVariables' (PConstructor x ps _) =
   [ y | y <- foldr (\p acc -> acc <> freeVariables' p) mempty ps, x /= y ]
 
 
--- Utility functions
+-- * Utility functions
 contains :: Pattern a -> X -> Bool
 contains (Variable         x _) y | x == y = True
 contains (List            ps _) y = any (`contains` y) ps

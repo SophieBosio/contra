@@ -41,14 +41,14 @@ import Data.Hashable (hash)
 import Control.Monad (zipWithM, zipWithM_)
 
 
--- Maximum recursion depth for ADTs and function calls
+-- * Maximum recursion depth for ADTs and function calls
 type RecursionDepth = Int
 
 defaultRecDepth :: RecursionDepth
 defaultRecDepth = 20
 
 
--- Custom symbolic variables
+-- * Custom symbolic variables
 data SValue =
     SUnit
   | SBoolean SBool
@@ -61,7 +61,7 @@ data SValue =
   deriving Show
 
 
--- The Formula monad
+-- * The Formula monad
 type Bindings   = Mapping X SValue
 type Formula  a = ERSymbolic Type Bindings a
 
@@ -115,7 +115,7 @@ createSymbolic p = error $
   ++ "\nPlease note that generating arbitrary functions is not supported."
 
 
--- SValue (symbolic) equality
+-- * SValue (symbolic) equality
 sEqual :: SValue -> SValue -> Formula SValue
 sEqual  SUnit           SUnit           = return $ SBoolean sTrue
 sEqual (SBoolean    b) (SBoolean     c) = return $ SBoolean (b .== c)
@@ -195,7 +195,7 @@ ensureTypeAccord (sv:svs) (tau:taus) = match sv tau >> ensureTypeAccord svs taus
       ++ show tau' ++ "'"
 
 
--- SValues are 'Mergeable', meaning we can use SBV's if-then-else, called 'ite'.
+-- * SValues are 'Mergeable', meaning we can use SBV's if-then-else, called 'ite'.
 instance Mergeable SValue where
   symbolicMerge = const merge
 
