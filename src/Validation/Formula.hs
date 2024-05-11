@@ -165,13 +165,13 @@ coerce ident adt (c, si) (xs, ys) =
 
 
 ensureInstantiated :: X -> D -> [SValue] -> [Type] -> Formula [SValue]
-ensureInstantiated _     adt [ ] [   ] = return []
+ensureInstantiated _     _   [ ] [   ] = return []
 ensureInstantiated ident adt [ ] types = instantiate ident adt types
-ensureInstantiated _     adt svs types = ensureTypeAccord svs types >> return svs
+ensureInstantiated _     _   svs types = ensureTypeAccord svs types >> return svs
 
 instantiate :: X -> D -> [Type] -> Formula [SValue]
 instantiate ident adt types =
-  do let names = map (((ident ++ "-field") ++) . show) [0..]
+  do let names = map (((adt ++ "-" ++ ident ++ "-field") ++) . show) ([0..] :: [Int])
      let vars  = zipWith Variable names types
      mapM createSymbolic vars
 
