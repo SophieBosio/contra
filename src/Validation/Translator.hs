@@ -58,14 +58,16 @@ translateToFormula depth prop =
 
 -- * Constraint generation
 translate :: RecursionDepth -> Term Type -> Formula SValue
-translate depth (Pattern    p) = translatePattern depth p
+translate 0 t = error $
+  "Reached max. recursion depth while trying to translate term '" ++ show t ++ "'"
+translate _     (Pattern    p) = translatePattern p
 translate depth (Application t1 t2 _) =
   do t2'        <- translate depth t2
      (bs, body) <- unifyAndBind depth t1 t2'
-     local bs $ translate depth body
+     local bs $ translate (depth - 1) body
 translate depth (Lambda p t _) =
   do bs <- liftPattern p
-     local bs $ translate depth t
+     local bs $ translate (depth - 1) t
 translate depth (Let p t1 t2 _) =
   do t1' <- translate depth t1
      bs  <- symbolicallyUnify p t1'
@@ -102,24 +104,23 @@ translate depth (Not t0 _) =
 translate _ t@(TConstructor {}) = error
   $ "Ill-typed constructor argument '" ++ show t ++ "'"
 
-translatePattern :: RecursionDepth -> Pattern Type -> Formula SValue
-translatePattern _ (Value v) = translateValue v
+translatePattern :: Pattern Type -> Formula SValue
+translatePattern (Value v) = translateValue v
 -- All input variables are bound at this point,
 -- so if a variable is not a function and not in the bindings, that's an error
-translatePattern depth (Variable x _) =
+translatePattern (Variable x _) =
   do env <- environment
      case map snd $ filter ((== x) . fst) (envFunctions env ++ envProperties env) of
-       [ t@(Lambda {}) ] -> translate depth t
        [ ] -> do bindings <- ask
                  return $ bindings x
-       _   -> error $ "Variable '" ++ x ++ "' is not a function and not bound"
-translatePattern depth (PConstructor c ps (ADT d)) =
-  do sps <- mapM (translatePattern depth) ps
+       _   -> error $ "Variable '" ++ x ++ "' is unbound"
+translatePattern (PConstructor c ps (ADT d)) =
+  do sps <- mapM translatePattern ps
      return $ SCtr d c sps
-translatePattern depth (List ps _) =
-  do sps <- mapM (translatePattern depth) ps
+translatePattern (List ps _) =
+  do sps <- mapM translatePattern ps
      return $ SArgs sps
-translatePattern _ p@(PConstructor {}) = error
+translatePattern p@(PConstructor {}) = error
   $ "Ill-typed constructor argument '" ++ show p ++ "'"
 
 translateValue :: Value Type -> Formula SValue
@@ -143,8 +144,8 @@ translateBranches depth sv [(alt, body)] =
 translateBranches depth sv ((alt, body) : rest) =
   case unifiable alt sv of
     NoMatch _  -> translateBranches depth sv rest
-    MatchBy bs -> do alt' <- local bs $ translatePattern depth alt
-                     cond <- alt' `sEqual` sv
+    MatchBy bs -> do alt'  <- local bs $ translatePattern alt
+                     cond  <- alt' `sEqual` sv
                      body' <- local bs $ translate depth body
                      next  <- translateBranches depth sv rest
                      return $ merge (truthy cond) body' next
@@ -190,23 +191,22 @@ unifyAndBind :: RecursionDepth -> Term Type -> SValue
 -- Applying a Lambda symbolically means unifying the input pattern against the
 -- symbolic argument and binding the free variables from the input accordingly.
 unifyAndBind 0 t s = error $
-  "Reached max. recursion depth while trying to translate function application\
+  "Reached max. recursion depth while trying to translate function application \
   \symbolically.\nCurrent step: Applying '" ++ show t ++ "' to '" ++ show s ++ "'"
-unifyAndBind _ (Lambda p t1 _) sv =
+unifyAndBind depth (Pattern (Variable x _)) sv =
+  do env <- environment
+     case map snd $ filter ((== x) . fst) (envFunctions env ++ envProperties env) of
+       [ Lambda p t a ] -> unifyAndBind depth (Lambda p t a) sv
+       _                -> error $
+         "Variable '" ++ x ++ "' is not a function and not bound"
+unifyAndBind _ (Lambda p t _) sv =
   do bs <- symbolicallyUnify p sv
-     return (bs, t1)
+     return (bs, t)
 unifyAndBind depth (Application t1 t2 _) sv =
   do t2'         <- translate depth t2
      (bs,  f   ) <- unifyAndBind (depth - 1) t1 t2'
      (bs', body) <- unifyAndBind (depth - 1) f sv
      return (bs' . bs, body)
-unifyAndBind depth (Pattern (Variable x _)) sv =
-  do env <- environment
-     case map snd $ filter ((== x) . fst) (envFunctions env ++ envProperties env) of
-       [f] -> unifyAndBind depth f sv
-       [ ] -> error $ "Error when translating the application of terms.\n\
-                          \Variable with name '" ++ x ++ "' is not a function."
-       _   -> error $ "Ambiguous bindings for variable '" ++ x ++ "'"
 unifyAndBind _ t1 t2 = error $ "Error when translating the application of term '"
                            ++ show t1 ++ "' to symbolic value '" ++ show t2
                            ++ "'\n'" ++ show t1 ++ "' is not a function."
