@@ -126,7 +126,7 @@ sEqual (SCtr adt x xs) (SCtr adt' y ys) =
          fromBool (adt == adt')
        : fromBool (x   == y   )
        : map truthy eqs
-sEqual (SADT x adt si xs) (SADT y adt' sj ys) =
+sEqual (SADT _ adt si xs) (SADT _ adt' sj ys) =
   do eqs <- zipWithM sEqual xs ys
      return $ SBoolean $ sAnd $
          fromBool (adt == adt')
