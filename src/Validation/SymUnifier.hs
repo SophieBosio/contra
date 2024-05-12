@@ -68,12 +68,6 @@ symUnify p sv =
        Right bs -> return $ MatchBy bs
        Left err -> return $ NoMatch $ intercalate "\n" err
 
-unifiable :: Pattern Type -> SValue -> PatternMatch
-unifiable p sv =
-  case unifier $ compatibleBy p sv of
-    Right bs -> MatchBy bs
-    Left err -> NoMatch $ intercalate "\n" err
-
 
 -- * Main functions
 sUnify :: Pattern Type -> SValue -> Formula Substitution
@@ -143,31 +137,18 @@ sUnifyValue v sv = return $ substError $
   ++ show v  ++ "'\nagainst symbolic value\n'"
   ++ show sv ++ "'\n"
 
-compatibleBy :: Pattern Type -> SValue -> Substitution
-compatibleBy (Value             _) _            = mempty
-compatibleBy (Variable     x    _) sv           = substitution $ bind x sv
-compatibleBy (List           ps _) (SArgs  svs) =
-  foldr (\(p, sv) u -> u <> compatibleBy p sv) mempty $ zip ps svs
-compatibleBy (PConstructor c ps (ADT adt)) (SCtr adt' c' svs)
+unifiable :: Pattern Type -> SValue -> Bool
+unifiable (Value             v) sv           = annotation v `correspondsTo` sv
+unifiable (Variable     _  tau) sv           = tau `correspondsTo` sv
+unifiable (List           ps _) (SArgs  svs) = and $ zipWith unifiable ps svs
+unifiable (PConstructor c ps (ADT adt)) (SCtr adt' c' svs)
   |  adt == adt'
-  && c   == c'  = foldr (\(p, sv) u -> u <> compatibleBy p sv) mempty $ zip ps svs
-  | otherwise   = substError $
-    "Unexpected type occurred when trying to unify\n\
-    \concrete pattern with constructor '" ++ c ++ "' and type '" ++ show adt
-    ++ "' against symbolic with constructor '" ++ c' ++ "' value of type '"
-    ++ adt' ++ "'"
-compatibleBy (PConstructor c _ (ADT adt)) (SADT ident adt' _ _)
-  | adt == adt' = mempty
-  | otherwise   = substError $
-    "Unexpected type error occurred when trying to unify\n\
-    \concrete pattern with constructor '" ++ c ++ "' and type '" ++ show adt
-    ++ "' against symbolic variable '" ++ ident
-    ++ "' of algebraic data type '" ++ show adt' ++ "'"
-compatibleBy p sv = substError $
-  "Unexpected type error occurred\n\
-  \trying to unify concrete pattern '"
-  ++ show p  ++ "' against symbolic value '"
-  ++ show sv ++ "'"
+  && c   == c'  = and $ zipWith unifiable ps svs
+  | otherwise   = False
+unifiable (PConstructor _ _ (ADT adt)) (SADT _ adt' _ _)
+  | adt == adt' = True
+  | otherwise   = False
+unifiable _ _   = False
 
 
 -- * Helpers

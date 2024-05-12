@@ -138,17 +138,19 @@ translateBranches :: RecursionDepth
                   -> Formula SValue
 translateBranches _  _ [] = error "Non-exhaustive patterns in case statement."
 translateBranches depth sv [(alt, body)] =
-  case unifiable alt sv of
-    NoMatch _  -> translateBranches depth sv []
-    MatchBy bs -> local bs $ translate depth body
+  if unifiable alt sv
+    then do bs <- symbolicallyUnify alt sv
+            local bs $ translate depth body
+    else translateBranches depth sv []
 translateBranches depth sv ((alt, body) : rest) =
-  case unifiable alt sv of
-    NoMatch _  -> translateBranches depth sv rest
-    MatchBy bs -> do alt'  <- local bs $ translatePattern alt
-                     cond  <- alt' `sEqual` sv
-                     body' <- local bs $ translate depth body
-                     next  <- translateBranches depth sv rest
-                     return $ merge (truthy cond) body' next
+  if unifiable alt sv
+    then do bs    <- symbolicallyUnify alt sv
+            alt'  <- local bs $ translatePattern alt
+            cond  <- alt' `sEqual` sv
+            body' <- local bs $ translate depth body
+            next  <- translateBranches depth sv rest
+            return $ merge (truthy cond) body' next
+    else translateBranches depth sv rest
 
 
 -- * Lift symbolic input variables
