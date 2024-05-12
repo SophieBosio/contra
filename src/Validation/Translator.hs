@@ -16,7 +16,6 @@
    * 'translateFormula'
    * 'translate'
    * 'liftPattern'
-   * 'createSymbolic'
 
   'translateFormula' takes a property (as a Contra term) and translates it into
   a symbolic term, represented by SValues, which in turn hold symbolic variables.
@@ -30,11 +29,12 @@
   term, which is the property body.
 
   The function 'liftPropertyInputPatterns' is responsible for lifting all the
-  property's input patterns. It, in turn, calls 'createSymbolic', translates
-  each input variable to its SValue equivalent and binds them, by using the
-  underlying Symbolic monad to create symbolic variables.
+  property's input patterns. It, in turn, calls 'createSymbolic' from Formula,
+  translates each input variable to its SValue equivalent and binds them,
+  by using the underlying Symbolic monad to create symbolic variables.
 
 -}
+
 {-# LANGUAGE LambdaCase #-}
 
 module Validation.Translator where

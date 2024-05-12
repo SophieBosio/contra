@@ -16,6 +16,7 @@
    * Definition of SValue - middle layer between SBV and Contra values
    * Bindings, which is a mapping from variable names to SValues
    * The Formula monad
+   * The function 'createSymbolic', which creates new symbolic variables
    * Function 'bind' to create or update Bindings
    * `Mergeable` instance for SValues
    * Helper function 'sEqual' for comparing SValues
@@ -41,7 +42,7 @@ import Data.Hashable (hash)
 import Control.Monad (zipWithM, zipWithM_)
 
 
--- * Maximum recursion depth for ADTs and function calls
+-- * Maximum recursion depth for function calls
 type RecursionDepth = Int
 
 defaultRecDepth :: RecursionDepth
