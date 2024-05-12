@@ -83,8 +83,10 @@ partial ns (Application t1 t2 a) =
   do t1' <- partial ns t1
      t2' <- partial ns t2
      if canonical t2'
-       then do f <- function t1'
-               partial ns (f t2')
+       then if canonical t1'
+               then do f <- function t1'
+                       partial ns (f t2')
+               else return $ Application t1' t2' a
        else return $ Application t1' t2' a
 partial ns (Case t0 ts a) =
   do v <- partial ns t0
