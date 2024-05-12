@@ -181,18 +181,26 @@ ensureTypeAccord [      ] _          = error
   "Fatal: Symbolic algebraic data type was missing fields."
 ensureTypeAccord _        [        ] = error
   "Fatal: Symbolic algebraic data type was missing fields."
-ensureTypeAccord (sv:svs) (tau:taus) = match sv tau >> ensureTypeAccord svs taus
-  where
-    match SUnit            Unit'            = return ()
-    match (SNumber      _) Integer'         = return ()
-    match (SBoolean     _) Boolean'         = return ()
-    match (SArgs     svs') (TypeList taus') = zipWithM_ match svs' taus'
-    match (SCtr   adt _ _) (ADT adt')       | adt == adt' = return ()
-    match (SADT _ adt _ _) (ADT adt')       | adt == adt' = return ()
-    match sv'              tau'             = error $
-      "Type mismatch occurred in equality check of constructor fields.\n\
-      \Unsatisfiable constraint: '" ++ show sv' ++ "' not of expected type '"
-      ++ show tau' ++ "'"
+ensureTypeAccord (sv:svs) (tau:taus) =
+  (if tau `correspondsTo` sv
+    then return ()
+    else error $
+         "Type mismatch occurred in equality check of constructor fields.\n\
+         \Unsatisfiable constraint: '" ++ show sv ++ "' not of expected type '"
+         ++ show tau ++ "'")
+   >> ensureTypeAccord svs taus
+
+
+-- * Correspondence between concrete and symbolic types
+correspondsTo :: Type -> SValue -> Bool
+Unit'     `correspondsTo` SUnit             = True
+Integer'  `correspondsTo` (SNumber       _) = True
+Boolean'  `correspondsTo` (SBoolean      _) = True
+(TypeList taus) `correspondsTo` (SArgs svs) =
+  and $ zipWith correspondsTo taus svs
+(ADT adt) `correspondsTo` (SCtr   adt' _ _) = adt == adt'
+(ADT adt) `correspondsTo` (SADT _ adt' _ _) = adt == adt'
+_         `correspondsTo` _                 = False
 
 
 -- * SValues are 'Mergeable', meaning we can use SBV's if-then-else, called 'ite'.
