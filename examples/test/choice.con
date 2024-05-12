@@ -1,0 +1,5 @@
+test :: Integer -> Boolean .
+test x =*= case x of
+  ; 5  -> True
+  ; 10 -> False
+  ; y  -> True .

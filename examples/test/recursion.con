@@ -11,3 +11,4 @@ diff x y = diff (x - 1) (y - 1) .
 
 test :: Integer -> Integer -> Boolean .
 test x y =*= (diff x y) > 0 .
+

@@ -1,0 +1,7 @@
+func :: Integer -> Integer -> Integer .
+func 3 y = 6 .
+func x 5 = 10 .
+func x y = x + y .
+
+test :: Integer -> Integer -> Boolean .
+test x y =*= func x 5 == 10 .
