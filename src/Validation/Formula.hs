@@ -39,7 +39,7 @@ import Environment.ERSymbolic
 
 import Data.SBV
 import Data.Hashable (hash)
-import Control.Monad (zipWithM, zipWithM_)
+import Control.Monad (zipWithM)
 
 
 -- * Maximum recursion depth for function calls
