@@ -189,7 +189,7 @@ symbolicallyUnify p sv =
 unifyAndBind :: RecursionDepth -> Term Type -> SValue
              -> Formula (Transformation, Term Type)
 -- A function is either a Lambda that can be applied directly
--- or it's an Application that will (eventually) return a Lambda.
+-- or it's an variable or Application that will (eventually) return a Lambda.
 -- Applying a Lambda symbolically means unifying the input pattern against the
 -- symbolic argument and binding the free variables from the input accordingly.
 unifyAndBind 0 t s = error $
@@ -200,7 +200,7 @@ unifyAndBind depth (Pattern (Variable x _)) sv =
      case map snd $ filter ((== x) . fst) (envFunctions env ++ envProperties env) of
        [ Lambda p t a ] -> unifyAndBind depth (Lambda p t a) sv
        _                -> error $
-         "Variable '" ++ x ++ "' is not a function and not bound"
+         "Variable '" ++ x ++ "' is not a function or not bound"
 unifyAndBind _ (Lambda p t _) sv =
   do bs <- symbolicallyUnify p sv
      return (bs, t)

@@ -28,9 +28,9 @@ evaluateToSameTerm p t =
 
 evaluateToDifferentTerm :: Program Type -> Term Type -> Assertion
 evaluateToDifferentTerm p t =
-  let ti       = normalise          p   t  in
+  let ti        = normalise         p   t  in
   let (tp, tp') = partiallyEvaluate p   t  in
-  let tip      = normalise          tp' tp in
+  let tip       = normalise         tp' tp in
     assertBool "Should *not* have evaluated to same term" (ti /= tip)
 
 parseAndStrip :: String -> IO (Program ())
