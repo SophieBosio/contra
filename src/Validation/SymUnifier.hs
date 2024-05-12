@@ -71,7 +71,11 @@ symUnify p sv =
 
 -- * Main functions
 sUnify :: Pattern Type -> SValue -> Formula Substitution
-sUnify (Value v) sv = sUnifyValue v sv
+sUnify (Value v) sv =
+  if annotation v `correspondsTo` sv
+     then return mempty
+     else error $ "Impossible to unify value '" ++ show v ++
+          "' with symbolic variable of type '" ++ show sv ++ "'"
 sUnify (Variable x _) sv = return $ substitution $ bind x sv
 sUnify (List ps _) (SArgs svs) =
   do foldrM (\(p, sv) u -> do u' <- sUnify p sv
@@ -96,45 +100,6 @@ sUnify p sv = return $ substError $
   "Unexpected type error occurred \
   \trying to unify concrete pattern\n'"
   ++ show p  ++ "'\nagainst symbolic value\n'"
-  ++ show sv ++ "'\n"
-
-sUnifyValue :: Value Type -> SValue -> Formula Substitution
-sUnifyValue (Unit      _) SUnit         = return mempty
-sUnifyValue (Number  n _) (SNumber  sn) =
-  do lift $ constrain $ sn .== literal n
-     return mempty
-sUnifyValue (Boolean b _) (SBoolean sb) =
-  do lift $ constrain $ sb .== literal b
-     return mempty
-sUnifyValue (VConstructor c vs (ADT adt)) (SCtr adt' c' svs)
-  | adt == adt'
-  && c  == c' = foldrM (\(v, sv) u -> do u' <- sUnifyValue v sv
-                                         return $ u <> u'
-                       ) mempty $ zip vs svs
-  | otherwise = return $ substError $
-    "Unexpected type occurred when trying to unify\n\
-    \concrete pattern with constructor '" ++ c ++ "' and type '" ++ show adt
-    ++ "' against symbolic with constructor '" ++ c' ++ "' value of type '"
-    ++ adt' ++ "'"
-sUnifyValue (VConstructor c vs (ADT adt)) (SADT ident adt' si svs)
-  | adt == adt' =
-      do env    <- environment
-         (_, i) <- selector env (adt, c)
-         lift $ constrain $ si .== literal i
-         types  <- fieldTypes env c
-         svs'   <- ensureInstantiated ident adt svs types
-         foldrM (\(p, sv) u -> do u' <- sUnifyValue p sv
-                                  return $ u <> u'
-                ) mempty $ zip vs svs'
-  | otherwise   = return $ substError $
-    "Unexpected type occurred when trying to unify\n\
-    \concrete pattern with constructor '" ++ c ++ "' and type '" ++ show adt
-    ++ "' against symbolic variable '" ++ ident
-    ++ "' of algebraic data type '" ++ adt' ++ "'"
-sUnifyValue v sv = return $ substError $
-  "Unexpected type error occurred\
-  \trying to unify concrete value\n'"
-  ++ show v  ++ "'\nagainst symbolic value\n'"
   ++ show sv ++ "'\n"
 
 unifiable :: Pattern Type -> SValue -> Bool
