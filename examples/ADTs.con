@@ -27,3 +27,16 @@ thirdElementIsZero x =*=
   case x of
     ; Cons {y, Cons {z, Cons {0, rest}}} -> False
     ; y -> True .
+
+
+-- Congruence
+adt Example = C Integer .
+
+exampleCongruent :: Example -> Example -> Boolean .
+exampleCongruent x y =*=
+  case (x == y) of
+    ; True -> let (C {xx}) = x in
+                let (C {yy}) = y in
+                  (xx == yy)
+    ; False -> True .
+

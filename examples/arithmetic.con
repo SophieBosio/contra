@@ -54,3 +54,60 @@ inverseMinus x =*= (x - 1) + 1 == x .
 mult :: Integer -> Integer -> Integer .
 mult 0 y = 0 .
 mult x y = y + (mult (x - 1) y) .
+
+  
+-- Helper function
+and :: Boolean -> Boolean -> Boolean .
+and True True = True .
+and x    y    = False .
+
+
+-- * Congruence
+-- addCongruent :: Integer -> Integer -> Integer -> Integer -> Boolean .
+addCongruent x y xx yy =*=
+  if and (x == xx) (y == yy)
+     then (x + y) == (xx + yy)
+     else True .
+
+plusCongruent :: Integer -> Integer -> Integer -> Integer -> Boolean .
+plusCongruent x y xx yy =*=
+  if and (x == xx) (y == yy)
+     then (plus x y) == (plus xx yy)
+     else True .
+
+subCongruent x y xx yy =*=
+  if and (x == xx) (y == yy)
+     then (x - y) == (xx - yy)
+     else True .
+
+
+-- Variations on incrementing
+plusOneCongruent :: Integer -> Integer -> Boolean .
+plusOneCongruent x y =*=
+  if (x == y)
+     then (x + 1) == (y + 1)
+     else True .
+
+inc :: Integer -> Integer .
+inc x = x + 1 .
+
+incCongruent :: Integer -> Integer -> Boolean .
+incCongruent x y =*=
+  if (x == y)
+     then (inc x) == (inc y)
+     else True .
+
+
+-- Less than & greater than
+ltCongruent :: Integer -> Integer -> Integer -> Integer -> Boolean .
+ltCongruent x y xx yy =*=
+  case and (x == xx) (y == yy) of
+    ; True -> (x < y) == (xx < yy)
+    ; False -> True .
+
+
+gtCongruent :: Integer -> Integer -> Integer -> Integer -> Boolean .
+gtCongruent x y xx yy =*=
+  case and (x == xx) (y == yy) of
+    ; True -> (x > y) == (xx > yy)
+    ; False -> True .
