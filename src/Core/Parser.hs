@@ -354,11 +354,12 @@ reserved = flip elem reservedKeywords
 
 -- * Flatten function definitions into a case statement with tuples
 flatten :: Program a -> Program a
-flatten p = remaining <> newDefs defs
+flatten p = update (newDefs defs) p
   where
     dups      = duplicates (functions p)
     defs      = collectDuplicates dups
-    remaining = foldr removeDefinition p dups
+    -- targets   = nub $ map fst dups
+    -- remaining = foldr removeDefinition p dups
 
 duplicates :: [(F, Term a)] -> [(F, Term a)]
 duplicates fs = filter (\(x, _) -> length (filter (== x) names) > 1) fs
@@ -368,24 +369,42 @@ collectDuplicates :: [(F, Term a)] -> [[(F, Term a)]]
 collectDuplicates defs = groupBy (\(f, _) (g, _) -> f == g)
                          (sortBy (\(f, _) (g, _) -> compare f g) defs)
 
-newDefs :: [[(F, Term a)]] -> Program a
-newDefs [           ] = End
+newDefs :: [[(F, Term a)]] -> [(F, Term a)]
+newDefs [           ] = []
 newDefs ([ ]  : rest) = newDefs rest
 newDefs (defs : rest) =
   let fname = fst (head defs) in
   let terms = map snd defs
-  in  Function fname (rewriteDefs fname terms) $ newDefs rest
+  in  (fname, rewriteDefs fname terms) : newDefs rest
+  -- in  Function fname (rewriteDefs fname terms) $ newDefs rest
 
-removeDefinition :: (F, Term a) -> Program a -> Program a
+update :: [(F, Term a)] -> (Program a -> Program a)
+update defs p = foldl (flip findAndReplace) p defs
+
+findAndReplace :: (F, Term a) -> (Program a -> Program a)
+findAndReplace (f', t') (Function f t rest)
+  | f == f'   = Function f' t' (removeDefinition (f', t') rest)
+  | otherwise = Function f t (findAndReplace (f', t') rest)
+findAndReplace (f', t') (Property p t rest)
+  | p == f'   = Property f' t' (removeDefinition (f', t') rest)
+  | otherwise = Property p t (findAndReplace (f', t') rest)
+findAndReplace def (Signature x tau rest) =
+  Signature x tau (findAndReplace def rest)
+findAndReplace def (Data x ts rest) =
+  Data      x ts  (findAndReplace def rest)
+findAndReplace _ End = End
+
+removeDefinition :: (F, Term a) -> (Program a -> Program a)
 removeDefinition (f', t') (Function f t rest)
   | f == f'   = removeDefinition (f', t') rest
   | otherwise = Function f t (removeDefinition (f', t') rest)
-removeDefinition def (Property  x t  rest) =
-  Property  x t  (removeDefinition def rest)
-removeDefinition def (Signature x t  rest) =
-  Signature x t  (removeDefinition def rest)
+removeDefinition (f', t') (Property  p t  rest)
+  | p == f'   = removeDefinition (f', t') rest
+  | otherwise = Property  p t  (removeDefinition (f', t') rest)
+removeDefinition def (Signature x tau  rest) =
+  Signature x tau (removeDefinition def rest)
 removeDefinition def (Data      x ts rest) =
-  Data      x ts (removeDefinition def rest)
+  Data      x ts  (removeDefinition def rest)
 removeDefinition _ End = End
 
 -- Combine the different definitions of the function
