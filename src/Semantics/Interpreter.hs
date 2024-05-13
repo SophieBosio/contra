@@ -27,7 +27,7 @@
 module Semantics.Interpreter where
 
 import Core.Syntax
-import Analysis.Unifier
+import Analysis.Unification
 
 import Control.Monad.Reader
 

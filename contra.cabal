@@ -25,7 +25,7 @@ source-repository head
 library
   exposed-modules:
       Analysis.TypeInferrer
-      Analysis.Unifier
+      Analysis.Unification
       Core.Parser
       Core.Syntax
       Environment.Environment
@@ -36,7 +36,7 @@ library
       Semantics.REPL
       Validation.Formula
       Validation.PropertyChecker
-      Validation.SymUnifier
+      Validation.SymbolicUnification
       Validation.Translator
   other-modules:
       Paths_contra

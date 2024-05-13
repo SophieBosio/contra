@@ -21,7 +21,7 @@
 module Semantics.PartialEvaluator where
 
 import Core.Syntax
-import Analysis.Unifier
+import Analysis.Unification
 import Semantics.Interpreter (boolean, number)
 
 import Control.Monad.Reader

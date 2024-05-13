@@ -43,7 +43,7 @@ import Core.Syntax
 import Environment.Environment
 import Environment.ERSymbolic
 import Validation.Formula
-import Validation.SymUnifier
+import Validation.SymbolicUnification
 
 import Data.SBV
 import Data.Foldable (foldrM)
