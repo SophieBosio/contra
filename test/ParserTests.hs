@@ -558,76 +558,37 @@ testFlattenProgram =
           let flat = flatten <$> ast
           assertEqual "" (return p) flat)
   [ ("examples/test/multipleFunctionDefinitions.con",
-     Signature "f" (Integer' :->: (Integer' :->: (Integer' :->: Integer'))) $
-     Signature "and" (Boolean' :->: (Boolean' :->: Boolean')) $
-     Function "and"
-      (Lambda (Variable "*a" ())
-       (Lambda (Variable "*b" ())
-        (Case (Pattern (List [ Variable "*a" ()
-                             , Variable "*b" ()
-                             ] ()))
-         [ (List [Value (Boolean True ()), Value (Boolean True ())] (),
-           Pattern (Value (Boolean True ())))
-         , (List [Value (Boolean True ()), Value (Boolean False ())] (),
-           Pattern (Value (Boolean False ())))
-         , (List [Value (Boolean False ()), Value (Boolean True ())] (),
-           Pattern (Value (Boolean False ())))
-         , (List [Value (Boolean False ()), Value (Boolean False ())] (),
-           Pattern (Value (Boolean False ())))
-         ]
-        ())
-       ())
-      ()) $
-     Function "f"
-      (Lambda (Variable "*a" ())
-       (Lambda (Variable "*b" ())
-        (Lambda (Variable "*c" ())
-          (Case (Pattern (List [ Variable "*a" ()
-                               , Variable "*b" ()
-                               , Variable "*c" ()
-                               ] ()))
-            [ (List [Value (Number 5 ()), Variable "y" (), Variable "z" ()] (),
-               Plus
-               (Plus
-                (Pattern (Value (Number 5 ())))
-                (Pattern (Variable "y" ()))
-                ())
-               (Pattern (Variable "z" ()))
-               ())
-            , (List [Variable "x" (), Value (Number 4 ()), Variable "z" ()] (),
-               Minus
-               (Minus
-                (Pattern (Variable "x" ()))
-                (Pattern (Value (Number 4 ())))
-                ())
-               (Pattern (Variable "z" ()))
-               ())
-            , (List [Variable "x" (), Variable "y" (), Value (Number 3 ())] (),
-               Minus
-               (Plus
-                (Pattern (Variable "x" ()))
-                (Pattern (Variable "y" ()))
-                ())
-               (Pattern (Value (Number 3 ())))
-               ())
-            , (List [Variable "x" (), Variable "y" (), Variable "z" ()] (),
-               Plus
-               (Plus
-                (Pattern (Variable "x" ()))
-                (Pattern (Variable "x" ()))
-                ())
-               (Plus
-                (Pattern (Variable "y" ()))
-                (Pattern (Variable "z" ()))
-                ())
-               ())
-            ]
-          ())
-         ())
-        ())
-       ())
-     End)
-  ]
+     Signature "f"
+      (Integer' :->: (Integer' :->: (Integer' :->: Integer')))
+     (Function "f"
+       (Lambda (Variable "*a" ())
+         (Lambda (Variable "*b" ())
+           (Lambda (Variable "*c" ())
+             (Case (Pattern (List [Variable "*a" (),Variable "*b" (),Variable "*c" ()] ()))
+              [(List [Value (Number 5 ()),Variable "y" (),Variable "z" ()] (),
+                 Plus (Plus (Pattern (Value (Number 5 ()))) (Pattern (Variable "y" ())) ()) (Pattern (Variable "z" ())) ()),
+               (List [Variable "x" (),Value (Number 4 ()),Variable "z" ()] (),
+                 Minus (Minus (Pattern (Variable "x" ())) (Pattern (Value (Number 4 ()))) ()) (Pattern (Variable "z" ())) ()),
+               (List [Variable "x" (),Variable "y" (),Value (Number 3 ())] (),
+                 Minus (Plus (Pattern (Variable "x" ())) (Pattern (Variable "y" ())) ()) (Pattern (Value (Number 3 ()))) ()),
+               (List [Variable "x" (),Variable "y" (),Variable "z" ()] (),
+                 Plus (Plus (Pattern (Variable "x" ())) (Pattern (Variable "x" ())) ()) (Plus (Pattern (Variable "y" ())) (Pattern (Variable "z" ())) ()) ())]
+               ()) ()) ()) ())
+       (Signature "and" (Boolean' :->: (Boolean' :->: Boolean'))
+       (Function "and"
+         (Lambda (Variable "*a" ())
+          (Lambda (Variable "*b" ())
+           (Case (Pattern (List [Variable "*a" (),Variable "*b" ()] ()))
+            [(List [Value (Boolean True ()),Value (Boolean True ())] (),
+               Pattern (Value (Boolean True ()))),
+             (List [Value (Boolean True ()),Value (Boolean False ())] (),
+               Pattern (Value (Boolean False ()))),
+             (List [Value (Boolean False ()), Value (Boolean True ())] (),
+               Pattern (Value (Boolean False ()))),
+             (List [Value (Boolean False ()),Value (Boolean False ())] (),
+               Pattern (Value (Boolean False ())))] ()) ()) ())
+         End))))
+    ]
 
 testParseErrorsPrograms :: [TestTree]
 testParseErrorsPrograms =
