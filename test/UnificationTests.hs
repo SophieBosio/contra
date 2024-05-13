@@ -10,15 +10,16 @@ import Test.Tasty.HUnit
 -- Export
 substitutionTests :: TestTree
 substitutionTests =
-  testGroup "Computing a substitution -- t[v/x]: "
-    substituteVars
+  testGroup "Computing a substitution -- t[v/x]: " $
+       substituteVars
+    ++ substituteADTs
 
 
 -- Helpers
 computeSubstitutionOK :: (Show a, Eq a) => Pattern a -> Term a
                                         -> Term a -> Term a -> Assertion
 computeSubstitutionOK x t v e =
-  -- Computing 'x' in 't' instead of 'v' should give 'e'
+  -- Computing 'v' in 't' instead of 'x' should give 'e'
   assertEqual "Should be equal after substitution."
     e (substitute x t v)
 
@@ -51,11 +52,11 @@ substituteADTs =
                          " should give " ++ show e) $
                         computeSubstitutionOK x t v e)
   [ ( Variable "x" ()
-    , Pattern (PConstructor "C" [PConstructor "D" [PConstructor "E" [Variable "x" ()] ()] ()] ())
+    , TConstructor "C" [TConstructor "D" [TConstructor "E" [Pattern (Variable "x" ())] ()] ()] ()
     , Pattern (Value (Number 5 ()))
-    , Pattern (PConstructor "C" [PConstructor "D" [PConstructor "E" [Value (Number 5 ())] ()] ()] ()))
+    , TConstructor "C" [TConstructor "D" [TConstructor "E" [Pattern (Value (Number 5 ()))] ()] ()] ())
   , ( Variable "x" ()
-    , Pattern (PConstructor "C" [PConstructor "D" [PConstructor "E" [Variable "x" ()] ()] ()] ())
+    , TConstructor "C" [TConstructor "D" [TConstructor "E" [Pattern (Variable "x" ())] ()] ()] ()
     , Pattern (Value (VConstructor "F" [Number 10 (), Boolean True ()] ()))
-    , Pattern (PConstructor "C" [PConstructor "D" [PConstructor "E" [Value (VConstructor "F" [Number 10 (), Boolean True ()] ())] ()] ()] ()))
+    , TConstructor "C" [TConstructor "D" [TConstructor "E" [Pattern (Value (VConstructor "F" [Number 10 (), Boolean True ()] ()))] ()] ()] ())
   ]
