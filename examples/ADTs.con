@@ -1,0 +1,29 @@
+adt Cartesian = Product Integer Integer .
+
+
+-- Always true
+identity :: Cartesian -> Boolean .
+identity x =*= x == x .
+
+commutativity (Product {x, y}) =*= (x + y) == (y + x) .
+
+associativity (Product {x, y}) z =*= ((x + y) + z) == (x + (y + z)) .
+
+
+-- Falsifiable
+different :: Cartesian -> Cartesian -> Boolean .
+different x y =*= x == y .
+
+subCommutativity (Product {x, y}) =*= (x - y) == (y - x) .
+
+subAssociativity (Product {x, y}) z =*= ((x - y) - z) == (x - (y - z)) .
+
+
+-- Non-recursive ADT properties
+adt IntList = Nil | Cons Integer IntList .
+
+thirdElementIsZero :: IntList -> Boolean .
+thirdElementIsZero x =*=
+  case x of
+    ; Cons {y, Cons {z, Cons {0, rest}}} -> False
+    ; y -> True .
