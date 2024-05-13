@@ -1,0 +1,56 @@
+-- * Commutativity
+addCommutative a b =*= (a + b) == (b + a) .
+
+subCommutative a b =*= (a - b) == (b - a) .
+
+
+-- Same properties with 'user-defined' functions
+plus :: Integer -> Integer -> Integer .
+plus a b = a + b.
+
+plusCommutative a b =*= (plus a b) == (plus b a) .
+
+minus :: Integer -> Integer -> Integer .
+minus a b = a - b.
+
+minusCommutative a b =*= (minus a b) == (minus b a) .
+
+
+-- * Associativity
+addAssociative a b c =*= ((a + b) + c) == (a + (b + c)) .
+
+subAssociative a b c =*= ((a - b) - c) == (a - (b - c)) .
+
+
+--- Same properties with 'user-defined' functions
+plusAssociative a b c =*= (plus (plus a b) c) == (plus a (plus b c)) .
+
+minusAssociative a b c =*= (minus (minus a b) c) == (minus a (minus b c)) .
+
+
+-- * Relations
+eqReflexive x =*= x == x .
+
+eqFalsifiable x y =*= x == y .
+
+gtFalsifiable x y =*= x > y .
+
+ltFalsifiable x y =*= x < y .
+
+
+-- * Operations
+addOneGt x =*= (x + 1) > x .
+
+subOneLt x =*= (x - 1) < x .
+
+
+-- * Inverse
+inversePlus x =*= (x + 1) - 1 == x .
+
+inverseMinus x =*= (x - 1) + 1 == x .
+
+
+-- * Multiplication
+mult :: Integer -> Integer -> Integer .
+mult 0 y = 0 .
+mult x y = y + (mult (x - 1) y) .
