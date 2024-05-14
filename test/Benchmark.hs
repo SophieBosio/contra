@@ -6,9 +6,8 @@ import Validation.PropertyChecker
 import qualified Test.Tasty.QuickCheck as QC
 import Test.Tasty                  (TestTree, testGroup)
 import Data.SBV
-import Data.List                   (lines, isPrefixOf, isInfixOf)
+import Data.List                   (isPrefixOf, isInfixOf)
 import Data.Char                   (isSpace)
-import Control.Monad               (foldM)
 import qualified Data.Map.Strict as Map
 
 
@@ -27,22 +26,22 @@ mutuallyRecursive =
             \of mutually recursive algebraic data types: "
     [ QC.testProperty "QuickCheck-generated A's. " a
     , QC.testProperty "QuickCheck-generated B's. " b
-    , QC.testProperty "QuickCheck-generated X's. " x
+    -- , QC.testProperty "QuickCheck-generated X's. " x
     ]
 
 
 -- * Built-in
 boolean :: Bool -> QC.Property
-boolean b = QC.ioProperty $
-  do let contraProgram = contraBoolean b
+boolean bool = QC.ioProperty $
+  do let contraProgram = contraBoolean bool
      results <- checkTest contraProgram
      case concat results of
-       [(_, value)] -> return $ b == (read value :: Bool)
+       [(_, value)] -> return $ bool == (read value :: Bool)
        _            -> return False
 
 integer :: Int -> QC.Property
-integer i = QC.ioProperty $
-  do let v = toInteger i
+integer int = QC.ioProperty $
+  do let v = toInteger int
      let contraProgram = contraInteger v
      results <- checkTest contraProgram
      case concat results of
@@ -95,38 +94,59 @@ genB 0 = QC.elements [Null]
 genB n = QC.oneof [return Null, Two <$> genA (n `div` 2)]
 
 a :: A -> QC.Property
-a = undefined
+a adt = QC.ioProperty $
+  do let v = aToContra adt
+     let contraProgram = contraA v
+     results <- checkTest contraProgram
+     case concat results of
+       [(_, value)] -> return $ show v == value
+       _            -> return False
 
 b :: B -> QC.Property
-b = undefined
+b adt = QC.ioProperty $
+  do let v = bToContra adt
+     let contraProgram = contraB v
+     results <- checkTest contraProgram
+     case concat results of
+       [(_, value)] -> return $ show v == value
+       _            -> return False
 
-contraA :: A -> Program Type
-contraA x =
+contraA :: Value Type -> Program Type
+contraA v =
   Data "A" [Constructor "Zero" [], Constructor "One" [ADT "B"]]
   (Data "B" [Constructor "Null" [], Constructor "Two" [ADT "A"]]
    (Signature "quickCheck" (ADT "A" :->: Boolean')
     (Property "quickCheck"
      (Lambda (Variable "x" (ADT "A"))
       (Case (Pattern (Variable "x" (ADT "A")))
-       [(Value (VConstructor "One" [VConstructor "Two" [VConstructor "Zero" [] (ADT "A")] (ADT "B")] (ADT "A")), Pattern (Value (Boolean False Boolean')))
+       [(Value v, Pattern (Value (Boolean False Boolean')))
        ,(Variable "y" (ADT "A"), Pattern (Value (Boolean True Boolean')))]
        Boolean')
        (ADT "A" :->: Boolean'))
       End)))
 
-contraB :: B -> Program Type
-contraB x =
+contraB :: Value Type -> Program Type
+contraB v =
   Data "A" [Constructor "Zero" [], Constructor "One" [ADT "B"]]
   (Data "B" [Constructor "Null" [], Constructor "Two" [ADT "A"]]
    (Signature "quickCheck" (ADT "B" :->: Boolean')
     (Property "quickCheck"
      (Lambda (Variable "x" (ADT "B"))
       (Case (Pattern (Variable "x" (ADT "B")))
-       [(Value (VConstructor "Two" [VConstructor "Zero" [] (ADT "A")] (ADT "B")), Pattern (Value (Boolean False Boolean')))
+       [(Value v, Pattern (Value (Boolean False Boolean')))
        ,(Variable "y" (ADT "B"), Pattern (Value (Boolean True Boolean')))]
        Boolean')
        (ADT "B" :->: Boolean'))
       End)))
+
+aToContra :: A -> Value Type
+aToContra Zero    = VConstructor "Zero" [] (ADT "A")
+aToContra (One v) = VConstructor "One"  [bToContra v] (ADT "A")
+
+bToContra :: B -> Value Type
+bToContra Null    = VConstructor "Null" [] (ADT "B")
+bToContra (Two v) = VConstructor "Two"  [aToContra v] (ADT "B")
+
 
 
 -- * X Y Z W
@@ -170,7 +190,7 @@ x :: X -> QC.Property
 x = undefined
 
 contraX :: X -> Program Type
-contraX x =
+contraX v =
   Data "X" [Constructor "Stop" [],Constructor "XY" [ADT "Y"],Constructor "XZ" [ADT "Z"],Constructor "XW" [ADT "W"]]
   (Data "Y" [Constructor "YY" [Unit',ADT "X"]]
    (Data "Z" [Constructor "ZZ" [Boolean',ADT "X"]]
@@ -220,6 +240,3 @@ parseResults results = map (parseVal . splitAndTrim) $ removeInfo $ lines result
         (trim varName, trim cv)
     trim = f . f
     f = reverse . dropWhile isSpace
-    splitAtChar char str =
-      let (before, after) = break (== char) str
-      in  (before, drop 1 after)
