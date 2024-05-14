@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Main (main) where
+module MainPretty (main) where
 
 import Core.Syntax
 import Core.Parser
@@ -75,21 +75,21 @@ typeCheck program =
 
 repl :: Program Type -> IO ()
 repl program =
-  do putStrLn "* Started the Contra REPL! *\n"
+  do putStrLn "✦ Started the Contra REPL! ✦\n"
      loop program
 
 execute :: Program Type -> IO ()
 execute program =
-  do putStrLn "* Contra *\n"
+  do putStrLn "✦ Contra ✦\n"
      print (runMain program)
 
 checkProperties :: Program Type -> Int -> IO ()
 checkProperties program depth =
-  do let depthInfo = if depth == defaultRecDepth
+  do let pretty = True
+     let depthInfo = if depth == defaultRecDepth
            then "default recursion depth"
            else "max. recursion depth set to " ++ show depth
-     let pretty = False
-     putStrLn $ "* Contra: Checking properties with " ++ depthInfo ++ " *\n"
+     putStrLn $ "✦ Contra: Checking properties with " ++ depthInfo ++ " ✦\n"
      check pretty depth program
 
 
