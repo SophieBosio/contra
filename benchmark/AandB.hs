@@ -1,4 +1,4 @@
-import Test.QuickCheck
+import Test.Tasty.QuickCheck
 
 data A = Zero | One B deriving (Show, Eq)
 data B = Null | Two A deriving (Show, Eq)
