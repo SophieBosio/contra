@@ -12,7 +12,12 @@ instance Arbitrary X where
 
 genX :: Int -> Gen X
 genX 0 = elements [Stop]
-genX n = oneof [return Stop, XY <$> genY (n `div` 3), XZ <$> genZ (n `div` 3), XW <$> genW (n `div` 3)]
+genX n = oneof
+  [ return Stop
+  , XY <$> genY (n `div` 3)
+  , XZ <$> genZ (n `div` 3)
+  , XW <$> genW (n `div` 3)
+  ]
 
 instance Arbitrary Y where
     arbitrary = genY 0
