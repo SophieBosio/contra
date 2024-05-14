@@ -1,0 +1,22 @@
+adt Shape = Circle Integer | Rectangle Integer Integer .
+
+and :: Boolean -> Boolean -> Boolean .
+and True True = True  .
+and x    y    = False .
+
+or :: Boolean -> Boolean -> Boolean .
+or True y     = True  .
+or x    True  = True  .
+or x    y     = False .
+
+nonNegativeCircle :: Shape -> Boolean .
+nonNegativeCircle x =*=
+  case x of
+    ; (Circle {n}) -> or (n > 0) (n == 0)
+    ; y -> True .
+
+nonNegativeRectangle :: Shape -> Boolean .
+nonNegativeRectangle x =*=
+  case x of
+    ; (Rectangle {n, m}) -> (and (or (n > 0) (n == 0)) (or (m == 0) (m > 0))) .
+    ; y -> True .

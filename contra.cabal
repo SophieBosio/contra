@@ -80,6 +80,7 @@ test-suite contra-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Benchmark
       ParserTests
       PartialEvaluatorTests
       PropertyCheckerTests

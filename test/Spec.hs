@@ -4,6 +4,7 @@ import ParserTests
 import PartialEvaluatorTests
 import UnificationTests
 import PropertyCheckerTests
+import Benchmark
 
 
 timeoutSeconds :: Integer -> Timeout
@@ -34,5 +35,7 @@ tests =
         [
           simple
         , programs
+        , builtIn
+        , mutuallyRecursive
         ]
     ]

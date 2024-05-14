@@ -1,0 +1,12 @@
+-- * X, Y, Z, W
+adt X = Stop | XY Y | XZ Z | XW W .
+
+adt Y = YY Unit    X .
+adt Z = ZZ Boolean X .
+adt W = WW Integer X .
+
+falsifiableX :: X -> Boolean .
+falsifiableX x =*=
+  case x of
+    ; XY {YY {Unit, XZ {ZZ {True, XW {WW {5, Stop}}}}}} -> False
+    ; y -> True .

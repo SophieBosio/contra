@@ -1,4 +1,3 @@
--- * A and B
 adt A = Zero | One B .
 adt B = Null | Two A .
 
@@ -15,17 +14,3 @@ falsifiableB b =*=
   case b of
     ; Two {One {Two {One {Null}}}} -> False
     ; x -> True .
-
-
--- * X, Y, Z, W
-adt X = Stop | XY Y | XZ Z | XW W .
-
-adt Y = YY Unit    X .
-adt Z = ZZ Boolean X .
-adt W = WW Integer X .
-
-falsifiableX :: X -> Boolean .
-falsifiableX x =*=
-  case x of
-    ; XY {YY {Unit, XZ {ZZ {True, XW {WW {n, Stop}}}}}} -> n > 5
-    ; y -> True .
