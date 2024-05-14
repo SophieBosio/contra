@@ -93,9 +93,8 @@ proveFormula pretty reconstructor f =
      case result of
        Unsatisfiable _ _ -> putStrLnGreen  $ ok     ++ " OK "
        Satisfiable   _ _ -> do putStrLnRed $ failed ++ " FAIL "
-                               print r
-                               -- printCounterExample reconstructor $
-                               --   getModelDictionary result
+                               printCounterExample reconstructor $
+                                 getModelDictionary result
        _                 -> do putStrLnYellow $ unknown ++ " Unknown result: "
                                print r
 
@@ -191,9 +190,8 @@ prettyField reconstructor prefix ((var, cv) : rest)
     let num     = takeWhile (/= '$') var'               in
       if (prefix' ++ num) == var
          then getVal cv ++ ", " ++ prettyField reconstructor prefix rest
-         else prettyConstructor reconstructor (prefix' ++ num) rest
-              ++ ", " ++ prettyField reconstructor prefix rest
-  | otherwise = prettyField reconstructor prefix rest
+         else prettyConstructor reconstructor (prefix' ++ num) ((var, cv) : rest)
+  | otherwise = prettyConstructor reconstructor prefix ((var, cv) : rest)
 
 getSelector :: CV -> Integer
 getSelector s = read (takeWhile (/= ' ') $ show s) :: Integer
