@@ -10,7 +10,7 @@ extra-source-files:
 - README.md
 
 # Metadata used when publishing your package
-# synopsis:            A friendly functional laguage for finding counterexamples
+# synopsis:            A friendly functional laguage for finding algebraic counterexamples
 # category:            Programming Language
 
 # To avoid duplicated efforts in documentation and dealing with the

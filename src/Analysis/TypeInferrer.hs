@@ -170,9 +170,9 @@ annotateProgram End = return End
 annotate :: Show a => Term a -> Annotation a (Term Type)
 annotate (Pattern p) = annotatePattern p
 annotate (TConstructor c ts _) =
-  do env <- environment
+  do ts' <- mapM annotate ts
+     env <- environment
      adt <- datatype env c
-     ts' <- mapM annotate ts
      cs  <- fieldTypes env c
      addConstraints ts' cs (map (show . annotation) ts)
      return $ strengthenIfPossible c ts' (ADT adt)
@@ -251,9 +251,9 @@ annotatePattern (List    ps _) =
      let tau = TypeList $ map annotation ps'
      return $ Pattern $ List ps' tau
 annotatePattern (PConstructor c ps _) =
-  do env <- environment
+  do ts' <- mapM annotatePattern ps
+     env <- environment
      adt <- datatype env c
-     ts' <- mapM annotatePattern ps
      cs  <- fieldTypes env c
      addConstraints ts' cs (map (show . annotation) ps)
      return $ strengthenIfPossible c ts' (ADT adt)
@@ -263,9 +263,9 @@ annotateValue (Unit        _) = return $ Pattern $ Value $ Unit Unit'
 annotateValue (Number    n _) = return $ Pattern $ Value $ Number n Integer'
 annotateValue (Boolean   b _) = return $ Pattern $ Value $ Boolean b Boolean'
 annotateValue (VConstructor c vs _) =
-  do env <- environment
+  do ts' <- mapM annotateValue vs
+     env <- environment
      adt <- datatype env c
-     ts' <- mapM annotateValue vs
      cs  <- fieldTypes env c
      addConstraints ts' cs (map (show . annotation) vs)
      return $ strengthenIfPossible c ts' (ADT adt)

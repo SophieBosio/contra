@@ -358,8 +358,6 @@ flatten p = update (newDefs defs) p
   where
     dups      = duplicates (functions p)
     defs      = collectDuplicates dups
-    -- targets   = nub $ map fst dups
-    -- remaining = foldr removeDefinition p dups
 
 duplicates :: [(F, Term a)] -> [(F, Term a)]
 duplicates fs = filter (\(x, _) -> length (filter (== x) names) > 1) fs
@@ -376,7 +374,6 @@ newDefs (defs : rest) =
   let fname = fst (head defs) in
   let terms = map snd defs
   in  (fname, rewriteDefs fname terms) : newDefs rest
-  -- in  Function fname (rewriteDefs fname terms) $ newDefs rest
 
 update :: [(F, Term a)] -> (Program a -> Program a)
 update defs p = foldl (flip findAndReplace) p defs
