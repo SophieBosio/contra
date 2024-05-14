@@ -11,9 +11,9 @@ A friendly, functional language for finding counterexamples!
 
 ## Features
 
-Contra is a small functional programming language designed to automate the process of finding counter-examples with property-based testing.
+Contra is a small functional programming language designed to automate the process of finding algebraic counter-examples with property-based testing.
 
-With Contra, you can define properties and check them automatically without the need to write a generator by hand. You can even check properties containing algebraic data types.
+With Contra, you can define properties and check them automatically without the need to write a generator by hand. In particular, can check properties that take *user-defined* algebraic data types. Even mutually recursive ones!
 
 Contra uses SMT solvers (currently Z3 via the Haskell library [SBV](https://hackage.haskell.org/package/sbv)) behind the scenes to actually find the counterexamples.
 
