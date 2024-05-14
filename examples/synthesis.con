@@ -1,0 +1,8 @@
+-- Properties can be used as functions in other properties!
+gtFive :: Integer -> Boolean .
+gtFive x =*= x > 5 .
+
+notEqFive :: Integer -> Boolean .
+notEqFive x =*= if gtFive x then True else not (x == 5) .
+
+

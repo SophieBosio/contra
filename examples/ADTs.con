@@ -1,23 +1,11 @@
-adt Cartesian = Product Integer Integer .
+and :: Boolean -> Boolean -> Boolean .
+and True True = True  .
+and x    y    = False .
 
-
--- Always true
-identity :: Cartesian -> Boolean .
-identity x =*= x == x .
-
-commutativity (Product {x, y}) =*= (x + y) == (y + x) .
-
-associativity (Product {x, y}) z =*= ((x + y) + z) == (x + (y + z)) .
-
-
--- Falsifiable
-different :: Cartesian -> Cartesian -> Boolean .
-different x y =*= x == y .
-
-subCommutativity (Product {x, y}) =*= (x - y) == (y - x) .
-
-subAssociativity (Product {x, y}) z =*= ((x - y) - z) == (x - (y - z)) .
-
+or :: Boolean -> Boolean -> Boolean .
+or True y     = True  .
+or x    True  = True  .
+or x    y     = False .
 
 -- Non-recursive ADT properties
 adt IntList = Nil | Cons Integer IntList .
@@ -29,14 +17,15 @@ thirdElementIsZero x =*=
     ; y -> True .
 
 
--- Congruence
 adt Example = C Integer .
 
 exampleCongruent :: Example -> Example -> Boolean .
 exampleCongruent x y =*=
   case (x == y) of
     ; True -> let (C {xx}) = x in
-                let (C {yy}) = y in
+              let (C {yy}) = y in
                   (xx == yy)
     ; False -> True .
 
+nonNegative :: Example -> Boolean .
+nonNegative (C {x}) =*= or (x > 0) (x == 0) .

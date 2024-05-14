@@ -1,31 +1,31 @@
 -- * Commutativity
-addCommutative a b =*= (a + b) == (b + a) .
+addCommutative x y =*= (x + y) == (y + x) .
 
-subCommutative a b =*= (a - b) == (b - a) .
+subCommutative x y =*= (x - y) == (y - x) .
 
 
 -- Same properties with 'user-defined' functions
 plus :: Integer -> Integer -> Integer .
-plus a b = a + b.
+plus x y = x + y.
 
-plusCommutative a b =*= (plus a b) == (plus b a) .
+plusCommutative x y =*= (plus x y) == (plus y x) .
 
 minus :: Integer -> Integer -> Integer .
-minus a b = a - b.
+minus x y = x - y .
 
-minusCommutative a b =*= (minus a b) == (minus b a) .
+minusCommutative x y =*= (minus x y) == (minus y x) .
 
 
 -- * Associativity
-addAssociative a b c =*= ((a + b) + c) == (a + (b + c)) .
+addAssociative x y z =*= ((x + y) + z) == (x + (y + z)) .
 
-subAssociative a b c =*= ((a - b) - c) == (a - (b - c)) .
+subAssociative x y z =*= ((x - y) - z) == (x - (y - z)) .
 
 
 --- Same properties with 'user-defined' functions
-plusAssociative a b c =*= (plus (plus a b) c) == (plus a (plus b c)) .
+plusAssociative x y z =*= (plus (plus x b) c) == (plus x (plus y z)) .
 
-minusAssociative a b c =*= (minus (minus a b) c) == (minus a (minus b c)) .
+minusAssociative x y z =*= (minus (minus x b) c) == (minus x (minus y z)) .
 
 
 -- * Relations
@@ -62,28 +62,28 @@ and True True = True .
 and x    y    = False .
 
 
--- * Congruence
--- addCongruent :: Integer -> Integer -> Integer -> Integer -> Boolean .
-addCongruent x y xx yy =*=
+-- * Closure under equality
+-- addClosed :: Integer -> Integer -> Integer -> Integer -> Boolean .
+addClosed x y xx yy =*=
   if and (x == xx) (y == yy)
      then (x + y) == (xx + yy)
      else True .
 
-plusCongruent :: Integer -> Integer -> Integer -> Integer -> Boolean .
-plusCongruent x y xx yy =*=
+plusClosed :: Integer -> Integer -> Integer -> Integer -> Boolean .
+plusClosed x y xx yy =*=
   if and (x == xx) (y == yy)
      then (plus x y) == (plus xx yy)
      else True .
 
-subCongruent x y xx yy =*=
+subClosed x y xx yy =*=
   if and (x == xx) (y == yy)
      then (x - y) == (xx - yy)
      else True .
 
 
 -- Variations on incrementing
-plusOneCongruent :: Integer -> Integer -> Boolean .
-plusOneCongruent x y =*=
+plusOneClosed :: Integer -> Integer -> Boolean .
+plusOneClosed x y =*=
   if (x == y)
      then (x + 1) == (y + 1)
      else True .
@@ -91,23 +91,23 @@ plusOneCongruent x y =*=
 inc :: Integer -> Integer .
 inc x = x + 1 .
 
-incCongruent :: Integer -> Integer -> Boolean .
-incCongruent x y =*=
+incClosed :: Integer -> Integer -> Boolean .
+incClosed x y =*=
   if (x == y)
      then (inc x) == (inc y)
      else True .
 
 
 -- Less than & greater than
-ltCongruent :: Integer -> Integer -> Integer -> Integer -> Boolean .
-ltCongruent x y xx yy =*=
+ltClosed :: Integer -> Integer -> Integer -> Integer -> Boolean .
+ltClosed x y xx yy =*=
   case and (x == xx) (y == yy) of
     ; True -> (x < y) == (xx < yy)
     ; False -> True .
 
 
-gtCongruent :: Integer -> Integer -> Integer -> Integer -> Boolean .
-gtCongruent x y xx yy =*=
+gtClosed :: Integer -> Integer -> Integer -> Integer -> Boolean .
+gtClosed x y xx yy =*=
   case and (x == xx) (y == yy) of
     ; True -> (x > y) == (xx > yy)
     ; False -> True .

@@ -1,0 +1,19 @@
+adt Expression = Const Integer | Add Expression Expression | Sub Expression Expression .
+
+eval :: Expression -> Integer .
+eval (Const {n}) = n .
+eval (Add {e1, e2}) = (eval e1) + (eval e2) .
+eval (Sub {e1, e2}) = (eval e1) - (eval e2) .
+
+
+addCommutative :: Expression -> Expression -> Boolean .
+addCommutative e1 e2 =*=
+  (eval (Add {e1, e2})) == (eval (Add {e2, e1})) .
+
+subCommutative :: Expression -> Expression -> Boolean .
+subCommutative e1 e2 =*=
+  (eval (Sub {e1, e2})) == (eval (Sub {e2, e1})) .
+
+addAssociative :: Expression -> Expression -> Expression -> Boolean .
+addAssociative e1 e2 e3 =*=
+  (eval (Add {e1, (Add {e2, e3})})) == (eval (Add {(Add {e1, e2}), e3})) .

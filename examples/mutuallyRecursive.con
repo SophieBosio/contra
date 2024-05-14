@@ -1,0 +1,9 @@
+adt A = Zero | One B .
+adt B = Null | Two A .
+
+
+falsifiable :: A -> Boolean .
+falsifiable a =*=
+  case a of
+    ; One {Two {One {Two {Zero}}}} -> False
+    ; x -> True .

@@ -1,0 +1,36 @@
+and :: Boolean -> Boolean -> Boolean .
+and True True = True .
+and x    y    = False .
+
+
+adt Cartesian = Product Integer Integer .
+
+
+-- Always true
+identity :: Cartesian -> Boolean .
+identity x =*= x == x .
+
+commutativity (Product {x, y}) =*= (x + y) == (y + x) .
+
+associativity (Product {x, y}) z =*= ((x + y) + z) == (x + (y + z)) .
+
+
+-- Falsifiable
+different :: Cartesian -> Cartesian -> Boolean .
+different x y =*= x == y .
+
+subCommutativity (Product {x, y}) =*= (x - y) == (y - x) .
+
+subAssociativity (Product {x, y}) z =*= ((x - y) - z) == (x - (y - z)) .
+
+
+-- Closure under equality
+cartesianClosed x y =*=
+  case (x == y) of
+    ; True  -> let (Product {x1, y1}) = x in
+               let (Product {x2, y2}) = y in
+                   (and (x1 == x2) (y1 == y2))
+    ; False -> True.
+
+-- Other examples
+sameProjections (Product {x, y}) =*= x == y .
