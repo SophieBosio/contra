@@ -17,16 +17,18 @@ builtIn :: TestTree
 builtIn =
   testGroup "Contra can find QuickCheck-generated counterexamples \
             \of built-in types: "
-    [ QC.testProperty "Contra can find QuickCheck-generated Booleans. " boolean
-    , QC.testProperty "Contra can find QuickCheck-generated Integers. " integer
+    [ QC.testProperty "QuickCheck-generated Booleans. " boolean
+    , QC.testProperty "QuickCheck-generated Integers. " integer
     ]
 
 mutuallyRecursive :: TestTree
 mutuallyRecursive =
   testGroup "Contra can find QuickCheck-generated counterexamples \
-            \of mutually recursive algebraic data types: " $
-       ab
-    ++ xyzw
+            \of mutually recursive algebraic data types: "
+    [ QC.testProperty "QuickCheck-generated A's. " a
+    , QC.testProperty "QuickCheck-generated B's. " b
+    , QC.testProperty "QuickCheck-generated X's. " x
+    ]
 
 
 -- * Built-in
@@ -92,8 +94,39 @@ genB :: Int -> QC.Gen B
 genB 0 = QC.elements [Null]
 genB n = QC.oneof [return Null, Two <$> genA (n `div` 2)]
 
-ab :: [TestTree]
-ab = []
+a :: A -> QC.Property
+a = undefined
+
+b :: B -> QC.Property
+b = undefined
+
+contraA :: A -> Program Type
+contraA x =
+  Data "A" [Constructor "Zero" [], Constructor "One" [ADT "B"]]
+  (Data "B" [Constructor "Null" [], Constructor "Two" [ADT "A"]]
+   (Signature "quickCheck" (ADT "A" :->: Boolean')
+    (Property "quickCheck"
+     (Lambda (Variable "x" (ADT "A"))
+      (Case (Pattern (Variable "x" (ADT "A")))
+       [(Value (VConstructor "One" [VConstructor "Two" [VConstructor "Zero" [] (ADT "A")] (ADT "B")] (ADT "A")), Pattern (Value (Boolean False Boolean')))
+       ,(Variable "y" (ADT "A"), Pattern (Value (Boolean True Boolean')))]
+       Boolean')
+       (ADT "A" :->: Boolean'))
+      End)))
+
+contraB :: B -> Program Type
+contraB x =
+  Data "A" [Constructor "Zero" [], Constructor "One" [ADT "B"]]
+  (Data "B" [Constructor "Null" [], Constructor "Two" [ADT "A"]]
+   (Signature "quickCheck" (ADT "B" :->: Boolean')
+    (Property "quickCheck"
+     (Lambda (Variable "x" (ADT "B"))
+      (Case (Pattern (Variable "x" (ADT "B")))
+       [(Value (VConstructor "Two" [VConstructor "Zero" [] (ADT "A")] (ADT "B")), Pattern (Value (Boolean False Boolean')))
+       ,(Variable "y" (ADT "B"), Pattern (Value (Boolean True Boolean')))]
+       Boolean')
+       (ADT "B" :->: Boolean'))
+      End)))
 
 
 -- * X Y Z W
@@ -133,8 +166,24 @@ genW :: Int -> QC.Gen W
 genW _ = WW <$> QC.arbitrary <*> QC.arbitrary
 
 
-xyzw :: [TestTree]
-xyzw = []
+x :: X -> QC.Property
+x = undefined
+
+contraX :: X -> Program Type
+contraX x =
+  Data "X" [Constructor "Stop" [],Constructor "XY" [ADT "Y"],Constructor "XZ" [ADT "Z"],Constructor "XW" [ADT "W"]]
+  (Data "Y" [Constructor "YY" [Unit',ADT "X"]]
+   (Data "Z" [Constructor "ZZ" [Boolean',ADT "X"]]
+    (Data "W" [Constructor "WW" [Integer',ADT "X"]]
+     (Signature "quickCheck" (ADT "X" :->: Boolean')
+      (Property "quickCheck"
+       (Lambda (Variable "x" (ADT "X"))
+        (Case (Pattern (Variable "x" (ADT "X")))
+         [(Value (VConstructor "XY" [VConstructor "YY" [Unit Unit',VConstructor "Stop" [] (ADT "X")] (ADT "Y")] (ADT "X")), Pattern (Value (Boolean False Boolean')))
+         ,(Variable "y" (ADT "X"), Pattern (Value (Boolean True Boolean')))
+         ] Boolean')
+         (ADT "X" :->: Boolean'))
+        End)))))
 
 
 -- * Utility
