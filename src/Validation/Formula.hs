@@ -99,17 +99,18 @@ createSymbolic (Variable x (TypeList ts)) =
      sxs <- mapM createSymbolic ps
      return $ SArgs sxs
 createSymbolic (Variable x (ADT adt)) =
-  do env   <- environment
-     si    <- lift $ sInteger $ "ADT-" ++ x
+  do let ident = x ++ "$" ++ adt
+     env   <- environment
+     si    <- lift $ sInteger ident
      upper <- cardinality env adt
      if upper == 1
        then do lift $ constrain $ si .== 0
                (_, c) <- reconstruct env (adt, 0)
                types  <- fieldTypes env c
-               svs    <- ensureInstantiated x adt [] types
-               return $ SADT x adt si svs
+               svs    <- ensureInstantiated ident [] types
+               return $ SADT ident adt si svs
        else do lift $ constrain $ (si .>= 0) .&& (si .< literal upper)
-               return $ SADT x adt si []
+               return $ SADT ident adt si []
 createSymbolic p = error $
      "Unexpected request to create symbolic sub-pattern '"
   ++ show p ++ "' of type '" ++ show (annotation p) ++ "'"
@@ -158,21 +159,21 @@ coerce ident adt (c, si) (xs, ys) =
      (_, i) <- selector env (adt, c)
      lift $ constrain $ si .== literal i
      types  <- fieldTypes env c
-     ys'    <- ensureInstantiated ident adt ys types
+     ys'    <- ensureInstantiated ident ys types
      eqs    <- zipWithM sEqual xs ys'
      return $ SBoolean $ sAnd $
          (si .== literal i)
        : map truthy eqs
 
 
-ensureInstantiated :: X -> D -> [SValue] -> [Type] -> Formula [SValue]
-ensureInstantiated _     _   [ ] [   ] = return []
-ensureInstantiated ident adt [ ] types = instantiate ident adt types
-ensureInstantiated _     _   svs types = ensureTypeAccord svs types >> return svs
+ensureInstantiated :: X -> [SValue] -> [Type] -> Formula [SValue]
+ensureInstantiated _     [ ] [   ] = return []
+ensureInstantiated ident [ ] types = instantiate ident types
+ensureInstantiated _     svs types = ensureTypeAccord svs types >> return svs
 
-instantiate :: X -> D -> [Type] -> Formula [SValue]
-instantiate ident adt types =
-  do let names = map (((adt ++ "-" ++ ident ++ "-field") ++) . show) ([0..] :: [Int])
+instantiate :: X -> [Type] -> Formula [SValue]
+instantiate ident types =
+  do let names = map (((ident ++ "$field") ++) . show) ([0..] :: [Int])
      let vars  = zipWith Variable names types
      mapM createSymbolic vars
 

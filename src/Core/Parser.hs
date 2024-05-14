@@ -89,7 +89,7 @@ identHead :: Parser Char
 identHead = lower <|> underscore
 
 identTail :: Parser Char
-identTail = try $ choice [ letter, digit, dash, underscore ]
+identTail = try $ choice [ letter, digit, dash ]
 
 identifier :: Parser String
 identifier = try $

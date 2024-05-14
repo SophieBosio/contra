@@ -92,7 +92,7 @@ sUnify (PConstructor c ps (ADT adt)) (SADT ident adt' si svs)
          (_, i) <- selector env (adt, c)
          lift $ constrain $ si .== literal i
          types  <- fieldTypes env c
-         svs'   <- ensureInstantiated ident adt svs types
+         svs'   <- ensureInstantiated ident svs types
          foldrM (\(p, sv) u -> do u' <- sUnify p sv
                                   return $ u <> u'
                 ) mempty $ zip ps svs'

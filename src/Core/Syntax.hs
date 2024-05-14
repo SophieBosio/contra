@@ -28,7 +28,7 @@
 
 module Core.Syntax where
 
-import Data.List (intercalate)
+import Data.List (intercalate, elemIndex)
 
 
 -- * Abbreviations
@@ -346,6 +346,26 @@ constructorFields :: Program a -> [(C, [Type])]
 constructorFields p = map (\(Constructor c ts) -> (c, ts)) constructors
   where
     constructors = map fst (dataConstructors p)
+
+ctrSelector :: Program a -> (D, C) -> (D, Integer)
+ctrSelector p (d, c) =
+  case lookup d (datatypes p) of
+    Nothing -> error $ "Couldn't find data type with name '" ++ d ++ "'"
+    Just cs ->
+      case elemIndex c (map nameOf cs) of
+        Just  s -> (d, toInteger s)
+        Nothing -> error $ "Constructor '" ++ c ++
+                   "' not found in data type declaration of type '" ++ d ++ "'"
+
+indexReconstruct :: Program a -> (D, Integer) -> (D, C)
+indexReconstruct p (d, i) =
+  case lookup d (datatypes p) of
+    Nothing   -> error $ "Couldn't find data type with name '" ++ d ++ "'"
+    Just ctrs -> let cs = map nameOf ctrs
+                 in  (d, cs !! fromInteger i)
+
+nameOf :: Constructor -> X
+nameOf (Constructor x _) = x
 
 
 -- * Pretty printing

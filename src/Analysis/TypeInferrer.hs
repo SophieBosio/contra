@@ -142,7 +142,7 @@ emptyBindings = error . (++ " is unbound or ambiguously typed!")
 
 
 -- * Annotate program
-annotateProgram ::Show a => Program a -> Annotation a (Program Type)
+annotateProgram :: Show a => Program a -> Annotation a (Program Type)
 annotateProgram (Signature x def rest) =
   do i <- get
      let (j, tau) = alpha i def

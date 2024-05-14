@@ -25,8 +25,6 @@ module Environment.Environment where
 
 import Core.Syntax
 
-import Data.List (elemIndex)
-
 
 -- * Abbreviations
 type Mapping      a b = a -> b
@@ -77,24 +75,11 @@ programEnvironment p =
         case lookup d (datatypes p) of
           Just cs -> return cs
           Nothing -> error $ "Couldn't find data type with name '" ++ d ++ "'"
-    , selector = \(d, c) ->
-        case lookup d (datatypes p) of
-          Nothing -> error $ "Couldn't find data type with name '" ++ d ++ "'"
-          Just cs ->
-            case elemIndex c (map nameOf cs) of
-              Just  s -> return (d, toInteger s)
-              Nothing -> error $ "Constructor '" ++ c ++
-                "' not found in data type declaration of type '" ++ d ++ "'"
-    , reconstruct = \(d, i) ->
-        case lookup d (datatypes p) of
-          Nothing   -> error $ "Couldn't find data type with name '" ++ d ++ "'"
-          Just ctrs -> let cs = map nameOf ctrs
-                       in  return (d, cs !! fromInteger i)
+    , selector    = \(d, c) -> return $ ctrSelector p (d, c)
+    , reconstruct = \(d, i) -> return $ indexReconstruct p (d, i)
     , cardinality = \d ->
         case lookup d (datatypes p) of
           Nothing -> error $ "Couldn't find data type with name '" ++ d ++ "'"
           Just cs -> return $ toInteger $ length cs
     }
 
-nameOf :: Constructor -> X
-nameOf (Constructor x _) = x
