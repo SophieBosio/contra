@@ -151,9 +151,9 @@ bToContra (Two v) = VConstructor "Two"  [aToContra v] (ADT "B")
 
 -- * X Y Z W
 data X = Stop | XY Y | XZ Z | XW W deriving (Show, Eq)
-data Y = YY ()      X              deriving (Show, Eq)
-data Z = ZZ Bool    X              deriving (Show, Eq)
-data W = WW Integer X              deriving (Show, Eq)
+data Y = YY Bool Bool X            deriving (Show, Eq)
+data Z = ZZ Bool      X            deriving (Show, Eq)
+data W = WW Integer   X            deriving (Show, Eq)
 
 instance QC.Arbitrary X where
     arbitrary = QC.sized genX
@@ -171,7 +171,7 @@ instance QC.Arbitrary Y where
     arbitrary = genY 0
 
 genY :: Int -> QC.Gen Y
-genY _ = YY () <$> QC.arbitrary
+genY _ = YY <$> QC.arbitrary <*> QC.arbitrary <*> QC.arbitrary
 
 instance QC.Arbitrary Z where
     arbitrary = genZ 0
@@ -198,7 +198,7 @@ x adt = QC.ioProperty $
 contraX :: Value Type -> Program Type
 contraX v =
   Data "X" [Constructor "Stop" [],Constructor "XY" [ADT "Y"],Constructor "XZ" [ADT "Z"],Constructor "XW" [ADT "W"]]
-  (Data "Y" [Constructor "YY" [Unit',ADT "X"]]
+  (Data "Y" [Constructor "YY" [Boolean',Boolean',ADT "X"]]
    (Data "Z" [Constructor "ZZ" [Boolean',ADT "X"]]
     (Data "W" [Constructor "WW" [Integer',ADT "X"]]
      (Signature "quickCheck" (ADT "X" :->: Boolean')
@@ -218,7 +218,7 @@ xToContra (XZ z) = VConstructor "XZ" [zToContra z] (ADT "X")
 xToContra (XW w) = VConstructor "XW" [wToContra w] (ADT "X")
 
 yToContra :: Y -> Value Type
-yToContra (YY () x') = VConstructor "YY" [Unit Unit', xToContra x'] (ADT "Y")
+yToContra (YY bool1 bool2 x') = VConstructor "YY" [Boolean bool1 Boolean', Boolean bool2 Boolean', xToContra x'] (ADT "Y")
 
 zToContra :: Z -> Value Type
 zToContra (ZZ bool x') = VConstructor "ZZ" [Boolean bool Boolean', xToContra x'] (ADT "Z")

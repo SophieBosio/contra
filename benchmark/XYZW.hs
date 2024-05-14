@@ -3,9 +3,9 @@ module XYZW where
 import Test.Tasty.QuickCheck
 
 data X = Stop | XY Y | XZ Z | XW W deriving (Show, Eq)
-data Y = YY ()      X              deriving (Show, Eq)
-data Z = ZZ Bool    X              deriving (Show, Eq)
-data W = WW Integer X              deriving (Show, Eq)
+data Y = YY Bool Bool X            deriving (Show, Eq)
+data Z = ZZ Bool      X            deriving (Show, Eq)
+data W = WW Integer   X            deriving (Show, Eq)
 
 instance Arbitrary X where
     arbitrary = sized genX
@@ -23,7 +23,7 @@ instance Arbitrary Y where
     arbitrary = genY 0
 
 genY :: Int -> Gen Y
-genY _ = YY () <$> arbitrary
+genY _ = YY <$> arbitrary <*> arbitrary <*> arbitrary
 
 instance Arbitrary Z where
     arbitrary = genZ 0
