@@ -26,7 +26,7 @@ mutuallyRecursive =
             \of mutually recursive algebraic data types: "
     [ QC.testProperty "QuickCheck-generated A's. " a
     , QC.testProperty "QuickCheck-generated B's. " b
-    -- , QC.testProperty "QuickCheck-generated X's. " x
+    , QC.testProperty "QuickCheck-generated X's. " x
     ]
 
 
@@ -187,9 +187,15 @@ genW _ = WW <$> QC.arbitrary <*> QC.arbitrary
 
 
 x :: X -> QC.Property
-x = undefined
+x adt = QC.ioProperty $
+  do let v = xToContra adt
+     let contraProgram = contraX v
+     results <- checkTest contraProgram
+     case concat results of
+       [(_, value)] -> return $ show v == value
+       _            -> return False
 
-contraX :: X -> Program Type
+contraX :: Value Type -> Program Type
 contraX v =
   Data "X" [Constructor "Stop" [],Constructor "XY" [ADT "Y"],Constructor "XZ" [ADT "Z"],Constructor "XW" [ADT "W"]]
   (Data "Y" [Constructor "YY" [Unit',ADT "X"]]
@@ -199,11 +205,26 @@ contraX v =
       (Property "quickCheck"
        (Lambda (Variable "x" (ADT "X"))
         (Case (Pattern (Variable "x" (ADT "X")))
-         [(Value (VConstructor "XY" [VConstructor "YY" [Unit Unit',VConstructor "Stop" [] (ADT "X")] (ADT "Y")] (ADT "X")), Pattern (Value (Boolean False Boolean')))
+         [(Value v, Pattern (Value (Boolean False Boolean')))
          ,(Variable "y" (ADT "X"), Pattern (Value (Boolean True Boolean')))
          ] Boolean')
          (ADT "X" :->: Boolean'))
         End)))))
+
+xToContra :: X -> Value Type
+xToContra Stop   = VConstructor "Stop" [] (ADT "X")
+xToContra (XY y) = VConstructor "XY" [yToContra y] (ADT "X")
+xToContra (XZ z) = VConstructor "XZ" [zToContra z] (ADT "X")
+xToContra (XW w) = VConstructor "XW" [wToContra w] (ADT "X")
+
+yToContra :: Y -> Value Type
+yToContra (YY () x') = VConstructor "YY" [Unit Unit', xToContra x'] (ADT "Y")
+
+zToContra :: Z -> Value Type
+zToContra (ZZ bool x') = VConstructor "ZZ" [Boolean bool Boolean', xToContra x'] (ADT "Z")
+
+wToContra :: W -> Value Type
+wToContra (WW int x') = VConstructor "WW" [Number int Integer', xToContra x'] (ADT "W")
 
 
 -- * Utility

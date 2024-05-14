@@ -427,7 +427,7 @@ instance Show (Pattern a) where
     " {" ++  intercalate ", " (map show ps) ++ "}"
 
 instance Show (Value a) where
-  show (Unit              _) = "()"
+  show (Unit              _) = "Unit"
   show (Number       n    _) = show n
   show (Boolean      b    _) = show b
   show (VConstructor c vs _) = c ++
