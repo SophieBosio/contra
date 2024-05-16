@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module MainPretty (main) where
+module Main (main) where
 
 import Core.Syntax
 import Core.Parser

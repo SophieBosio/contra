@@ -19,6 +19,8 @@ Contra uses SMT solvers (currently Z3 via the Haskell library [SBV](https://hack
 
 Its main contribution, and the reason you might find using Contra to be easier than using QuickCheck or SBV directly, is that Contra has a completely regular ML-style syntax, which is purposefully similar to Haskell's, and you don't need to learn any special syntax to get started.
 
+This repo includes a file `contra/app/MainPretty.hs` which is a version of Contra that uses Unicode symbols. This is prettier, but not supported by all terminals. If you do have Unicode support where you plan to run Contra, you can build and install as normal, but use the executable called `contra-pretty` instead of `contra`.
+
 ## Prerequisites
 
 You need to have both the SMT solver [Z3](https://github.com/Z3Prover/z3) and the Haskell build tool [Stack](https://docs.haskellstack.org/en/stable/
