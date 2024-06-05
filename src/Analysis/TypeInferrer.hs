@@ -279,8 +279,6 @@ signatureDefinitionAccord annotatedProgram =
       | (sig, tau) <- signatures  annotatedProgram
       , (def, t)   <- definitions annotatedProgram
       , sig == def ]
-  where
-    definitions program = functions program ++ properties program
 
 propertiesReturnBoolean :: Program Type -> [Constraint]
 propertiesReturnBoolean annotatedProgram =

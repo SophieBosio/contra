@@ -36,8 +36,7 @@ data Environment m a =
   Environment
     { function      :: F -> m (Term a)
     , property      :: P -> m (Term a)
-    , envFunctions  :: [(F, Term a)]
-    , envProperties :: [(P, Term a)]
+    , definitionsIn :: [(Name, Term a)]
     , datatype      :: C -> m D
     , fieldTypes    :: C -> m [Type]
     , constructors  :: D -> m [Constructor]
@@ -60,8 +59,7 @@ programEnvironment p =
           Just def -> return def
           Nothing  -> error $
             "Couldn't find definition for property '" ++ q ++ "'"
-    , envFunctions  = functions  p
-    , envProperties = properties p
+    , definitionsIn = definitions p
     , datatype = \c ->
         case lookup c (constructorNames p) of
           Just  d -> return d

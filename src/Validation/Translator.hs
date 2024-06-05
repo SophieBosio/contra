@@ -197,7 +197,7 @@ unifyAndBind 0 t s = error $
   \symbolically.\nCurrent step: Applying '" ++ show t ++ "' to '" ++ show s ++ "'"
 unifyAndBind depth (Pattern (Variable x _)) sv =
   do env <- environment
-     case map snd $ filter ((== x) . fst) (envFunctions env ++ envProperties env) of
+     case map snd $ filter ((== x) . fst) (definitionsIn env) of
        [ Lambda p t a ] -> unifyAndBind depth (Lambda p t a) sv
        _                -> error $
          "Variable '" ++ x ++ "' is not a function or not bound"

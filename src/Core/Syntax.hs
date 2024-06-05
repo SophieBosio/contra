@@ -326,6 +326,9 @@ properties (Property  p x rest) = (p, x) : properties rest
 properties (Data      _ _ rest) = properties rest
 properties _                    = mempty
 
+definitions :: Program a -> [(Name, Term a)]
+definitions p = functions p ++ properties p
+
 datatypes :: Program a -> [(D, [Constructor])]
 datatypes (Signature _ _ rest) = datatypes rest
 datatypes (Function  _ _ rest) = datatypes rest
