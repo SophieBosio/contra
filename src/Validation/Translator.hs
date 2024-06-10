@@ -107,13 +107,11 @@ translate _ t@(TConstructor {}) = error
 translatePattern :: Pattern Type -> Formula SValue
 translatePattern (Value v) = translateValue v
 -- All input variables are bound at this point,
--- so if a variable is not a function and not in the bindings, that's an error
+-- so a variable must either be a function name in an application
+-- or bound in the bindings
 translatePattern (Variable x _) =
-  do env <- environment
-     case map snd $ filter ((== x) . fst) (envFunctions env ++ envProperties env) of
-       [ ] -> do bindings <- ask
-                 return $ bindings x
-       _   -> error $ "Variable '" ++ x ++ "' is unbound"
+  do bindings <- ask
+     return $ bindings x
 translatePattern (PConstructor c ps (ADT d)) =
   do sps <- mapM translatePattern ps
      return $ SCtr d c sps
