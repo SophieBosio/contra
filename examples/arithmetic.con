@@ -23,9 +23,9 @@ subAssociative x y z =*= ((x - y) - z) == (x - (y - z)) .
 
 
 --- Same properties with 'user-defined' functions
-plusAssociative x y z =*= (plus (plus x b) c) == (plus x (plus y z)) .
+plusAssociative x y z =*= (plus (plus x y) z) == (plus x (plus y z)) .
 
-minusAssociative x y z =*= (minus (minus x b) c) == (minus x (minus y z)) .
+minusAssociative x y z =*= (minus (minus x y) z) == (minus x (minus y z)) .
 
 
 -- * Relations
