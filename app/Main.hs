@@ -17,7 +17,7 @@ import System.Environment (getArgs)
 import System.Exit        (die)
 
 
--- Abbreviations
+-- * Abbreviations
 type ErrorMessage = String
 type VersionInfo  = String
 
@@ -30,8 +30,12 @@ data Action =
   | Version                  VersionInfo
   | Fail                     ErrorMessage
 
+-- Print plain symbols instead of pretty unicode symbols
+plain :: Bool
+plain = False
 
--- Entry point
+
+-- * Entry point
 main :: IO ()
 main = getArgs >>= run . action
 
@@ -59,7 +63,7 @@ action [ ]                  = return $ REPL     End
 action _                    = return $ Fail     useInfo
 
 
--- Main functions
+-- * Main functions
 parse :: String -> IO (Program String)
 parse file =
   do result <- parseProgram file
@@ -88,9 +92,8 @@ checkProperties program depth =
   do let depthInfo = if depth == defaultRecDepth
            then "default recursion depth"
            else "max. recursion depth set to " ++ show depth
-     let pretty = False
      putStrLn $ "* Contra: Checking properties with " ++ depthInfo ++ " *\n"
-     check pretty depth program
+     check plain depth program
 
 
 -- Information about the program

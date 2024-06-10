@@ -74,7 +74,7 @@ check pretty depth program =
 
 checkProperty :: Bool -> RecursionDepth -> Program Type -> PropertyDef -> IO (Program Type)
 checkProperty pretty depth prog (propName, prop) =
-  do let symbol = if pretty then " ⇒ " else " >>> "
+  do let symbol = if pretty then "  » " else "  >>> "
      putStr $ "Checking '" ++ propName ++ "'" ++ symbol
      let (prop', residual) = partiallyEvaluate prog prop
      let f = generateFormula depth residual prop'

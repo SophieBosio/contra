@@ -25,7 +25,7 @@
 module Semantics.REPL where
 
 import Core.Syntax
-import Core.Parser hiding (program)
+import Core.Parser hiding (program, symbol)
 import Analysis.TypeInferrer
 import Semantics.PartialEvaluator
 
@@ -41,7 +41,9 @@ loop :: Program Type -> IO ()
 loop p =
   do input <- readLine
      case input of
-       ":q"                                 -> return ()
+       ":q"                                 ->
+         do putStrLn "Quitting Contra REPL."
+            return ()
        (':':'l':' ': file)                  ->
          do program <- loadProgram file
             putStrLn $ "Loaded file " ++ show file
@@ -88,9 +90,10 @@ typecheck program =
     Right tp -> return tp
 
 readLine :: IO String
-readLine = putStr "contra> "
-           >> hFlush stdout
-           >> getLine
+readLine =
+  do putStr "Contra> "
+     hFlush stdout
+     getLine
 
 parseLine :: String -> IO (Term Info)
 parseLine input =
