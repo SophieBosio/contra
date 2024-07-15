@@ -19,7 +19,10 @@ Contra uses SMT solvers (currently Z3 via the Haskell library [SBV](https://hack
 
 Its main contribution, and the reason you might find using Contra to be easier than using QuickCheck or SBV directly, is that Contra has a completely regular ML-style syntax, which is purposefully similar to Haskell's, and you don't need to learn any special syntax to get started.
 
-This repo includes a file `contra/app/MainPretty.hs` which is a version of Contra that uses Unicode symbols. This is prettier, but not supported by all terminals. If you do have Unicode support where you plan to run Contra, you can build and install as normal, but use the executable called `contra-pretty` instead of `contra`.
+Note that the interpreter and REPL support recursive functions, but the property-checker (using SMT solving) does not.
+
+> [!TIP]
+> This repo includes a file `contra/app/MainPretty.hs` which is a version of Contra that uses Unicode symbols. This is prettier, but not supported by all terminals. If you do have Unicode support where you plan to run Contra, you can build and install as normal, but use the executable called `contra-pretty` instead of `contra`. If you want the executable to be simply `contra`, you can rename the target executables in `./package.yaml` before building.
 
 ## Prerequisites
 
@@ -121,9 +124,11 @@ contra --help
 ## About
 
 The design and implementation of Contra were part of my MSc thesis at
-the University of Oslo, delivered 2024. I was supervised by Michael Kirkedal
+the University of Oslo, delivered May 15, 2024. I was supervised by Michael Kirkedal
 Thomsen and Joachim Tilsted Kristensen. I'm deeply grateful to them
 for their help and guidance.
+
+The thesis text is reproduced here as a PDF at `./thesis.pdf`.
 
 Contra is built based on the pioneering property-based testing tool, [QuickCheck](https://dl.acm.org/doi/abs/10.1145/1988042.1988046).
 
@@ -131,3 +136,20 @@ The underlying machinery in Contra uses the SMT solver [Z3](https://github.com/Z
 
 The particular solver library chosen for this implementation is the Haskell
 package [sbv](https://hackage.haskell.org/package/sbv).
+
+# TODO
+
+Suggested extensions and improvements after thesis delivery:
+
+
+**Minor:**
+- [ ] Pad pretty printed output to right-justify "OK"/"FAIL"/"Unknown"
+- [ ] Remove the need for alpha renaming from type-inference algorithm
+- [ ] Implement pretty printer for check results using Parsec instead of string manipulation
+
+**Major:**
+- [ ] Check for pattern-exhaustion in case-statements
+- [ ] Support uninterpreted functions in property-checker
+- [ ] (Template) polymorphism
+- [ ] Termination checker
+- [ ] Mode for producing different counterexamples - force SMT solver to keep producing new values
